@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "kind": "health-wallet-network-design-only",
+  "activationAllowed": false,
+  "mechanism": "dedicated-namespace-scoped-relay",
+  "preserve": {
+    "PrivateNetwork": "yes",
+    "addressFamilies": {
+      "allowList": true,
+      "families": []
+    }
+  },
+  "postgres": {
+    "host": "127.0.0.1",
+    "port": 5433,
+    "connectionLimit": 4
+  },
+  "aws": {
+    "profile": "ai-health-wallet",
+    "account": "402909940531",
+    "region": "ap-southeast-2",
+    "bucket": "ai-health-wallet-records-402909940531",
+    "prefix": "medical-documents/",
+    "services": [
+      "sts:get-caller-identity",
+      "s3control:get-public-access-block",
+      "s3api:bucket-security-read",
+      "s3api:approved-original-get-only"
+    ]
+  },
+  "brokerRequirements": [
+    "inherited-descriptor-only worker transport; no worker-created network sockets",
+    "fixed endpoint TLS hostname/certificate validation and bounded responses",
+    "scope-owned original receipt required for get-object",
+    "no CONNECT/general proxy, redirects, arbitrary DNS or cloud fallback",
+    "broker/kernel policy evidence bound to exact configuration and invocation",
+    "controller loss, runtime expiry and stalled IO revoke descriptor admission"
+  ],
+  "implemented": false
+}

@@ -1,0 +1,4 @@
+# Runtime factory only; deliberately excludes uvicorn/server CLI and provider SDKs.
+fastapi==0.158.1
+starlette==1.9.0
+pydantic==2.14.1

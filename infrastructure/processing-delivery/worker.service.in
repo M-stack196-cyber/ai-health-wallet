@@ -1,0 +1,48 @@
+# INACTIVE REVIEW TEMPLATE. Not installable/approved for activation.
+[Unit]
+Description=AI Health Wallet stage-c-aaaaaaaaaaaaaaaaaaaaaaaa
+ConditionPathExists=/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/ACTIVATION_APPROVED
+BindsTo=health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa-controller.service
+After=health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa-controller.service
+
+[Service]
+User=hw-aaaaaaaaaaaaaaaaaaaaaaaa
+Type=exec
+DynamicUser=yes
+Restart=no
+WorkingDirectory=/opt/ai-health-wallet/releases/offline-example/backend
+RuntimeDirectory=health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa
+RuntimeDirectoryMode=0700
+RuntimeMaxSec=600
+CPUQuota=200%
+MemoryMax=3221225472
+TasksMax=128
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+SendSIGKILL=yes
+ProtectControlGroups=yes
+Delegate=no
+PrivateMounts=yes
+PrivateNetwork=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+StandardOutput=null
+StandardError=null
+RestrictAddressFamilies=@TYPED_DENY_ALL_DBUS_REQUIRED@
+Environment=PROCESSING_SERVICE_ENABLED=false
+Environment=PROCESSING_OPERATIONAL_ENABLED=false
+Environment=SUMMARY_EXECUTOR_ENABLED=false
+Environment=AWS_EC2_METADATA_DISABLED=true
+ExecStartPre=/opt/ai-health-wallet/releases/offline-example/bin/node /opt/ai-health-wallet/releases/offline-example/backend/dist/stage-c/inside-entry.js /run/health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/inside.json
+ExecStart=/opt/ai-health-wallet/releases/offline-example/bin/node /opt/ai-health-wallet/releases/offline-example/backend/dist/processing/operational-entry.js
+LoadCredential=aws-profile.json:/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/aws-profile.json
+LoadCredential=postgres-password.json:/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/postgres-password.json
+LoadCredential=processing-approval.json:/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/processing-approval.json
+LoadCredential=runtime-authorization.json:/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/runtime-authorization.json

@@ -1,0 +1,21 @@
+{
+  "version": "glossary-v1",
+  "entries": {
+    "glucose": {
+      "text": "Glucose is a sugar used by the body for energy. This explanation does not interpret your result.",
+      "source": "https://medlineplus.gov/lab-tests/blood-glucose-test/"
+    },
+    "hemoglobin": {
+      "text": "Hemoglobin is a protein in red blood cells that transports oxygen. This explanation does not interpret your result.",
+      "source": "https://medlineplus.gov/lab-tests/hemoglobin-test/"
+    },
+    "ocr": {
+      "text": "OCR reads text from an image. Letters or numbers may have been read incorrectly.",
+      "source": null
+    },
+    "reference_range": {
+      "text": "A reported range is the comparison interval printed in this report. No missing range has been supplied.",
+      "source": null
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "kind": "module-01-offline-qualification",
+  "date": "2026-10-24",
+  "outcome": "BACKEND_QUALIFIED_MODULE_OPEN",
+  "owner_review_policy": "stop-after-each-module",
+  "source_sha256": {
+    "AI_Health_Wallet_Module_Wise_PRD_v1_0.docx": "b2053bcdad3e2dda701a0b0fea8632a8cf0f92e34ce2970374cc37bf4211cf10",
+    "AI_Health_Wallet_Final_SRS_v3.docx": "e401b0aaa64f0a8ef4f393eb1a8f41dd8b029c7166728b34aa6c2e478c19c591"
+  },
+  "counts": {
+    "prd_modules": 16,
+    "prd_features": 127,
+    "new_module01_checks": 16,
+    "existing_b02_checks": 24,
+    "route_checks_passed": 40,
+    "completeness_checks_passed": 18
+  },
+  "typecheck": true,
+  "build": true,
+  "environment": {
+    "node": "24.22.0",
+    "credentials": "synthetic only",
+    "database": "in-memory SQL port; no PostgreSQL connection",
+    "network": "owned loopback test HTTP/IPC only, guarded",
+    "snapshot": "/tmp/health-wallet-module-delivery-463Niw9P/qualification"
+  },
+  "live_operations": false,
+  "production_logic_modified": false,
+  "processing_activated": false,
+  "module_complete": false,
+  "production_ready": false,
+  "historical_broad_receipts_preserved": true,
+  "initial_attempt": "Reduced PATH Node18 and sandbox IPC refusal; no tests executed. Retained separately. Corrected guarded run used installed Node24.",
+  "checks": [
+    {
+      "check": "typecheck-node24",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "check": "module01-and-b02-node24",
+      "exit_code": 0,
+      "log_sha256": "d350b005641c4075603fb64d5d6278473a578e307194faf43e1bc9f48246b152"
+    },
+    {
+      "check": "build-node24",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "check": "coverage-final",
+      "exit_code": 0,
+      "log_sha256": "81e0566319960112d2262ed40df983285b9868874f0576c5af3f36402428fae1"
+    },
+    {
+      "check": "coverage-unit-final",
+      "exit_code": 0,
+      "log_sha256": "f0d9c209fed2fde01075d585a6a2fa6dc1ccd6335a8a915f399e5c0b2d50b994"
+    }
+  ],
+  "modified_files": [
+    "backend/package.json",
+    "docs/BACKEND_MASTER_ROADMAP.md",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md"
+  ],
+  "new_files": [
+    "backend/src/module-checks/accounts.check.ts",
+    "docs/MODULE_01_PATIENT_ACCOUNTS.md",
+    "docs/PRD_MODULE_DELIVERY_TRACKER.md",
+    "docs/baselines/PRD_MODULE_DELIVERY.json",
+    "infrastructure/requirements/check_prd.py",
+    "infrastructure/requirements/test_check_prd.py",
+    "docs/baselines/MODULE_01_QUALIFICATION_20261024.json"
+  ],
+  "published_file_sha256": {
+    "backend/package.json": "502ee20a423e87f7113e4ee5d4792d9327c3beee3a97ac7028ac837eb25e1d97",
+    "docs/BACKEND_MASTER_ROADMAP.md": "c0506c01aecf5208761ab2b0cddc44b05839fb47379c4d87095ce0a2329d2cad",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md": "75467df83cbc18bba312653a1922c3e5e7ca6625e117eac9739f95780b165222",
+    "docs/PRD_MODULE_DELIVERY_TRACKER.md": "3811bf3137ceb89fc139045d2a551596d82a1cf4e530046f2485be87f0ab1c55",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md": "a38f1d37c87168231201e16b79e82691b13807b6f963e2f414e3bf85657fbda3",
+    "docs/MODULE_01_PATIENT_ACCOUNTS.md": "9b9282968e33102e493c607d51ee503bd7fd67d85871b1c401d164b9c2a82355",
+    "backend/src/module-checks/accounts.check.ts": "d83d6d28fef500e132cb3cc3f90eddfb53207ca71dd0999c01eda7b6af1c737e",
+    "infrastructure/requirements/test_check_prd.py": "24e202a85375f9a22d85100e1258e0b9890910f9e68c03a83a914072a2d37fc3",
+    "infrastructure/requirements/check_prd.py": "a6bf7c04f6d9acec3a8dc190cff10aafdf864703b3f81de2b6a4be6282138bee",
+    "docs/baselines/PRD_MODULE_DELIVERY.json": "2ad8729d4f6baf9c35635850739a68d30692f6517007126e2b530e44b0f5b1db"
+  },
+  "private_archive": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/module-01-review-20261024-463Niw9P",
+  "remaining": [
+    "Account/session recovery and invalidation policy plus security approval",
+    "Ownership/authentication across missing downstream surfaces",
+    "React Native account/profile client and end-to-end acceptance",
+    "Actual deployed runtime and independent safety/privacy/operations approval"
+  ]
+}

@@ -1,0 +1,2 @@
+# Independent Draft 2020-12 compatibility checks only; runtime is standard-library-only.
+jsonschema==4.10.3

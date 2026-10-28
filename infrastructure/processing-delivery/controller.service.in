@@ -1,0 +1,42 @@
+# INACTIVE REVIEW TEMPLATE. Not installable/approved for activation.
+[Unit]
+Description=AI Health Wallet stage-c-aaaaaaaaaaaaaaaaaaaaaaaa controller
+ConditionPathExists=/run/health-wallet-delivery/stage-c-aaaaaaaaaaaaaaaaaaaaaaaa/ACTIVATION_APPROVED
+
+[Service]
+User=hw-aaaaaaaaaaaaaaaaaaaaaaaac
+Type=exec
+DynamicUser=yes
+Restart=no
+WorkingDirectory=/opt/ai-health-wallet/releases/offline-example/backend
+RuntimeDirectory=health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa-controller
+RuntimeDirectoryMode=0700
+RuntimeMaxSec=900
+CPUQuota=50%
+MemoryMax=805306368
+TasksMax=64
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=60
+SendSIGKILL=yes
+ProtectControlGroups=yes
+Delegate=no
+PrivateMounts=yes
+PrivateNetwork=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+StandardOutput=null
+StandardError=null
+RestrictAddressFamilies=@TYPED_DENY_ALL_DBUS_REQUIRED@
+Environment=PROCESSING_SERVICE_ENABLED=false
+Environment=PROCESSING_OPERATIONAL_ENABLED=false
+Environment=SUMMARY_EXECUTOR_ENABLED=false
+Environment=AWS_EC2_METADATA_DISABLED=true
+ExecStartPre=/opt/ai-health-wallet/releases/offline-example/bin/node /opt/ai-health-wallet/releases/offline-example/backend/dist/stage-c/inside-entry.js /run/health-wallet-stage-c-aaaaaaaaaaaaaaaaaaaaaaaa-controller/inside.json
+ExecStart=/opt/ai-health-wallet/releases/offline-example/bin/node /opt/ai-health-wallet/releases/offline-example/backend/dist/stage-c/cli.js

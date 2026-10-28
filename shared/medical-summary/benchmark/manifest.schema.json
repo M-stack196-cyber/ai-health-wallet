@@ -1,0 +1,289 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "summary-benchmark-preparation"
+    },
+    "benchmark_version": {
+      "const": "held-out-synthetic-v1"
+    },
+    "mode": {
+      "const": "dry-run"
+    },
+    "external_execution_enabled": {
+      "const": false
+    },
+    "synthetic_only": {
+      "const": true
+    },
+    "candidate_model": {
+      "type": "null"
+    },
+    "provider_allowlist": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "clinical_review": {
+      "const": "pending"
+    },
+    "privacy_review": {
+      "const": "pending"
+    },
+    "fixture_set_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "pins": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "cases_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "prompt_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "manifest_schema_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "glossary_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "schema_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "cases_sha256",
+        "prompt_sha256",
+        "manifest_schema_sha256",
+        "glossary_sha256",
+        "schema_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "evaluator_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "preparation_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "concurrency": {
+          "const": 1
+        },
+        "timeout_ms": {
+          "const": 1000
+        },
+        "max_requests": {
+          "const": 12
+        },
+        "max_input_tokens": {
+          "const": 16000
+        },
+        "max_output_tokens": {
+          "const": 8000
+        },
+        "spending_cap_microusd": {
+          "const": 1000000
+        }
+      },
+      "required": [
+        "concurrency",
+        "timeout_ms",
+        "max_requests",
+        "max_input_tokens",
+        "max_output_tokens",
+        "spending_cap_microusd"
+      ],
+      "additionalProperties": false
+    },
+    "currency": {
+      "const": "USD"
+    },
+    "dry_run_spend_microusd": {
+      "const": 0
+    },
+    "estimated_live_spend_microusd": {
+      "type": "null"
+    },
+    "generation_settings": {
+      "type": "object",
+      "properties": {
+        "temperature_decimal": {
+          "const": "0"
+        },
+        "top_p_decimal": {
+          "const": "1"
+        },
+        "seed": {
+          "const": 0
+        },
+        "tools_enabled": {
+          "const": false
+        },
+        "retrieval_enabled": {
+          "const": false
+        },
+        "response_format": {
+          "const": "SummaryOutputV1"
+        }
+      },
+      "required": [
+        "temperature_decimal",
+        "top_p_decimal",
+        "seed",
+        "tools_enabled",
+        "retrieval_enabled",
+        "response_format"
+      ],
+      "additionalProperties": false
+    },
+    "generation_settings_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "planned_request_count": {
+      "const": 12
+    },
+    "automatic_retries": {
+      "const": 0
+    },
+    "requests": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "case": {
+            "type": "string",
+            "pattern": "^H(?:0[1-9]|1[0-2])$"
+          },
+          "topic": {
+            "enum": [
+              "numbers",
+              "negation",
+              "omissions",
+              "ambiguity",
+              "conflicts",
+              "injection",
+              "isolation",
+              "missing_unit",
+              "precision",
+              "unsupported",
+              "attribution"
+            ]
+          },
+          "input_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "reference_facts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "critical_facts": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "case",
+          "topic",
+          "input_sha256",
+          "reference_facts",
+          "critical_facts"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "gates": {
+      "type": "object",
+      "properties": {
+        "provider_identity_pinned": {
+          "const": false
+        },
+        "provider_allowlisted": {
+          "const": false
+        },
+        "pricing_verified": {
+          "const": false
+        },
+        "privacy_verified": {
+          "const": false
+        },
+        "clinical_gold_approved": {
+          "const": false
+        },
+        "glossary_approved": {
+          "const": false
+        },
+        "live_execution_authorized": {
+          "const": false
+        },
+        "external_adapter_implemented": {
+          "const": false
+        }
+      },
+      "required": [
+        "provider_identity_pinned",
+        "provider_allowlisted",
+        "pricing_verified",
+        "privacy_verified",
+        "clinical_gold_approved",
+        "glossary_approved",
+        "live_execution_authorized",
+        "external_adapter_implemented"
+      ],
+      "additionalProperties": false
+    },
+    "evaluator_version": {
+      "const": "medical-summary-evaluator-v1"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "benchmark_version",
+    "mode",
+    "external_execution_enabled",
+    "synthetic_only",
+    "candidate_model",
+    "provider_allowlist",
+    "clinical_review",
+    "privacy_review",
+    "fixture_set_sha256",
+    "pins",
+    "evaluator_sha256",
+    "preparation_sha256",
+    "limits",
+    "currency",
+    "dry_run_spend_microusd",
+    "estimated_live_spend_microusd",
+    "generation_settings",
+    "generation_settings_sha256",
+    "planned_request_count",
+    "automatic_retries",
+    "requests",
+    "gates",
+    "evaluator_version"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

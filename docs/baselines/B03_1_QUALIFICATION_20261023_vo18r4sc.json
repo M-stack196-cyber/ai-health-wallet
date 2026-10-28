@@ -1,0 +1,771 @@
+{
+  "attempts": [
+    {
+      "directory": "/tmp/health-wallet-summary-db-d3wVwh",
+      "failed_count": 2,
+      "label": "unchanged-broad",
+      "passed": false,
+      "passed_count": 751,
+      "report_sha256": "d47a990672abf614d9b5816e1c6b0acccad4ffd2a0173d171775bb76ef94103d",
+      "test_count": 753
+    },
+    {
+      "directory": "/tmp/health-wallet-summary-db-JL8ZhV",
+      "failed_count": 0,
+      "label": "instrumented-summary",
+      "passed": true,
+      "passed_count": 73,
+      "report_sha256": "75c493febddf94024bddb56f8980cf49e2aaadecfe4a002df45f86a9fceeba8f",
+      "test_count": 73
+    },
+    {
+      "directory": "/tmp/health-wallet-summary-db-hFZ8lJ",
+      "failed_count": 0,
+      "label": "instrumented-broad",
+      "passed": true,
+      "passed_count": 753,
+      "report_sha256": "93dc1d2ba42d54eb6ece8716a3d12a48113e6e743750e5f993f3210d42a0fa32",
+      "test_count": 753
+    },
+    {
+      "directory": "/tmp/health-wallet-summary-db-tBSow1",
+      "failed_count": 0,
+      "label": "qualification-broad",
+      "passed": true,
+      "passed_count": 755,
+      "report_sha256": "298e6bcea90146819395827bc98dd3d88a20a9babdbc278e64ecbba2aac52b57",
+      "test_count": 755
+    }
+  ],
+  "b03_operational_dod": "OPEN",
+  "b04_started": false,
+  "blocking_reason": "Exact cause of the original B03 short-lease lease-lost failure remains unproven; passing runs do not explain it.",
+  "changed_files": [
+    "backend/src/summary-checks/executor.unit.ts",
+    "backend/src/summary-db-checks/lifecycle.check.ts",
+    "docs/BACKEND_MASTER_ROADMAP.md",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+    "docs/B03_1_SHORT_LEASE_QUALIFICATION_20261023_vo18r4sc.md",
+    "docs/baselines/B03_1_QUALIFICATION_20261023_vo18r4sc.json"
+  ],
+  "cleanup": {
+    "dependency_cache_tag_absent": true,
+    "kind": "b031-independent-cleanup",
+    "owned_containers_removed": 8,
+    "owned_image_tags_removed": 4,
+    "owned_volumes_removed": 4,
+    "preexisting_container_count": 5,
+    "preexisting_containers_and_start_stop_states_unchanged": true,
+    "runs": [
+      {
+        "containers_absent": true,
+        "directory": "/tmp/health-wallet-summary-db-d3wVwh",
+        "image_tag_absent": true,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "run": "stage-b-ee17bec99e83a5fb25e822e5",
+        "volumes_absent": true
+      },
+      {
+        "containers_absent": true,
+        "directory": "/tmp/health-wallet-summary-db-JL8ZhV",
+        "image_tag_absent": true,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "run": "stage-b-0ceb2379e7724fa88f78f8ed",
+        "volumes_absent": true
+      },
+      {
+        "containers_absent": true,
+        "directory": "/tmp/health-wallet-summary-db-hFZ8lJ",
+        "image_tag_absent": true,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "run": "stage-b-54bf56e29886df5cddc9bb11",
+        "volumes_absent": true
+      },
+      {
+        "containers_absent": true,
+        "directory": "/tmp/health-wallet-summary-db-tBSow1",
+        "image_tag_absent": true,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "run": "stage-b-98a710e8b6a03a9e1d8d3f38",
+        "volumes_absent": true
+      }
+    ]
+  },
+  "counts_overlap": true,
+  "date": "2026-10-23",
+  "evidence_copies": [
+    {
+      "path": "controller/preflight.json",
+      "sha256": "7a2f17e1a713c71f9b375d0c8c133cbd6988fc02382b6eac622a468e92c9e4f1",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/containers-before.json",
+      "sha256": "adeedff7c66f4f35a2646ac676561bd3f2ffd9591da76bfca9c4f81826fa8129",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/cleanup-verification.json",
+      "sha256": "40a5afe9dd31bab844a07bce94a8800c9f91a0fe0175bd851c287d99b9031521",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/measured-observations.json",
+      "sha256": "ba7f276e6b282e070f7b0922ab29ac67c87f14911b3755887cc748679a1eda64",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/offline-qualification.json",
+      "sha256": "e70118b974e952c04573e969deaa65d7f1a19663295c0e179db69fa00ded8fbc",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/unchanged-broad.log",
+      "sha256": "07f193d6797d6094aa4bcbbe48ddc46429bff0d311c55ecf5ca891526ef992f6",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/diagnostic-summary.log",
+      "sha256": "1df9f8d591f811847889dd1dd29c42f2987f1b221b0263389d499766aa45ce47",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/diagnostic-broad.log",
+      "sha256": "ca5bf809946c640fe55c4d313f37a1fdf68c86b61bea4f16e0454e5ef2ec67f1",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/qualification-broad.log",
+      "sha256": "84e01c5051dace045f03070d42d2e68fa5755c97045f3a13b656e4ee4c318923",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/offline-qualification.log",
+      "sha256": "f8bc9ba5faae78eb7c9534268855fc11c12fa22e8e1cfc42a953d60ed9ae2ea7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/new-unit.log",
+      "sha256": "01dd36e7f03489b2628ee012362999445f9d3bc2d9b42de357b3498a2b0e9281",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/new-unit-corrected-command.log",
+      "sha256": "f4c02eab29b829b26f2dad200d8c5c2c3fddc6340efc32e36759683a62325859",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/unit-import-diagnostic.log",
+      "sha256": "dd0dfecd0eb67f24628c35cea7b5fec72c9213f98a95b5d44c48c2ef3518c041",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "controller/run-offline-qualification.py",
+      "sha256": "31abad3652837c6715d47fc6710628b684fc4e1ee0439c19f3ab994935516c96",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/authentication.log",
+      "sha256": "69c76a0fcc79e61d6bbe5d627601cf07cccbaa2c1382b61e1e534a6eef51625e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/b02-contracts.log",
+      "sha256": "623178267f0ba2780e6ff1ff3b4a526f725b5f78f6a84ab937137d517ac54431",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/b03-contracts.log",
+      "sha256": "2f1c4e6b82b1d043bb3fd512d90d3ed41da8fb93ed198eee63ebef98b44bc19e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/b03-db.log",
+      "sha256": "77e1276039fa8d87d120c04fd10406e31d22f79e0b9062651f7c71f6dfb7f32f",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/bootstrap.log",
+      "sha256": "466981332b40445f8f5cc33155d9460afe1080c38e21a549d8bac1d594d6cca7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/database.log",
+      "sha256": "42315d17489b6527b5e77cd378788b8a44c6a5ce8ab27304ebe0bcb4e795ff74",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/documents.log",
+      "sha256": "b05da4ede6a7caeef49eb82c85caa60c8b15b913ce729c40955d58e634fe4f05",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/migrations.log",
+      "sha256": "0360f549bc6812d3621c7f8d728f21212c17c22af88966fe1a038a2bf632b517",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/processing.log",
+      "sha256": "1f13da2109f6acb760d06f40c03c12c155366db2ff784a16b2e6ce61d20ca0b2",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/report.json",
+      "sha256": "d47a990672abf614d9b5816e1c6b0acccad4ffd2a0173d171775bb76ef94103d",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/runner.log",
+      "sha256": "d20f12aa9c0f795ed7306ee4793e70361c2f31425a355ac7e3cef0c0da7405e6",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/security.log",
+      "sha256": "1cb1efbaad879f1779b4e37c2b68801b9e54fbb4077c1c02657595d44be5b8b2",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/stage-a.log",
+      "sha256": "5b551a7c900476bd73e8ce37e684d1de9eed8886b19f2c040438af98e4e614ba",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/stage-b.log",
+      "sha256": "6451321c38c5b250296869b61d52cbb85b6e5d7c520c2d05061eafce5cab8843",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/stage-c-db.log",
+      "sha256": "33fdd84cf10a3428c13dcc10ee58f842a5fd7d4e506dd51fd808a7801ad726e6",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/stage-c.log",
+      "sha256": "d76d9d330069e6c97db355a4735bf9e8d201aacbf724354d504e99204737f96d",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/unchanged-broad/summary-jobs.log",
+      "sha256": "59185da44ddc94cf621f32940037e070bb02229fd5d2dc35137369aa2fb52945",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-summary/b031-timing.json",
+      "sha256": "2ded1a96cea93ead3010dd992c471d27e25f02bae7e42b327a0be1ef66c47224",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-summary/bootstrap.log",
+      "sha256": "466981332b40445f8f5cc33155d9460afe1080c38e21a549d8bac1d594d6cca7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-summary/migrations.log",
+      "sha256": "0360f549bc6812d3621c7f8d728f21212c17c22af88966fe1a038a2bf632b517",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-summary/report.json",
+      "sha256": "75c493febddf94024bddb56f8980cf49e2aaadecfe4a002df45f86a9fceeba8f",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-summary/summary-jobs.log",
+      "sha256": "94f51040661331d19898f9f3915d3999b9fc108c3f1462d792a12058e2d43412",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/authentication.log",
+      "sha256": "965e7ffd40b5147301f865b4eb2692a388766596f6cda173c1242a2d70570f5e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/b02-contracts.log",
+      "sha256": "2eb2de72603cce77247994838c9c9d7a6741dca95f27b083cf0ad9ac447da68e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/b03-contracts.log",
+      "sha256": "c8dccc734a0e1f4f878efe401ede9edb3e78bc1d113b7c876fda5a80956f47ae",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/b03-db.log",
+      "sha256": "e339e3af9c0b5542da3c79e2bafdd7c5cd2101ab546f29698ba1e42a6f9b61e3",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/b031-timing.json",
+      "sha256": "5f3915225190e765e3865defc73004dd5a8acf514ce7a53417cd429863a54c1b",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/bootstrap.log",
+      "sha256": "466981332b40445f8f5cc33155d9460afe1080c38e21a549d8bac1d594d6cca7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/build.log",
+      "sha256": "3ca97bea7e1b6611b20d1b7f750f70a87d9068d19ff07f2e40976146059d2d81",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/database.log",
+      "sha256": "6325dbd29dca6461bc13739f443facd998f39f360a591fc27c27b39fe2ff606f",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/disabled.log",
+      "sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/documents.log",
+      "sha256": "fb4ca55f99789b115a120a3ebf91b469aab788260283648cf320f87ceba03ca9",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/migrations.log",
+      "sha256": "0360f549bc6812d3621c7f8d728f21212c17c22af88966fe1a038a2bf632b517",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/processing.log",
+      "sha256": "723a5250033f6d732388fddb25b238eb3cb89ce4b943a54b06e42f0283eaba80",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/report.json",
+      "sha256": "93dc1d2ba42d54eb6ece8716a3d12a48113e6e743750e5f993f3210d42a0fa32",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/runner.log",
+      "sha256": "22a1ab2b3a75b85c647cdd5ac33170dfcde0cd1fb51484b90d4ad829c6fcbd6a",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/security.log",
+      "sha256": "ade7789d9f56fb0329d770d24615c072ff7191d1a91346878e17f3b2ceeaac8c",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/stage-a.log",
+      "sha256": "4da3458effae0a332e8bc4baf3e7cdbad651da0a36bec9e8ea8124faae13c5eb",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/stage-b.log",
+      "sha256": "96ca33dafaa5aac8e79e68f6ff7bb7403ec3837a6c2166b6a49e49cf058094b9",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/stage-c-db.log",
+      "sha256": "8121ae588581299e93e734719ba5f5e3925ca963492138a7ee8a81bca1c70921",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/stage-c.log",
+      "sha256": "f1121888983481d2d23aa49005191352e6567cc5ee6e74c3b9f9188338701f17",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/summary-disabled.log",
+      "sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/summary-jobs.log",
+      "sha256": "a6ab55d434c257d12834ec8da36f4204fb5933514daf0287114928645c92c94a",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/instrumented-broad/typecheck.log",
+      "sha256": "98c10d93158e72af04aa7608d9a86d3904d60c993d0497329207fb9793b2d872",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/authentication.log",
+      "sha256": "47b5dc42551478a7738e0e452d3c3cb2ed1dbb79f5caf0de688e271b1d26fd75",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/b02-contracts.log",
+      "sha256": "73af19f9448f61fddcdd0985732d53abc8c40f3d421a01e045e70360d665268f",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/b03-contracts.log",
+      "sha256": "63a0123404a984f0ab5be0803ec316e87af43e5412064db52b2ca06adde9fd1f",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/b03-db.log",
+      "sha256": "8b7f07b8cc77bc1b6043bf91988af3a6f2c0d294da92ddd50dc2690bbc0a6e95",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/bootstrap.log",
+      "sha256": "466981332b40445f8f5cc33155d9460afe1080c38e21a549d8bac1d594d6cca7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/build.log",
+      "sha256": "3ca97bea7e1b6611b20d1b7f750f70a87d9068d19ff07f2e40976146059d2d81",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/database.log",
+      "sha256": "a979ffdf52d2cd2e8d729522ca2530a4dd0389c767f05db55802995f4c67d7b1",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/disabled.log",
+      "sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/documents.log",
+      "sha256": "444a8959001f0c010cc1f3d11b99e4c879b408d861c0020412b9b88f67dd8c22",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/migrations.log",
+      "sha256": "0360f549bc6812d3621c7f8d728f21212c17c22af88966fe1a038a2bf632b517",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/processing.log",
+      "sha256": "c2643fad3d029e0477d57f5613fe623df30024b5c98c8902147d82a35c1e754e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/report.json",
+      "sha256": "298e6bcea90146819395827bc98dd3d88a20a9babdbc278e64ecbba2aac52b57",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/runner.log",
+      "sha256": "606c39a814f0217f17b378b6add37d47815aa8d5eca848220898ee0fecdd4449",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/security.log",
+      "sha256": "1adfb7be448d3bfb8cc895d72bcced971c0d27d26c741297485b911c96abbfa6",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/stage-a.log",
+      "sha256": "2582c570a2617976738d9314b02918848130982eda8184df480dc568a9176d40",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/stage-b.log",
+      "sha256": "cc2db356d20b755492b20869c7cea7c0c521f504443c2cc1a08a8245bc374f88",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/stage-c-db.log",
+      "sha256": "6aeec0917cfd310da71e6b6465d98ee958670b5d82923b25a9014ca0696eec98",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/stage-c.log",
+      "sha256": "7c7edd9d23aca3bbf18ce5a6fdbaab5a2242b0333d91634c8a2fa105ad6d9cd0",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/summary-disabled.log",
+      "sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/summary-jobs.log",
+      "sha256": "8bc0101b261caebac659b5e70cd71eddd6abf827f66c508b84f7fe202ea72fde",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "attempts/qualification-broad/typecheck.log",
+      "sha256": "98c10d93158e72af04aa7608d9a86d3904d60c993d0497329207fb9793b2d872",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "historical-original/report.json",
+      "sha256": "d47a990672abf614d9b5816e1c6b0acccad4ffd2a0173d171775bb76ef94103d",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "historical-original/summary-jobs.log",
+      "sha256": "69f59426fe49c8cb62ad8737d93959747e7bc8b0ba3f5004f9326e398888da75",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "source-before/backend/src/summary-checks/executor.unit.ts",
+      "sha256": "caad2c2802585e5282e45e0346374fab1334297466e311b6a5dba1fd47db5a3e",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "source-after/backend/src/summary-checks/executor.unit.ts",
+      "sha256": "b783ede96cf5679cfd5ac81afdc3b799420de4c90eb194be507edcacbc7d7401",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "source-before/backend/src/summary-db-checks/lifecycle.check.ts",
+      "sha256": "c31296522b24a5eff1ce86610c97eb3d40e153e2a697b9399ab257fe45b7d275",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "source-after/backend/src/summary-db-checks/lifecycle.check.ts",
+      "sha256": "ec60c83df013fa360c5a6ba1baccfb2e01d66c7053109990e6cf29c659b7d904",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/baseline-unit.log",
+      "sha256": "94e8521bc8142b5aaeb9d6d11da6c8851f98121f85f8bf24553857fd744c928b",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/python-regressions.log",
+      "sha256": "43cb43395516bc073e33a4199e7a4617784e44153bb8481e52d839605d42e2a7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/typescript-fake-regressions.log",
+      "sha256": "39a5675fe9e423908ce37e09f204d9c9cd1a075c9cee8c358687b1e0aab0870b",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/contract-compatibility.log",
+      "sha256": "48b780f3779be6c20761f14c786348e8c8597eaca7b43c2f4a95febf0ef68f49",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/disabled-ocr-entry.log",
+      "sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/disabled-summary-entry.log",
+      "sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+      "source_sha256_matches": true
+    },
+    {
+      "path": "offline/B031_OFFLINE_SOURCE_MANIFEST.json",
+      "sha256": "a5dcbb65dad6c66f3f25ba67e94fb87d4078ebd92f8535d181170deded5f788f",
+      "source_sha256_matches": true
+    }
+  ],
+  "evidence_directory": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.1-short-lease-20261023-vo18r4sc",
+  "kind": "health-wallet-b03.1-short-lease-qualification",
+  "limitations": [
+    "Original failure not reproduced; no asserted scheduler/SQL/publication root cause for that event.",
+    "Instrumentation can perturb scheduling.",
+    "Legacy full_851_regression_verified flag is false because its exact 510-TS predicate predates the two new tests; actual 512 TS and all executed checks passed.",
+    "Two preliminary Node loader probes counted a file wrapper, not individual tests; not used as unit-test evidence. Final offline CLI reported 512 individual tests."
+  ],
+  "offline": {
+    "all_executed_checks_passed": true,
+    "blocked_checks": [],
+    "blocked_dependency_versions": {},
+    "cloud_operations": 0,
+    "disposable_postgresql_suites": "not_authorized_not_run",
+    "full_851_regression_verified": false,
+    "generation_calls": 0,
+    "kind": "health-wallet-b01-offline-validation",
+    "live_database_operations": 0,
+    "paid_ai_spend_microusd": 0,
+    "private_diagnostic_directory": "/tmp/health-wallet-b01-_5icny3o",
+    "schema_version": 1,
+    "snapshot_excludes_secrets": true,
+    "source_tree_sha256": "2cc45d80d02ac6fb701a451c1e8cb1d1399a32a9e50e6f346baa18e243afe0e1",
+    "source_unchanged": true,
+    "suites": [
+      {
+        "exit_code": 0,
+        "log_sha256": "94e8521bc8142b5aaeb9d6d11da6c8851f98121f85f8bf24553857fd744c928b",
+        "passed": true,
+        "suite": "baseline-unit",
+        "tests": 25
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "43cb43395516bc073e33a4199e7a4617784e44153bb8481e52d839605d42e2a7",
+        "passed": true,
+        "suite": "python-regressions",
+        "tests": 341
+      },
+      {
+        "cancelled": 0,
+        "exit_code": 0,
+        "fail": 0,
+        "log_sha256": "39a5675fe9e423908ce37e09f204d9c9cd1a075c9cee8c358687b1e0aab0870b",
+        "pass": 512,
+        "skipped": 0,
+        "suite": "typescript-fake-regressions",
+        "tests": 512
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "48b780f3779be6c20761f14c786348e8c8597eaca7b43c2f4a95febf0ef68f49",
+        "suite": "contract-compatibility"
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "suite": "typecheck"
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "suite": "build"
+      },
+      {
+        "disabled_verified": true,
+        "exit_code": 0,
+        "log_sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+        "suite": "disabled-ocr-entry"
+      },
+      {
+        "disabled_verified": true,
+        "exit_code": 0,
+        "log_sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+        "suite": "disabled-summary-entry"
+      }
+    ],
+    "systemd_operations": 0,
+    "toolchain": {
+      "node": "v24.22.0",
+      "node_sha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+      "python": "3.12.3",
+      "python_dependencies": {
+        "fastapi": "0.158.1",
+        "httpx": "0.28.1",
+        "jsonschema": "4.10.3",
+        "pydantic": "2.14.1",
+        "starlette": "1.9.0"
+      }
+    }
+  },
+  "offline_tests_passed": 878,
+  "outcome": "BLOCKED",
+  "preserved_historical_receipts": {
+    "docs/baselines/B01_SOURCE_MANIFEST.json": "fcfb0dc6cc07df2dbc289e582452decf0801ca923d22add841b97ce0d3c26afa",
+    "docs/baselines/B01_VALIDATION_RECEIPT.json": "10bcc0e51fa70f933d441e30504b891935418b72ea121b2186737a80edef76e0",
+    "docs/baselines/B02_VALIDATION_RECEIPT.json": "c6809e5fcc421efa0f498b7be650320406f6a4590f6fa0721e5f4f6c6fb50285",
+    "docs/baselines/B03_VALIDATION_RECEIPT.json": "bf9ffdce882f706194a302bca27708b944d69cecd69b57a9cf4d833455413141"
+  },
+  "preserved_specifications": {
+    "docs/AI_Health_Wallet_Final_SRS_v3.docx": "e401b0aaa64f0a8ef4f393eb1a8f41dd8b029c7166728b34aa6c2e478c19c591",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v1_0.docx": "b2053bcdad3e2dda701a0b0fea8632a8cf0f92e34ce2970374cc37bf4211cf10"
+  },
+  "production_ready": false,
+  "qualification_checks_passed": true,
+  "renewal_proof": {
+    "elapsed_db_ms": 677.957,
+    "heartbeat_ms": 30,
+    "lease_ms": 300,
+    "original_short_lease_test_unchanged": true,
+    "renewals": 19
+  },
+  "root_cause_findings": {
+    "historical_short_lease": "unresolved; no original stage timings",
+    "minimal_correction": "retry test verifies worker drain and database-clock retry eligibility; no production logic changes",
+    "new_broad_failure": "retry exhaustion expected failed but received busy; a pending heartbeat legitimately blocks admissions",
+    "timing_evidence": "instrumented focused run observed final heartbeat settlement 43.7503 ms after completed result"
+  },
+  "run": "vo18r4sc",
+  "safety": {
+    "database_expiry_cancels_provider_without_publication": true,
+    "lease_predicates_and_migrations_unchanged": true,
+    "no_aws_or_development_database_access": true,
+    "no_generation_or_systemd_operations": true,
+    "processing_disabled_defaults_preserved": true,
+    "production_executor_and_jobs_unchanged": true,
+    "replaced_source_publication_refused": true,
+    "stale_token_publication_refused": true
+  },
+  "schema_version": 1,
+  "tested_file_hashes": {
+    "backend/src/summary-checks/executor.unit.ts": "b783ede96cf5679cfd5ac81afdc3b799420de4c90eb194be507edcacbc7d7401",
+    "backend/src/summary-db-checks/lifecycle.check.ts": "ec60c83df013fa360c5a6ba1baccfb2e01d66c7053109990e6cf29c659b7d904"
+  }
+}

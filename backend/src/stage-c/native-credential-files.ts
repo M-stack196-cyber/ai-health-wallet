@@ -1,0 +1,18 @@
+import {canonical} from '../processing/operational-authority.js';
+import {credentialSha256,type CredentialFileSystem,type CredentialHandle,type FileIdentity} from './credential-files.js';
+import type {SystemFileSelection} from './system-credentials.js';
+import type {NativeCredentialRecord} from './native-credential-bootstrap.js';
+import {requireDelivery as need} from './delivery-guards.js';
+export interface ReceivedCredentialSnapshot {version:1;kind:'health-wallet-received-descriptors';record:NativeCredentialRecord;directory:FileIdentity;files:Record<'aws'|'postgres'|'approval'|'authorization',{identity:FileIdentity;bytes:Uint8Array}>;}
+// Explicit logical descriptor namespace, NOT fabricated host pathname proof.
+// Only a native SO_PEERCRED/SCM_RIGHTS receiver may supply these observations.
+// Existing file/schema/grounding/approval loaders remain unchanged and authoritative.
+export function transportedCredentialFiles(selection:SystemFileSelection,record:NativeCredentialRecord,authorizationSha256:string,ports:{verify(record:NativeCredentialRecord):Promise<void>;receive():Promise<ReceivedCredentialSnapshot>}):CredentialFileSystem {
+ const s=structuredClone(selection),r=structuredClone(record),base=s.directory.path,names={aws:'aws-profile.json',postgres:'postgres-password.json',approval:'processing-approval.json',authorization:'runtime-authorization.json'};const pins={aws:s.pins.aws.sha256,postgres:s.pins.postgres.sha256,approval:s.pins.approval.sha256,authorization:authorizationSha256};need(canonical(pins)===canonical(r.receipt.files)&&r.receipt.binding.process.uid===s.directory.ownerUid);let active:ReceivedCredentialSnapshot|undefined;
+ const virtual=(path:string):FileIdentity=>({kind:'directory',uid:0,mode:0o555,links:1,size:0,device:'0',inode:String(path.length+1),mtimeNs:'0',ctimeNs:'0'});
+ async function receive(){await ports.verify(r);const snap=await ports.receive();need(snap.version===1&&snap.kind==='health-wallet-received-descriptors'&&canonical(snap.record)===canonical(r)&&snap.directory.kind==='directory'&&snap.directory.uid===s.directory.ownerUid&&(snap.directory.mode&0o777)===s.directory.mode&&Object.keys(snap.files).sort().join(',')==='approval,authorization,aws,postgres');for(const key of Object.keys(names) as (keyof typeof names)[]){const f=snap.files[key],m=f.identity;need(m.kind==='file'&&m.uid===s.directory.ownerUid&&(m.mode&0o777)===0o400&&m.links===1&&f.bytes.byteLength===m.size&&m.size>0&&m.size<=16384&&credentialSha256(f.bytes)===pins[key]);}await ports.verify(r);return snap;}
+ const role=(path:string)=>(Object.keys(names) as (keyof typeof names)[]).find(k=>path===base+'/'+names[k]);
+ const stat=(path:string,snap:ReceivedCredentialSnapshot)=>{if(path===base)return {...snap.directory};const key=role(path);if(key)return {...snap.files[key].identity};need(path==='/'||base.startsWith(path+'/'));return virtual(path);};
+ function handle(path:string,snap:ReceivedCredentialSnapshot):CredentialHandle{return {stat:async()=>stat(path,snap),async child(name,kind){need(/^[a-zA-Z0-9_.-]+$/.test(name)&&name!=='.'&&name!=='..');const child=(path==='/'?'':path)+'/'+name;need((kind==='file'&&role(child))||(kind==='directory'&&(child===base||base.startsWith(child+'/'))));return handle(child,snap);},async read(max){const key=role(path);need(key&&Number.isSafeInteger(max)&&max>0&&max<=32769);await ports.verify(r);return snap.files[key].bytes.slice(0,max);},async close(){}};}
+ return {async root(){active=await receive();return handle('/',active);},async lstat(path){need(active);const latest=await receive();return stat(path,latest);}};
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "kind": "health-wallet-scoped-delivery",
+  "enabled": false,
+  "mechanism": "inherited-descriptor-relay",
+  "defaultDeny": true,
+  "worker": {
+    "privateNetwork": true,
+    "addressFamilies": [],
+    "directSockets": false
+  },
+  "postgres": {
+    "scheme": "postgresql",
+    "host": "127.0.0.1",
+    "port": 5433,
+    "tls": true,
+    "rejectUnauthorized": true,
+    "serverName": "localhost",
+    "caSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "aws": {
+    "scheme": "https",
+    "port": 443,
+    "region": "ap-southeast-2",
+    "account": "402909940531",
+    "bucket": "ai-health-wallet-records-402909940531",
+    "prefix": "medical-documents/",
+    "hosts": [
+      "s3.ap-southeast-2.amazonaws.com",
+      "sts.ap-southeast-2.amazonaws.com",
+      "402909940531.s3-control.ap-southeast-2.amazonaws.com"
+    ],
+    "rejectUnauthorized": true,
+    "caSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "dns": {
+    "worker": false,
+    "relay": "pinned-resolution-only"
+  },
+  "health": {
+    "transport": "private-file",
+    "public": false
+  },
+  "proxies": false,
+  "redirects": false,
+  "fallback": false
+}

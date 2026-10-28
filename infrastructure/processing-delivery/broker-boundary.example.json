@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "enabled": false,
+  "transport": "unix-domain-hmac-v1",
+  "socket": "/run/health-wallet-delivery/APPROVED_RUN/control.sock",
+  "caller": "exact-controller-pid-start-uid-boot",
+  "server": "independently-pinned-broker-pid-start-uid-boot",
+  "maximumFrameBytes": 65536,
+  "maximumConnections": 4,
+  "deadlineMs": 2000,
+  "journal": {
+    "reservation": "fsync-and-atomic-no-replace-link",
+    "maximumEntries": 1024,
+    "expiry": "fixed-approved-run",
+    "evictActive": false,
+    "corruption": "refuse-and-preserve",
+    "recreateMissingAcceptedRun": false
+  },
+  "nativeCompareAndControlImplemented": false,
+  "operations": [
+    "start-absent",
+    "stop-exact",
+    "reset-exact"
+  ],
+  "activationAllowed": false
+}

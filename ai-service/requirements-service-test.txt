@@ -1,0 +1,4 @@
+-r requirements.txt
+-r requirements-test.txt
+# In-process ASGITransport, never a network listener.
+httpx==0.28.1

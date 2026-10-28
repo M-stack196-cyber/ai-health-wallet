@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "enabled": false,
+  "deploymentSha256": "d45a8fdc22e83338e4194139cf978f8326d844c7999848e8583855870092bdbc",
+  "configurationSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "helperSha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "authority": "exclusive-broker-flock-unit-ref",
+  "outOfBandRoot": "trusted",
+  "maximumMs": 1000
+}

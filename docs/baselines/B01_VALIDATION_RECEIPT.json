@@ -1,0 +1,83 @@
+{
+  "all_executed_checks_passed": true,
+  "blocked_checks": [],
+  "blocked_dependency_versions": {},
+  "cloud_operations": 0,
+  "disposable_postgresql_suites": "not_authorized_not_run",
+  "full_851_regression_verified": true,
+  "generation_calls": 0,
+  "kind": "health-wallet-b01-offline-validation",
+  "live_database_operations": 0,
+  "paid_ai_spend_microusd": 0,
+  "private_diagnostic_directory": "/tmp/health-wallet-b01-2_mivjen",
+  "schema_version": 1,
+  "snapshot_excludes_secrets": true,
+  "source_tree_sha256": "29561fb71aaa5fd0bf385f266c778dc7f98994f2a5b9fe36758d21bc5861458c",
+  "source_unchanged": true,
+  "suites": [
+    {
+      "exit_code": 0,
+      "log_sha256": "96c1e3a38a64f7e6f0cbab90170b485ded2dfce1d1b88711b77fc6930b514520",
+      "passed": true,
+      "suite": "baseline-unit",
+      "tests": 25
+    },
+    {
+      "exit_code": 0,
+      "log_sha256": "1c7aba48b04a1ef28b808e29260a72640cc849832560cc5aeb5364fa7b4da806",
+      "passed": true,
+      "suite": "python-regressions",
+      "tests": 341
+    },
+    {
+      "cancelled": 0,
+      "exit_code": 0,
+      "fail": 0,
+      "log_sha256": "2099174a5a57675d7958f45246d730d66e9a59a2900ca4bf004e10b32b142a3f",
+      "pass": 510,
+      "skipped": 0,
+      "suite": "typescript-fake-regressions",
+      "tests": 510
+    },
+    {
+      "exit_code": 0,
+      "log_sha256": "48b780f3779be6c20761f14c786348e8c8597eaca7b43c2f4a95febf0ef68f49",
+      "suite": "contract-compatibility"
+    },
+    {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "suite": "typecheck"
+    },
+    {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "suite": "build"
+    },
+    {
+      "disabled_verified": true,
+      "exit_code": 0,
+      "log_sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+      "suite": "disabled-ocr-entry"
+    },
+    {
+      "disabled_verified": true,
+      "exit_code": 0,
+      "log_sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+      "suite": "disabled-summary-entry"
+    }
+  ],
+  "systemd_operations": 0,
+  "toolchain": {
+    "node": "v24.22.0",
+    "node_sha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+    "python": "3.12.3",
+    "python_dependencies": {
+      "fastapi": "0.158.1",
+      "httpx": "0.28.1",
+      "jsonschema": "4.10.3",
+      "pydantic": "2.14.1",
+      "starlette": "1.9.0"
+    }
+  }
+}

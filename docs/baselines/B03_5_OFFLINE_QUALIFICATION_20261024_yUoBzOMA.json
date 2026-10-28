@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "kind": "health-wallet-b03.5-offline-qualification",
+  "date": "2026-10-24",
+  "outcome": "PASS_OFFLINE",
+  "b03_regression_lease_safety": "CLOSED",
+  "b03_operational_implementation": "PARTIAL",
+  "b03_deployment_runtime_qualification": "OPEN",
+  "production_ready": false,
+  "live_operations_authorized": false,
+  "service_activated": false,
+  "tests": {
+    "single_final_broad": {
+      "total": 1000,
+      "baseline": 25,
+      "python": 341,
+      "typescript": 634,
+      "new_b035_cases": 76,
+      "blocked": 0,
+      "skipped": 0,
+      "passed": true,
+      "source_tree_sha256": "31faedecef16cd8982dce3a5ff2131b48d6a9b5988124a1a227552e310727ae4"
+    },
+    "completeness": {
+      "tests": 23,
+      "passed": true
+    },
+    "targeted_followup": {
+      "tests": 1,
+      "passed": true,
+      "reason": "Normalize numeric SIGTERM using existing adapter semantics; other signals rejected",
+      "source_delta_from_broad": [
+        "backend/src/background-checks/system-delivery.check.ts",
+        "backend/src/stage-c/linux-system-observer.ts"
+      ],
+      "typecheck": true,
+      "build": true
+    },
+    "distinct_new_b035_cases": 77,
+    "contracts": true,
+    "disabled_ocr_summary": true,
+    "operational_default_disabled": true,
+    "enabled_without_composition_refused": true,
+    "example_policy_valid": true,
+    "example_activation_allowed": false,
+    "new_postgresql_suite_run": false,
+    "historical_b03_4_disposable_result_reused": 810
+  },
+  "safety": {
+    "schema_version": 1,
+    "test_owned_temporary_directories_absent": true,
+    "checked_roots": [
+      "/tmp/health-wallet-b035-yUoBzOMA/focused/tmp",
+      "/tmp/health-wallet-b01-t7ipz9d8/tmp"
+    ],
+    "test_subprocesses_joined": true,
+    "service_operations": 0,
+    "containers_created": 0,
+    "volumes_created": 0,
+    "existing_containers_inspected": false,
+    "aws_operations": 0,
+    "existing_database_operations": 0,
+    "model_calls": 0,
+    "data_cleanup_performed": false,
+    "original_temporary_evidence_preserved": true
+  },
+  "source_sha256": {
+    "AI_Health_Wallet_Module_Wise_PRD_v1_0.docx": "b2053bcdad3e2dda701a0b0fea8632a8cf0f92e34ce2970374cc37bf4211cf10",
+    "AI_Health_Wallet_Final_SRS_v3.docx": "e401b0aaa64f0a8ef4f393eb1a8f41dd8b029c7166728b34aa6c2e478c19c591"
+  },
+  "delivery_status_counts": {
+    "COMPLETE": 0,
+    "PARTIAL": 66,
+    "MISSING": 57,
+    "BLOCKED": 4
+  },
+  "prd_entries_retained": 127,
+  "primary_srs_completion_promoted": false,
+  "module01_accepted_partial_preserved": true,
+  "affected_prd_ids": [
+    "PRD-M04-06",
+    "PRD-M04-07",
+    "PRD-M04-08",
+    "PRD-M13-03",
+    "PRD-M13-04",
+    "PRD-M13-08",
+    "PRD-M13-09",
+    "PRD-M14-01",
+    "PRD-M14-02",
+    "PRD-M14-03",
+    "PRD-M14-06",
+    "PRD-M14-07",
+    "PRD-M14-08",
+    "PRD-M15-01",
+    "PRD-M15-03",
+    "PRD-M15-05",
+    "PRD-M15-07",
+    "PRD-M15-09",
+    "PRD-M16-01",
+    "PRD-M16-03",
+    "PRD-M16-04",
+    "PRD-M16-05"
+  ],
+  "modified_files": [
+    "backend/package.json",
+    "backend/src/processing/background-runtime-core.ts",
+    "backend/src/processing/operational-runtime.ts",
+    "docs/BACKEND_MASTER_ROADMAP.md",
+    "docs/PRD_MODULE_DELIVERY_TRACKER.md",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md",
+    "docs/baselines/PRD_MODULE_DELIVERY.json",
+    "infrastructure/requirements/check_prd.py",
+    "infrastructure/requirements/test_check_prd.py"
+  ],
+  "new_files": [
+    "backend/src/background-checks/system-delivery-fixture.ts",
+    "backend/src/background-checks/system-delivery.check.ts",
+    "backend/src/processing/private-health-sink.ts",
+    "backend/src/processing/receipt-health.ts",
+    "backend/src/processing/system-operational-composition.ts",
+    "backend/src/stage-c/deployment-entry.ts",
+    "backend/src/stage-c/deployment-policy.ts",
+    "backend/src/stage-c/immutable-artifacts.ts",
+    "backend/src/stage-c/linux-system-observer.ts",
+    "backend/src/stage-c/system-manager-transport.ts",
+    "docs/B03_5_TRUSTED_DELIVERY_20261024_yUoBzOMA.md",
+    "infrastructure/processing-delivery/README.md",
+    "infrastructure/processing-delivery/controller.service.in",
+    "infrastructure/processing-delivery/network-contract.example.json",
+    "infrastructure/processing-delivery/offline-deployment.example.json",
+    "infrastructure/processing-delivery/offline-deployment.example.sha256",
+    "infrastructure/processing-delivery/typed-units.example.json",
+    "infrastructure/processing-delivery/worker.service.in",
+    "docs/baselines/B03_5_OFFLINE_QUALIFICATION_20261024_yUoBzOMA.json"
+  ],
+  "published_file_sha256": {
+    "backend/package.json": "598d4ba1e9808c3d026308134f4ac1c3ab03e978aaabaa99e3a000bf0339f70a",
+    "docs/BACKEND_MASTER_ROADMAP.md": "169392700f40827d7e1f070a10694677841de9d0cf67a6ae3b1636f9da0b0c24",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md": "6fa1d13b756d65b0756502c5fdd375bb4875f66fcccdb7994c7991eaa65b289e",
+    "docs/B03_5_TRUSTED_DELIVERY_20261024_yUoBzOMA.md": "fe04a99988e2a28fde4999226fa9a28ede7f816dae6e1a3b3d19a7e39efe8d73",
+    "docs/PRD_MODULE_DELIVERY_TRACKER.md": "1944a2f7a0ef26f5ca131038807e263a7521d476536d8da8b300e5339835ebcb",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md": "a5ee1250dc8ceffd8916f7429aacef44e5b99ded2c8a1033f760386612b3e34b",
+    "backend/src/processing/operational-runtime.ts": "f6552faef8fd038d18767174eaa165412b99d14da2a32dc612c61739bad56b9c",
+    "backend/src/processing/private-health-sink.ts": "d8daba57dd0585db5f781b70f20648c43619120a3893b9857f706235215b89af",
+    "backend/src/processing/system-operational-composition.ts": "17057e8effdcb123782347c33cc9ffa920a8362366ca77b0abcbd352dd0dc74e",
+    "backend/src/processing/receipt-health.ts": "bf8a84ab27db16108d5137be6f1c0ed158e5d06f968495cd80983359f1fefc66",
+    "backend/src/processing/background-runtime-core.ts": "4e59ed6e81b0ca9e3425a8f2e03940748744819901f604875a0617b0966d56d4",
+    "backend/src/background-checks/system-delivery.check.ts": "fb51485a75216647c57b3a9008e9e4a2705cfad7d6f3e4203f7e7d8172d12020",
+    "backend/src/background-checks/system-delivery-fixture.ts": "1fd64ef209fce3d30d59a9dbfa4e91586a609fdb724b7a972a15f0f2ebd25035",
+    "backend/src/stage-c/deployment-policy.ts": "58345b94b07f216c3525e64bcc1b0e0ff7cd7abf866aa69e2f3969af26b56fa1",
+    "backend/src/stage-c/linux-system-observer.ts": "a979e172ccbd868c2efbcb64854fe1b37d796897d28aa448d94c180401946e9d",
+    "backend/src/stage-c/deployment-entry.ts": "d50ac9e5f1b16c54593aed87c63e13416b5bf2c692863afd1343d68129d4ea3e",
+    "backend/src/stage-c/immutable-artifacts.ts": "b7a55326c434ce81091eccefe1cf7fc68f1da8b01209ea411559c41527f39480",
+    "backend/src/stage-c/system-manager-transport.ts": "b0d1ca828b8eccb3219ab52295e65643a3cd9030dc46a88fa2e00dcefa31a2e2",
+    "infrastructure/processing-delivery/controller.service.in": "eaf16abb602c92b1f5f7b24f45e142fa6447ca4a1e9ac6a297af9959c7d39352",
+    "infrastructure/processing-delivery/offline-deployment.example.json": "63b788071d5a24a0b18bc00bd1cb4063384bad9038a0d8097053e91200336b51",
+    "infrastructure/processing-delivery/worker.service.in": "20b7eab4238652d9658b82874b14f76ee9cff59fedd886295ff3f52b41b8526c",
+    "infrastructure/processing-delivery/offline-deployment.example.sha256": "2e8da37106c2e2a442531c716df235a5806e91959e6d21359cf6f08d41f50191",
+    "infrastructure/processing-delivery/README.md": "dc49002362ca437bcc657580fc19b50d1a8ffd19474172a6739cdd26fdc026ad",
+    "infrastructure/processing-delivery/typed-units.example.json": "666183a6ea1873cd6d9daa7353c0ab5bbc648fc85b0b1cb5da994085b760a002",
+    "infrastructure/processing-delivery/network-contract.example.json": "3f8325291fa47cb7dc8d0f30fd475f0b90769116ce839b27260258459c394dcf",
+    "infrastructure/requirements/test_check_prd.py": "fd35a733f70f5da73b6b68fc6523ad9e294a21850944bc3f292ac9cfd2e79a67",
+    "infrastructure/requirements/check_prd.py": "356bd21cf63a258923b2082c62d501b30f8a349cedfea9874d317dd413a6f867",
+    "docs/baselines/PRD_MODULE_DELIVERY.json": "996a10e0e9ec19fff15a471e26ca7a8b0f1075b58d798e3b6962be1b07e56edf"
+  },
+  "unchanged_migration_sha256": {
+    "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+    "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+    "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+    "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b"
+  },
+  "previous_evidence_preservation": [
+    {
+      "name": "b03.4-operational-delivery-20261023-w_f16tm8",
+      "index_sha256": "774a5c2ea72ab7221a25a9c12941589dd702412523adcd7c83f42f3ffc4bb3d1",
+      "verified_files": 130
+    },
+    {
+      "name": "module-01-review-20261024-463Niw9P",
+      "index_sha256": "de5fce705741fed2e980da1713099a8102d96cebec33780a93d703d136f65262",
+      "verified_files": 33
+    }
+  ],
+  "archive": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.5-trusted-delivery-20261024-yUoBzOMA",
+  "remaining": [
+    "Privileged broker/server/channel/journal/kernel compare-and-control",
+    "Dynamic UID/invocation credential bootstrap and actual issuer lifecycle",
+    "Complete real immutable runtime/native/dependency graph",
+    "Enforced inherited-descriptor network and PG/SDK transport",
+    "Actual Node/native controller-loss/runtime-expiry/recovery/cleanup and live canary",
+    "Operations/clinical/privacy appointments and pending formal SRS amendments"
+  ],
+  "next_gate": "Owner/Operations review of broker/bootstrap/graph/relay decisions; no automatic activation or B04"
+}

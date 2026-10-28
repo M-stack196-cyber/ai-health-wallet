@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "reference_sha256": "b7dd9f24a071778d68ac0d3b1c2a87859f7d5ecdac84deb8556514bed277143f",
+  "glossary_sha256": "02a0088e3866da34471dfc1fe3adbd9f8297f4900de6a4d0e3473e2e85d80681",
+  "schema_sha256": "35770082cdbdf86fbdef14ebb13aa12f339a19ad219cc0c268936b0f4bee4a91",
+  "scenarios_sha256": "01b4c5244262a1613c4992ccb08300740b92db2f47302c1e33b0cf045f3740d9",
+  "receipt_schema_sha256": "067b0d0cfe4b9b54b8336b9842bfacbe8c0f45ec1375981e6e1bd57391bd0cc5"
+}

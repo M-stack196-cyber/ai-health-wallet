@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "case": "unicode_decimal",
+      "mutation": "decimal",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "precision",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "unit",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "operator",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "range",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "flag",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "offset",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "utf16",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "quote",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "page",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "source_hash",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "original_hash",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "metadata_hash",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "attempt",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "provenance",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "scope",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "foreign_evidence",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "diagnosis",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "treatment",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "glossary",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "unknown_field",
+      "expected_acceptance": false
+    },
+    {
+      "case": "negation",
+      "mutation": "negation",
+      "expected_acceptance": false
+    },
+    {
+      "case": "ambiguous_ocr",
+      "mutation": "ambiguity",
+      "expected_acceptance": false
+    },
+    {
+      "case": "conflicting",
+      "mutation": "conflict",
+      "expected_acceptance": false
+    },
+    {
+      "case": "injection",
+      "mutation": "injection",
+      "expected_acceptance": false
+    },
+    {
+      "case": "critical_inventory",
+      "mutation": "omission",
+      "expected_acceptance": false
+    },
+    {
+      "case": "critical_inventory",
+      "mutation": "catalogue_gap",
+      "expected_acceptance": false
+    },
+    {
+      "case": "missing_unit",
+      "mutation": "invented_unit",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "input_limit",
+      "expected_acceptance": false
+    },
+    {
+      "case": "unicode_decimal",
+      "mutation": "incomplete",
+      "expected_acceptance": false
+    }
+  ]
+}

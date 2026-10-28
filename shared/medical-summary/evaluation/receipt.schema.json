@@ -1,0 +1,302 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "offline-summary-evaluation"
+    },
+    "evaluator_version": {
+      "const": "medical-summary-evaluator-v1"
+    },
+    "evaluator_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "fixture_set_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "reference_pins": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "reference_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "glossary_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "schema_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "scenarios_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "receipt_schema_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "reference_sha256",
+        "glossary_sha256",
+        "schema_sha256",
+        "scenarios_sha256",
+        "receipt_schema_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "synthetic_only": {
+      "const": true
+    },
+    "clinical_validation": {
+      "const": false
+    },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "critical_coverage_percent": {
+          "const": 100
+        },
+        "catalogued_coverage_percent": {
+          "const": 100
+        },
+        "unsupported_claims": {
+          "const": 0
+        },
+        "numerical_errors": {
+          "const": 0
+        },
+        "fabricated_diagnoses": {
+          "const": 0
+        },
+        "treatment_instructions": {
+          "const": 0
+        },
+        "scope_errors": {
+          "const": 0
+        }
+      },
+      "required": [
+        "critical_coverage_percent",
+        "catalogued_coverage_percent",
+        "unsupported_claims",
+        "numerical_errors",
+        "fabricated_diagnoses",
+        "treatment_instructions",
+        "scope_errors"
+      ],
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "scenarios": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectations_met": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "scenarios",
+        "expectations_met",
+        "accepted",
+        "passed"
+      ],
+      "additionalProperties": false
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "schema_valid": {
+            "type": "boolean"
+          },
+          "grounding_valid": {
+            "type": "boolean"
+          },
+          "semantic_valid": {
+            "type": "boolean"
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "type": "object",
+            "properties": {
+              "reference_facts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "covered_facts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "critical_facts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "covered_critical_facts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "missing_critical_facts": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "reference_facts",
+              "covered_facts",
+              "critical_facts",
+              "covered_critical_facts",
+              "missing_critical_facts"
+            ],
+            "additionalProperties": false
+          },
+          "errors": {
+            "type": "object",
+            "properties": {
+              "unsupported_facts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unsupported_interpretations": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "numerical_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unit_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "operator_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "range_flag_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "negation_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "citation_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "uncertainty_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "glossary_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "provenance_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "scope_errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fabricated_diagnoses": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "treatment_instructions": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "unsupported_facts",
+              "unsupported_interpretations",
+              "numerical_errors",
+              "unit_errors",
+              "operator_errors",
+              "range_flag_errors",
+              "negation_errors",
+              "citation_errors",
+              "uncertainty_errors",
+              "glossary_errors",
+              "provenance_errors",
+              "scope_errors",
+              "fabricated_diagnoses",
+              "treatment_instructions"
+            ],
+            "additionalProperties": false
+          },
+          "provider_failed": {
+            "type": "boolean"
+          },
+          "case": {
+            "type": "string",
+            "pattern": "^[a-z_]+$"
+          },
+          "scenario": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "expected_acceptance": {
+            "type": "boolean"
+          },
+          "expectation_met": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accepted",
+          "provider_failed",
+          "case",
+          "scenario",
+          "expected_acceptance",
+          "expectation_met"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "evaluator_version",
+    "evaluator_sha256",
+    "fixture_set_sha256",
+    "reference_pins",
+    "synthetic_only",
+    "clinical_validation",
+    "thresholds",
+    "summary",
+    "outcomes"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

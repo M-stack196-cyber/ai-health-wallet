@@ -1,0 +1,1114 @@
+{
+  "schema_version": 1,
+  "kind": "health-wallet-b03.4-offline-operational-qualification",
+  "date": "2026-10-24",
+  "run_started_date": "2026-10-23",
+  "run": "w_f16tm8",
+  "status": "PASS",
+  "b03_regression_lease_safety": "CLOSED",
+  "b03_operational_implementation": "PARTIAL",
+  "b03_deployment_runtime_qualification": "OPEN",
+  "production_ready": false,
+  "live_launch_ready": false,
+  "changed_code_config": [
+    {
+      "path": "backend/src/processing/operational-authority.ts",
+      "sha256": "b7abbb1f49e7615e070af365995023a37bfc67de8f80bf676f39a45265fa9e2f",
+      "new": true
+    },
+    {
+      "path": "backend/src/processing/operational-runtime.ts",
+      "sha256": "562e9006a062f6097dd364c1428dfd13831f60cc52f4d46d73adf646cf9c5d52",
+      "new": true
+    },
+    {
+      "path": "backend/src/processing/operational-resources.ts",
+      "sha256": "d1ef02b555eb8e526366870890a01ead1aa583659178508dbf9fc428021fcef7",
+      "new": true
+    },
+    {
+      "path": "backend/src/processing/operational-entry.ts",
+      "sha256": "4e8c6c04c255dd6d21b19ffcb4b4bcc545508d798d70051cc22006288550a576",
+      "new": true
+    },
+    {
+      "path": "backend/src/processing/background-runtime-core.ts",
+      "sha256": "8f4dc0b9d1cb727a619f6b56329f4a4a0758f2619648aac1d3b67de1da264ace",
+      "new": false
+    },
+    {
+      "path": "backend/src/stage-c/system-supervision.ts",
+      "sha256": "c0b76cd55b4091b32d77cde0619e1670a0e89eb1e51275bb2947dd21c9cc16e8",
+      "new": false
+    },
+    {
+      "path": "backend/src/background-checks/operational-fixture.ts",
+      "sha256": "0f5923a94971bfc11bdf8c0f912f74c967a9780a0b1003dace4900fd7485e518",
+      "new": true
+    },
+    {
+      "path": "backend/src/background-checks/operational.check.ts",
+      "sha256": "16b494e626e516426f180fd64ffc3fdb9beb7df51a57d4ae89261d347e904250",
+      "new": true
+    },
+    {
+      "path": "backend/src/background-db-checks/operational.check.ts",
+      "sha256": "520bebe582ea05317cc34f2147e840f9d21f29cc74ab0fadea2de70d19f05cbe",
+      "new": true
+    },
+    {
+      "path": "backend/package.json",
+      "sha256": "a861c2ccddc19e90babd264fd288caba9e9088e53ac20d860f1bbebc18f6a657",
+      "new": false
+    }
+  ],
+  "changed_docs": [
+    "docs/BACKEND_MASTER_ROADMAP.md",
+    "docs/SRS_REQUIREMENTS_TRACEABILITY.md",
+    "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+    "docs/B03_4_OPERATIONAL_DELIVERY_20261023_w_f16tm8.md",
+    "docs/baselines/B03_4_OPERATIONAL_QUALIFICATION_20261023_w_f16tm8.json"
+  ],
+  "report_sha256": "cae29b3f7fa96c0af2e53ad8f05946b5071928b418f5573ed267c18dd8b19e2b",
+  "runs": [
+    {
+      "phase": "focused",
+      "execution": {
+        "phase": "focused",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b034-w_f16tm8/focused-source/backend",
+        "started_at": "2026-10-23T13:58:36.501632+00:00",
+        "finished_at": "2026-10-23T13:59:31.125001+00:00",
+        "exit_code": 1,
+        "environment_directory": "/tmp/health-wallet-summary-db-W0AkiL"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b034-db",
+          "exitCode": 1,
+          "tests": 1,
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "diagnostics": []
+    },
+    {
+      "phase": "focused-corrected",
+      "execution": {
+        "phase": "focused-corrected",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b034-w_f16tm8/focused-corrected-source/backend",
+        "started_at": "2026-10-23T14:00:20.443179+00:00",
+        "finished_at": "2026-10-23T14:00:58.947653+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-0sosd9"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b034-db",
+          "exitCode": 0,
+          "tests": 5,
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "typecheck",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "diagnostics": []
+    },
+    {
+      "phase": "db-focused-final",
+      "execution": {
+        "phase": "db-focused-final",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b034-w_f16tm8/focused-final-source/backend",
+        "started_at": "2026-10-23T14:07:48.250731+00:00",
+        "finished_at": "2026-10-23T14:08:27.924192+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-iRQsb6"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b034-db",
+          "exitCode": 0,
+          "tests": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "typecheck",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "diagnostics": []
+    },
+    {
+      "phase": "broad",
+      "execution": {
+        "phase": "broad",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b034-w_f16tm8/qualification-source/backend",
+        "started_at": "2026-10-23T14:10:07.214236+00:00",
+        "finished_at": "2026-10-23T14:13:15.359286+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-pWRIUz"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "database",
+          "exitCode": 0,
+          "tests": 19,
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "security",
+          "exitCode": 0,
+          "tests": 15,
+          "passed": 15,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "authentication",
+          "exitCode": 0,
+          "tests": 29,
+          "passed": 29,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "documents",
+          "exitCode": 0,
+          "tests": 45,
+          "passed": 45,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b02-contracts",
+          "exitCode": 0,
+          "tests": 24,
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b03-contracts",
+          "exitCode": 0,
+          "tests": 19,
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "processing",
+          "exitCode": 0,
+          "tests": 162,
+          "passed": 162,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "runner",
+          "exitCode": 0,
+          "tests": 37,
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-a",
+          "exitCode": 0,
+          "tests": 78,
+          "passed": 78,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-b",
+          "exitCode": 0,
+          "tests": 26,
+          "passed": 26,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b03-db",
+          "exitCode": 0,
+          "tests": 8,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-c",
+          "exitCode": 0,
+          "tests": 259,
+          "passed": 259,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-c-db",
+          "exitCode": 0,
+          "tests": 11,
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-jobs",
+          "exitCode": 0,
+          "tests": 78,
+          "passed": 78,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "typecheck",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "build",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "disabled",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-disabled",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 810,
+      "passed": 810,
+      "failed": 0,
+      "diagnostics": [
+        "{\"kind\":\"b033-gated-characterization\",\"committed\":true,\"expired\":true,\"renewals\":1,\"result\":\"lease-lost\",\"cancelled\":true,\"publication_count\":0,\"drained\":true}",
+        "{\"kind\":\"b033-locked-retry-characterization\",\"due\":true,\"prior_drained\":true,\"locked_result\":\"idle\",\"released_result\":\"completed\",\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-retry-proof\",\"prior_drained\":true,\"database_due\":true,\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-renewal-proof\",\"lease_ms\":300,\"heartbeat_ms\":30,\"renewals\":21,\"elapsed_db_ms\":650.664}"
+      ]
+    }
+  ],
+  "counts": {
+    "broad": 810,
+    "offline": 924,
+    "new_fake_cases": 46,
+    "focused_disposable_final": 6
+  },
+  "counts_overlap": true,
+  "offline": {
+    "all_executed_checks_passed": true,
+    "blocked_checks": [],
+    "blocked_dependency_versions": {},
+    "cloud_operations": 0,
+    "disposable_postgresql_suites": "not_authorized_not_run",
+    "full_851_regression_verified": false,
+    "generation_calls": 0,
+    "kind": "health-wallet-b01-offline-validation",
+    "live_database_operations": 0,
+    "paid_ai_spend_microusd": 0,
+    "private_diagnostic_directory": "/tmp/health-wallet-b01-8go49dfc",
+    "schema_version": 1,
+    "snapshot_excludes_secrets": true,
+    "source_tree_sha256": "48d32bed2683e20b755068aa1f367d191404adb09b9b4b5574e4003e6e964385",
+    "source_unchanged": true,
+    "suites": [
+      {
+        "exit_code": 0,
+        "log_sha256": "663058325f27ab78c897ad383aa572061f7096bb6b8e26ac8c48c220c0e405d2",
+        "passed": true,
+        "suite": "baseline-unit",
+        "tests": 25
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "2bc48977cc8801624db60494935e238b51c9fbc2f7bba7441edfb74869fb814a",
+        "passed": true,
+        "suite": "python-regressions",
+        "tests": 341
+      },
+      {
+        "cancelled": 0,
+        "exit_code": 0,
+        "fail": 0,
+        "log_sha256": "cd875852413721ec94d3a0075a528a5cf671389810d2bbd612feacf224f65e3c",
+        "pass": 558,
+        "skipped": 0,
+        "suite": "typescript-fake-regressions",
+        "tests": 558
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "48b780f3779be6c20761f14c786348e8c8597eaca7b43c2f4a95febf0ef68f49",
+        "suite": "contract-compatibility"
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "suite": "typecheck"
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "suite": "build"
+      },
+      {
+        "disabled_verified": true,
+        "exit_code": 0,
+        "log_sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+        "suite": "disabled-ocr-entry"
+      },
+      {
+        "disabled_verified": true,
+        "exit_code": 0,
+        "log_sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+        "suite": "disabled-summary-entry"
+      }
+    ],
+    "systemd_operations": 0,
+    "toolchain": {
+      "node": "v24.22.0",
+      "node_sha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+      "python": "3.12.3",
+      "python_dependencies": {
+        "fastapi": "0.158.1",
+        "httpx": "0.28.1",
+        "jsonschema": "4.10.3",
+        "pydantic": "2.14.1",
+        "starlette": "1.9.0"
+      }
+    }
+  },
+  "operational_smoke": {
+    "version": 1,
+    "disabled_verified": true,
+    "enabled_without_composition_refused": true,
+    "external_capabilities_prohibited": true,
+    "checks": [
+      {
+        "mode": "disabled",
+        "exit_code": 0,
+        "expected_exit_code": 0,
+        "passed": true,
+        "log_sha256": "b6792c366876c87df28418be4f87478d993b84e0e346951af978cca31393ec2c"
+      },
+      {
+        "mode": "enabled-refusal",
+        "exit_code": 1,
+        "expected_exit_code": 1,
+        "passed": true,
+        "log_sha256": "cc802fc17b63c8fbb27e6f6660132f0bde67dfb711245d33a6ec865958773f23"
+      }
+    ]
+  },
+  "cleanup": {
+    "schema_version": 1,
+    "runs": [
+      {
+        "phase": "focused",
+        "directory": "/tmp/health-wallet-summary-db-W0AkiL",
+        "run": "stage-b-8e6103296d4d68670b742f12",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      },
+      {
+        "phase": "focused-corrected",
+        "directory": "/tmp/health-wallet-summary-db-0sosd9",
+        "run": "stage-b-bc5b9c6874b79c121110ee0d",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      },
+      {
+        "phase": "db-focused-final",
+        "directory": "/tmp/health-wallet-summary-db-iRQsb6",
+        "run": "stage-b-31eb5ad80a6f6ac107a68f3a",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      },
+      {
+        "phase": "broad",
+        "directory": "/tmp/health-wallet-summary-db-pWRIUz",
+        "run": "stage-b-ba99bc97abc1e25b5557fc0a",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      }
+    ],
+    "owned_containers_absent": 8,
+    "owned_volumes_absent": 4,
+    "owned_test_image_tags_absent": 4,
+    "dependency_cache_tag_absent": true,
+    "preexisting_container_count": 5,
+    "preexisting_container_state_and_start_stop_times_unchanged": true,
+    "no_prune": true
+  },
+  "traceability": [
+    {
+      "id": "FR-010",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "FR-011",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "FR-012",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-01",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-02",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-05",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-06",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-07",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "NFR-08",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "DEC-07",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "DEC-08",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "DEC-12",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M04-06",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M04-07",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M04-08",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M13-03",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M13-04",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M13-08",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M13-09",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-01",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-02",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-03",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-06",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-07",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M14-08",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M15-01",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M15-03",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M15-05",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M15-07",
+      "previous_status": "Unknown: no separate whole-control status in targeted baseline",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "Unknown: whole-control status not reassessed by targeted operational qualification",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M15-09",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M16-01",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M16-03",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M16-04",
+      "previous_status": "I",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "I",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    },
+    {
+      "id": "PRD-M16-05",
+      "previous_status": "P",
+      "evidence_added": "Disabled operational composition; pinned files/runtime grants; scoped disposable ownership/rollback/expiry/coordinator tests; regression/cleanup receipts",
+      "new_status": "P",
+      "product_status_upgraded": false,
+      "remaining_gap": "Actual system-manager/network/credential deployment and application qualification; full control/module acceptance still pending"
+    }
+  ],
+  "gates": [
+    {
+      "gate": "System-manager composition",
+      "before": "MISSING",
+      "after": "PARTIAL",
+      "evidence_remaining": "New read-only inside-worker identity/admission composition, explicit operational artifact; trusted OS read/control transport and actual controller composition missing.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Artifact/service identity deployment",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Six independent artifact pins, boot/invocation/PID-start/UID checks and configuration fingerprint; real root-owned release/native graph/identity deployment unverified.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Credential delivery",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Existing pinned file loaders composed with PG/S3 constructor factory, expiry bounds and no fallback; real protected staging, issuer expiration/rotation/revocation and transport qualification remain.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Network delivery",
+      "before": "MISSING",
+      "after": "PARTIAL",
+      "evidence_remaining": "Exact logical PG/S3 intent and fresh enforced-policy evidence required; no enforcement installed. Existing PrivateNetwork plus deny-all families prevents PG/S3 and loopback health.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Application containment",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Application ownership/expiry guards, duplicate refusal and transactional rollback tested; actual Node/native-child cgroup containment remains unverified.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Controller-loss handling",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Fresh exact-identity checks, bounded monitoring, terminal cancellation and rollback tested; real system-manager BindsTo/After loss proof pending.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Runtime-expiry handling",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Pinned bounded grant, credential expiry cap, monotonic deadline, no reactivation and expiry rollback tested; real application RuntimeMaxSec/termination proof pending.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Supervised worker composition",
+      "before": "PARTIAL",
+      "after": "PARTIAL",
+      "evidence_remaining": "Actual scheduler/coordinator/repository reused in isolated PG tests; explicit resource/processor/composition ports wired, no default live launcher/OS observer.",
+      "live_runtime_approval_required": true
+    },
+    {
+      "gate": "Deployment/runtime qualification",
+      "before": "MISSING",
+      "after": "MISSING",
+      "evidence_remaining": "No deployed actual worker, live canary, production credentials/network, real application loss/expiry/cleanup proof or operational approval.",
+      "live_runtime_approval_required": true
+    }
+  ],
+  "historical_preserved": true,
+  "b033_historical": {
+    "status": "PASS",
+    "regression_lease_safety": "PROPOSED CLOSED",
+    "full_b03": "OPEN",
+    "report": "/home/m-tayyab-aslam/Music/ai-health-wallet/docs/B03_3_RESIDUAL_CONCURRENCY_20261023_w6uzcegf.md",
+    "report_sha256": "7c521d50fefad79202f23835b9909ef484c6780b75599a145bd731d6e7157dd3",
+    "receipt": "/home/m-tayyab-aslam/Music/ai-health-wallet/docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json",
+    "receipt_sha256": "488760cb16e5adbffebe6f7b6ee35b3c45071e5a94ecb0066b7ef6e943f5e47b",
+    "archive": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.3-residual-concurrency-20261023-w6uzcegf",
+    "index_sha256": "ea9771bdafd7a428f7bc6c2c1b5cb761df2418eea87041ff905e5981243e7509",
+    "file_count": 103,
+    "all_archive_hashes_verified": true,
+    "git_excluded": true,
+    "counts": {
+      "disposable": 758,
+      "focused": 16,
+      "characterization": 3,
+      "offline": 878
+    },
+    "changed_existing_files": [
+      "backend/src/summary-db-checks/lifecycle.check.ts",
+      "docs/BACKEND_MASTER_ROADMAP.md",
+      "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+      "docs/SRS_REQUIREMENTS_TRACEABILITY.md"
+    ],
+    "new_public_files": [
+      "backend/src/summary-db-checks/b033-concurrency.check.ts",
+      "docs/B03_3_RESIDUAL_CONCURRENCY_20261023_w6uzcegf.md",
+      "docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json"
+    ]
+  },
+  "evidence_directory": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.4-operational-delivery-20261023-w_f16tm8",
+  "restrictions": {
+    "aws_requests": 0,
+    "development_production_db_connections": 0,
+    "real_patient_data": false,
+    "real_credentials_staged_or_used": false,
+    "systemd_operations": 0,
+    "paid_ai_spend": 0,
+    "model_generation": 0,
+    "packages_installed": 0,
+    "migrations_modified": false,
+    "infrastructure_activated": false,
+    "b04_started": false,
+    "commit_push_merge": false
+  },
+  "limitations": [
+    "No default trusted system OS/preflight/network transport; enabled standalone refuses without explicit composition.",
+    "Current deny-all address-family/private-network unit cannot deliver required PG/S3/loopback health.",
+    "Mocked system and network observations in disposable tests are not actual OS enforcement proof.",
+    "COMMIT dispatch linearizes authority; a concurrent later loss cannot retroactively undo it; lease checks are statement-time under locks.",
+    "Runtime grant is bounded by independently declared credential expiry; issuer early revocation/classification/rotation requires live adapter verification.",
+    "Real native artifact graph, OS containment, loss/expiry and timeout/cleanup budgets remain unqualified.",
+    "Prior focused setup failure retained, causal environment-order correction verified."
+  ]
+}

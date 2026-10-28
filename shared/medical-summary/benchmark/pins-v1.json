@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "cases_sha256": "20662186cb5b539375152d00561af747ebad50fc18d2a13c36365b2a4ed27c62",
+  "prompt_sha256": "0c8586303933d9af23c3b10bda77c909ffe076fd37229abb1c7d931604fd90b2",
+  "manifest_schema_sha256": "2e4552de4916b01ce95c771ade9d042ba9e6425b7b290e7376a627a182de89cd",
+  "glossary_sha256": "02a0088e3866da34471dfc1fe3adbd9f8297f4900de6a4d0e3473e2e85d80681",
+  "schema_sha256": "35770082cdbdf86fbdef14ebb13aa12f339a19ad219cc0c268936b0f4bee4a91"
+}

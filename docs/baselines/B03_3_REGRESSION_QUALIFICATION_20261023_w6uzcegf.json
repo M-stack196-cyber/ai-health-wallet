@@ -1,0 +1,1905 @@
+{
+  "schema_version": 1,
+  "kind": "health-wallet-b03.3-residual-concurrency-qualification",
+  "date": "2026-10-23",
+  "run": "w6uzcegf",
+  "status": "PASS",
+  "qualification_basis": "Controlled test-contract defects corrected; both failure classes safely demonstrated and corrected tests pass focused and single final broad regression. Historical failed schedules remain unknown and are not retrospectively attributed.",
+  "b03_regression_lease_safety": "PROPOSED CLOSED",
+  "full_b03_operational_dod": "OPEN",
+  "historical_original_cause": "Unknown; retained residual uncertainty",
+  "historical_b032_exact_causes_reconstructed": false,
+  "production_defect_demonstrated": false,
+  "shared_production_cause_demonstrated": false,
+  "historical_b031_b032_statuses_rewritten": false,
+  "new_unexplained_failures": 0,
+  "changes": {
+    "production": [],
+    "tests": [
+      "backend/src/summary-db-checks/lifecycle.check.ts",
+      "backend/src/summary-db-checks/b033-concurrency.check.ts"
+    ],
+    "documentation": [
+      "docs/BACKEND_MASTER_ROADMAP.md",
+      "docs/SRS_REQUIREMENTS_TRACEABILITY.md",
+      "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+      "docs/B03_3_RESIDUAL_CONCURRENCY_20261023_w6uzcegf.md",
+      "docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json"
+    ]
+  },
+  "runs": [
+    {
+      "phase": "diagnostic",
+      "execution": {
+        "phase": "diagnostic",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b033-w6uzcegf/diagnostic-source/backend",
+        "started_at": "2026-10-23T13:27:06.497992+00:00",
+        "finished_at": "2026-10-23T13:27:48.667567+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-Y7yz4N"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-jobs",
+          "exitCode": 0,
+          "tests": 3,
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "diagnostics": [
+        "{\"kind\":\"b033-gated-characterization\",\"committed\":true,\"expired\":true,\"renewals\":1,\"result\":\"lease-lost\",\"cancelled\":true,\"publication_count\":0,\"drained\":true}",
+        "{\"kind\":\"b033-locked-retry-characterization\",\"due\":true,\"prior_drained\":true,\"locked_result\":\"idle\",\"released_result\":\"completed\",\"attempts\":2,\"publication_count\":1}"
+      ]
+    },
+    {
+      "phase": "focused",
+      "execution": {
+        "phase": "focused",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b033-w6uzcegf/focused-source/backend",
+        "started_at": "2026-10-23T13:28:33.135577+00:00",
+        "finished_at": "2026-10-23T13:29:14.018840+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-tP3OLy"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-jobs",
+          "exitCode": 0,
+          "tests": 16,
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "typecheck",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "diagnostics": [
+        "{\"kind\":\"b033-gated-characterization\",\"committed\":true,\"expired\":true,\"renewals\":1,\"result\":\"lease-lost\",\"cancelled\":true,\"publication_count\":0,\"drained\":true}",
+        "{\"kind\":\"b033-locked-retry-characterization\",\"due\":true,\"prior_drained\":true,\"locked_result\":\"idle\",\"released_result\":\"completed\",\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-retry-proof\",\"prior_drained\":true,\"database_due\":true,\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-renewal-proof\",\"lease_ms\":300,\"heartbeat_ms\":30,\"renewals\":19,\"elapsed_db_ms\":654.545}"
+      ]
+    },
+    {
+      "phase": "broad",
+      "execution": {
+        "phase": "broad",
+        "command": [
+          "npm",
+          "run",
+          "integration:summary-db",
+          "--",
+          "--execute-isolated"
+        ],
+        "cwd": "/tmp/health-wallet-b033-w6uzcegf/qualification-source/backend",
+        "started_at": "2026-10-23T13:29:38.861045+00:00",
+        "finished_at": "2026-10-23T13:32:37.465617+00:00",
+        "exit_code": 0,
+        "environment_directory": "/tmp/health-wallet-summary-db-pIUL2n"
+      },
+      "suites": [
+        {
+          "suite": "bootstrap",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "migrations",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "database",
+          "exitCode": 0,
+          "tests": 19,
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "security",
+          "exitCode": 0,
+          "tests": 15,
+          "passed": 15,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "authentication",
+          "exitCode": 0,
+          "tests": 29,
+          "passed": 29,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "documents",
+          "exitCode": 0,
+          "tests": 45,
+          "passed": 45,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b02-contracts",
+          "exitCode": 0,
+          "tests": 24,
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b03-contracts",
+          "exitCode": 0,
+          "tests": 19,
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "processing",
+          "exitCode": 0,
+          "tests": 162,
+          "passed": 162,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "runner",
+          "exitCode": 0,
+          "tests": 37,
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-a",
+          "exitCode": 0,
+          "tests": 32,
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-b",
+          "exitCode": 0,
+          "tests": 20,
+          "passed": 20,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "b03-db",
+          "exitCode": 0,
+          "tests": 8,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-c",
+          "exitCode": 0,
+          "tests": 259,
+          "passed": 259,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "stage-c-db",
+          "exitCode": 0,
+          "tests": 11,
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-jobs",
+          "exitCode": 0,
+          "tests": 78,
+          "passed": 78,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "typecheck",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "build",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "disabled",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        {
+          "suite": "summary-disabled",
+          "exitCode": 0,
+          "tests": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      ],
+      "tests": 758,
+      "passed": 758,
+      "failed": 0,
+      "diagnostics": [
+        "{\"kind\":\"b033-gated-characterization\",\"committed\":true,\"expired\":true,\"renewals\":1,\"result\":\"lease-lost\",\"cancelled\":true,\"publication_count\":0,\"drained\":true}",
+        "{\"kind\":\"b033-locked-retry-characterization\",\"due\":true,\"prior_drained\":true,\"locked_result\":\"idle\",\"released_result\":\"completed\",\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-retry-proof\",\"prior_drained\":true,\"database_due\":true,\"attempts\":2,\"publication_count\":1}",
+        "{\"kind\":\"b033-renewal-proof\",\"lease_ms\":300,\"heartbeat_ms\":30,\"renewals\":19,\"elapsed_db_ms\":654.434}"
+      ]
+    }
+  ],
+  "counts": {
+    "disposable": 758,
+    "focused": 16,
+    "characterization": 3,
+    "offline": 878
+  },
+  "counts_overlap": true,
+  "offline": {
+    "all_executed_checks_passed": false,
+    "blocked_checks": [],
+    "blocked_dependency_versions": {},
+    "cloud_operations": 0,
+    "disposable_postgresql_suites": "not_authorized_not_run",
+    "full_851_regression_verified": false,
+    "generation_calls": 0,
+    "kind": "b033-offline-qualification-with-infrastructure-resumption",
+    "live_database_operations": 0,
+    "paid_ai_spend_microusd": 0,
+    "private_diagnostic_directory": "/tmp/health-wallet-b01-y32jdgh5",
+    "schema_version": 1,
+    "snapshot_excludes_secrets": true,
+    "source_tree_sha256": "dc9cb9d5018cb9b5dc99d3f750a3617a5409676d87cab99b70ab363918ec2a30",
+    "source_unchanged": true,
+    "suites": [
+      {
+        "exit_code": 0,
+        "log_sha256": "30110f5679ca101093e161502cab9c07d8ee80671fe06815a3ca237ef00d52ed",
+        "passed": true,
+        "suite": "baseline-unit",
+        "tests": 25
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "687ed1de9233ee125f6ed7cb0da3faefb82a2b944de94a1a031374cbf8ef230e",
+        "passed": true,
+        "suite": "python-regressions",
+        "tests": 341
+      },
+      {
+        "suite": "typescript-fake-regressions",
+        "exit_code": 0,
+        "log_sha256": "fe56f8bd7f8fe62347c377c3802af314760f79578a0ec0156da92c8f3cd28580",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/typescript-fake-regressions-resumed.log",
+        "argv": [
+          "/home/m-tayyab-aslam/.nvm/versions/node/v24.22.0/bin/node",
+          "/home/m-tayyab-aslam/Music/ai-health-wallet/backend/node_modules/tsx/dist/cli.mjs",
+          "--test",
+          "--test-reporter=tap",
+          "--test-concurrency=1",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/background-checks/background.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/canary-checks/credentials.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/canary-checks/hardening.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/canary-checks/preparation.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/canary-checks/system-manager.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/integration-checks/live-s3-ocr.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/benchmark.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/client.service.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/contracts.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/evaluation.check.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/executor.unit.ts",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/src/summary-checks/jobs.unit.ts"
+        ],
+        "tests": 512,
+        "pass": 512,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "contract-compatibility",
+        "exit_code": 0,
+        "log_sha256": "48b780f3779be6c20761f14c786348e8c8597eaca7b43c2f4a95febf0ef68f49",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/contract-compatibility-resumed.log",
+        "argv": [
+          "/tmp/hw-b01-stage/test-venv/bin/python",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/ai-service/tools/generate_contracts.py",
+          "--check"
+        ]
+      },
+      {
+        "suite": "typecheck",
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/typecheck-resumed.log",
+        "argv": [
+          "/home/m-tayyab-aslam/.nvm/versions/node/v24.22.0/bin/node",
+          "/home/m-tayyab-aslam/Music/ai-health-wallet/backend/node_modules/typescript/bin/tsc",
+          "--noEmit"
+        ]
+      },
+      {
+        "suite": "build",
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/build-resumed.log",
+        "argv": [
+          "/home/m-tayyab-aslam/.nvm/versions/node/v24.22.0/bin/node",
+          "/home/m-tayyab-aslam/Music/ai-health-wallet/backend/node_modules/typescript/bin/tsc"
+        ]
+      },
+      {
+        "suite": "disabled-ocr-entry",
+        "exit_code": 0,
+        "log_sha256": "07c53bc8e01ea1267390854cabbb1e0ef93ab2e8c12d66c4af3e105a27e2f9e7",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/disabled-ocr-entry-resumed.log",
+        "argv": [
+          "/home/m-tayyab-aslam/.nvm/versions/node/v24.22.0/bin/node",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/dist/processing/background-entry.js"
+        ],
+        "disabled_verified": true
+      },
+      {
+        "suite": "disabled-summary-entry",
+        "exit_code": 0,
+        "log_sha256": "562534c53ef1281988ac1e104069034d2c58648773b46a5e37469b1f98b8652c",
+        "log_file": "/tmp/health-wallet-b033-w6uzcegf/disabled-summary-entry-resumed.log",
+        "argv": [
+          "/home/m-tayyab-aslam/.nvm/versions/node/v24.22.0/bin/node",
+          "/tmp/health-wallet-b01-y32jdgh5/snapshot/backend/dist/summaries/executor-entry.js"
+        ],
+        "disabled_verified": true
+      }
+    ],
+    "systemd_operations": 0,
+    "toolchain": {
+      "node": "v24.22.0",
+      "node_sha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+      "python": "3.12.3",
+      "python_dependencies": {
+        "fastapi": "0.158.1",
+        "httpx": "0.28.1",
+        "jsonschema": "4.10.3",
+        "pydantic": "2.14.1",
+        "starlette": "1.9.0"
+      }
+    },
+    "initial_receipt_preserved": "/tmp/health-wallet-b033-w6uzcegf/offline-receipt.json",
+    "initial_failure": "Sandbox local IPC EPERM before TS test startup",
+    "all_required_checks_passed": true,
+    "initial_infrastructure_failure_retained": true,
+    "resumption_receipt": "/tmp/health-wallet-b033-w6uzcegf/offline-resumption.json"
+  },
+  "named_safety_checks": {
+    "heartbeat extends a genuinely short lease during slow generation": true,
+    "committed renewals span multiple lease periods before publication": true,
+    "transient fake service failures schedule bounded retry and later succeed": true,
+    "heartbeat failure cancels generation without stale publication": true,
+    "database-expired heartbeat cancels the provider without publication": true,
+    "stale worker fenced after recovery and a new attempt": true,
+    "source replacement during generation cannot publish": true,
+    "cancellation while publication waits rolls back accepted evidence": true,
+    "concurrent executor invocations admit only one model generation": true,
+    "real database clock expiry fences heartbeat and publication": true,
+    "gated heartbeat observer can consume a committed lease without a production defect": true,
+    "a due retry is legitimately idle while its exact row is locked and succeeds after release": true,
+    "uncooperative injected I/O prevents further admissions and reports incomplete drain": true,
+    "executor retry exhaustion is terminal and request cannot reset it": true
+  },
+  "cleanup": {
+    "schema_version": 1,
+    "runs": [
+      {
+        "phase": "diagnostic",
+        "directory": "/tmp/health-wallet-summary-db-Y7yz4N",
+        "run": "stage-b-2081e47b855e62796ca1e3bd",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      },
+      {
+        "phase": "focused",
+        "directory": "/tmp/health-wallet-summary-db-tP3OLy",
+        "run": "stage-b-94d5a16b4792b85ba7f33f1e",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      },
+      {
+        "phase": "broad",
+        "directory": "/tmp/health-wallet-summary-db-pIUL2n",
+        "run": "stage-b-ce3c93d8246c6ebddb2ec136",
+        "containers_absent": true,
+        "volumes_absent": true,
+        "image_tag_absent": true,
+        "container_count": 2,
+        "volume_count": 1,
+        "recorded_cleanup": [
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "container",
+            "status": "removed"
+          },
+          {
+            "kind": "volume",
+            "status": "removed"
+          },
+          {
+            "kind": "image",
+            "status": "removed"
+          }
+        ],
+        "isolation": {
+          "network": "none/shared-private-namespace",
+          "publishedPorts": 0,
+          "privileged": false,
+          "bounded": true,
+          "mountAllowlist": true
+        }
+      }
+    ],
+    "owned_containers_absent": 6,
+    "owned_volumes_absent": 3,
+    "owned_test_image_tags_absent": 3,
+    "dependency_cache_tag_absent": true,
+    "preexisting_container_count": 5,
+    "preexisting_container_state_and_start_stop_times_unchanged": true,
+    "no_prune": true
+  },
+  "requirement_traceability": [
+    {
+      "requirement_id": "FR-010",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "FR-011",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "FR-012",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "FR-015",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "FR-023",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-01",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-02",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-04",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-05",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-07",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "NFR-08",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "DEC-07",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "DEC-12",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M04-06",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M04-07",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M04-08",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M05-06",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M13-08",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M14-01",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M14-07",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M15-01",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M15-03",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M15-05",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M15-09",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M16-01",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M16-03",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M16-04",
+      "previous_status": "I",
+      "current_status": "I",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    },
+    {
+      "requirement_id": "PRD-M16-05",
+      "previous_status": "P",
+      "current_status": "P",
+      "status_changed": false,
+      "evidence_added": "B03.3 controlled characterizations, narrow test corrections, focused/broad/offline qualification and exact-owned cleanup",
+      "reason": "Regression/test-contract evidence only; no product integration, clinical or release completion",
+      "production_ready": false
+    }
+  ],
+  "operational_gates": [
+    {
+      "gate": "System-manager composition",
+      "status": "Missing",
+      "evidence": "system-supervision.ts defines ports; live-runtime.ts still composes user-manager adapter; no system OS transport"
+    },
+    {
+      "gate": "Artifact/service identity",
+      "status": "Partial",
+      "evidence": "Gate 1A models independently pinned artifacts, boot/invocation/process identity; reviewed deployed native graph/runtime identity not proven"
+    },
+    {
+      "gate": "Credential delivery",
+      "status": "Partial",
+      "evidence": "Gate 1B strict file loaders and fake tests exist; service staging/injection/rotation not operationally composed"
+    },
+    {
+      "gate": "Network delivery",
+      "status": "Missing",
+      "evidence": "PrivateNetwork=yes and deny-all address-family allowlist cannot deliver required PostgreSQL/S3 TCP traffic; reviewed network policy needed"
+    },
+    {
+      "gate": "Application containment",
+      "status": "Partial",
+      "evidence": "Synthetic Python cgroup probes passed historically; actual Node/OCR child graph has no system-unit live proof"
+    },
+    {
+      "gate": "Controller-loss handling",
+      "status": "Partial",
+      "evidence": "BindsTo/After definitions, bounded fake-port verification exist; actual application-controller loss not exercised"
+    },
+    {
+      "gate": "Runtime-expiry handling",
+      "status": "Partial",
+      "evidence": "RuntimeMaxSec and synthetic timeout proof exist; no application-level exact-invocation expiry receipt"
+    },
+    {
+      "gate": "Supervised worker composition",
+      "status": "Partial",
+      "evidence": "Scoped disabled scheduler exists; executable system-manager+credentials+network composition missing"
+    },
+    {
+      "gate": "Deployment/runtime qualification",
+      "status": "Missing",
+      "evidence": "No approved actual-worker canary or release-like identity/network/child/recovery verification"
+    }
+  ],
+  "evidence_directory": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.3-residual-concurrency-20261023-w6uzcegf",
+  "plan_sha256": "e0f023a1b6a986622730bd0abf037bc66f125575655e58b2d2659efc7b150cfc",
+  "source_before": {
+    "root": "/home/m-tayyab-aslam/Music/ai-health-wallet",
+    "branch": "main",
+    "git_status": "?? .gitignore\n?? ai-service/\n?? backend/\n?? docs/\n?? infrastructure/\n?? shared/\n",
+    "files": [
+      {
+        "path": "ai-service/requirements-test.txt",
+        "sha256": "3659d316850fa8511228d80bd833dd3d374e275d7725fa104d3f20ccd690534b"
+      },
+      {
+        "path": "ai-service/requirements.txt",
+        "sha256": "1a3a5a602c3523710952c664ac4b563525801c4e91c750d80274b87633c5e9d2"
+      },
+      {
+        "path": "ai-service/requirements-service-test.txt",
+        "sha256": "44a03fb6cdc0c658937ad0a7ca77b4c53d7c41d5ad810918a0650b12d0535959"
+      },
+      {
+        "path": "ai-service/summary_evaluation/runner.py",
+        "sha256": "60175bf1836f4a945e802a523ab98ac1913e3d541f0141aebb9898560e255431"
+      },
+      {
+        "path": "ai-service/summary_evaluation/scenarios.py",
+        "sha256": "0cce6dae668eb52404854d578c61f785098261cc43fdbdd3fd89a5ea5f8a8ba7"
+      },
+      {
+        "path": "ai-service/summary_evaluation/reference.py",
+        "sha256": "bb679c939c844f032f05d05d89d282e36c386a2f6b629ac7484db416eefd0893"
+      },
+      {
+        "path": "ai-service/summary_evaluation/evaluator.py",
+        "sha256": "bc1b8f295acd0fec068e801abe199ae6281d2045500d1bd947ff847e1c9aa49b"
+      },
+      {
+        "path": "ai-service/summary_evaluation/__init__.py",
+        "sha256": "db52dbca58f331209149cdbd6370afed65fe5e37c4132117ea0ef319b5442db4"
+      },
+      {
+        "path": "ai-service/summary_contracts/validation.py",
+        "sha256": "062d0488b4d3f6fee6ef1435616b6b91c3aadcba10320cb99829dd03ea0c5738"
+      },
+      {
+        "path": "ai-service/summary_contracts/types.py",
+        "sha256": "c985801180ec2e31917a43cfd20c306ac587057e424a1a01111e8e800d48ceeb"
+      },
+      {
+        "path": "ai-service/summary_contracts/__init__.py",
+        "sha256": "f602f70beb93ad1a007583f2e832bd0748abe821c4fb012089b4050d338542d7"
+      },
+      {
+        "path": "ai-service/tests/test_service.py",
+        "sha256": "1a7c391c5181aa34746327c98831a57f8b435efed4fad0e23bf1ea28c21debbc"
+      },
+      {
+        "path": "ai-service/tests/test_contracts.py",
+        "sha256": "bd433211e2c12816f108aab47a19d892957e1b1f0356bef7746e65707c1fb3f6"
+      },
+      {
+        "path": "ai-service/tests/test_evaluation.py",
+        "sha256": "3f621ba4ca18070385dde2e811f0f0fe8b98b2295e97ff4f3d09af1befc0cef6"
+      },
+      {
+        "path": "ai-service/tests/test_ollama_local.py",
+        "sha256": "3f4512034cb97cc5eb6290c21e4ee239127d34a9d9b3c0dd95c46b62c54f3d32"
+      },
+      {
+        "path": "ai-service/tests/test_benchmark.py",
+        "sha256": "2d5a91e75df1cacc5ffa6b191b6a6d15773862298f56adc74610799abdaf8d10"
+      },
+      {
+        "path": "ai-service/summary_service/protocol.py",
+        "sha256": "44847b4fb405d6af85c3b14acc6bc6f1a74174b694d7c621d78d16618b5deccf"
+      },
+      {
+        "path": "ai-service/summary_service/workflow.py",
+        "sha256": "9c3cbfc59df71add44f7899cc111d1f4f266a56b790a69997cba4e5fb2591034"
+      },
+      {
+        "path": "ai-service/summary_service/provider.py",
+        "sha256": "d03703c09c8ccfe6af2801930925050a142cdf50e1ce0ec679602816b0c1b705"
+      },
+      {
+        "path": "ai-service/summary_service/__init__.py",
+        "sha256": "197c0ad1fd19f03d896c4f5af9804690784d477b24c2f0e7b97733de3d489b7d"
+      },
+      {
+        "path": "ai-service/summary_service/app.py",
+        "sha256": "9745f9a7e6df499e4eb0801ed20fb8e7e7b2081ee85492ac79e63c73caffbad4"
+      },
+      {
+        "path": "ai-service/tools/check_contracts.py",
+        "sha256": "c20894cb6f4e1d46706736498a30b6ca8db9c79e28d133446f73e82b479d4d03"
+      },
+      {
+        "path": "ai-service/tools/build_synthetic_fixtures.py",
+        "sha256": "bf580f61c42a3726d9b37ae3edbb76dc9a5cf516129993fa8fd28e864611d571"
+      },
+      {
+        "path": "ai-service/tools/generate_contracts.py",
+        "sha256": "86b2ad7065a504e1b5cd775c5c7ddfffa2478ef99872dcd5457ceb3d95b1312f"
+      },
+      {
+        "path": "ai-service/tools/service_fixture_bridge.py",
+        "sha256": "04e9468913bb39428443393e48591100400cf7fff6b7a4bfb82639a5fec64265"
+      },
+      {
+        "path": "ai-service/summary_benchmark/ollama_http.py",
+        "sha256": "da94f611886f68d3f106a919d550062cadfbcaa753cfecce3b3805cdad3909ea"
+      },
+      {
+        "path": "ai-service/summary_benchmark/contracts.py",
+        "sha256": "a6dcf55263a99d1d580923744510fdac6bd9ac5e312972cad12d45f51f58f6f7"
+      },
+      {
+        "path": "ai-service/summary_benchmark/offline.py",
+        "sha256": "b8b1c14317dd92ebb8e497f1b9b76934fc2bc29d80b9f1f6564ef4d98aaa2c6c"
+      },
+      {
+        "path": "ai-service/summary_benchmark/preparation.py",
+        "sha256": "182d3d1e85510974720354e3e8e6c3034c275f46cb22559c71a7f862a55c5293"
+      },
+      {
+        "path": "ai-service/summary_benchmark/ollama_local.py",
+        "sha256": "13ae244fd6477b1807a59d73e998d09a8f2c94b97e368fa36f27725245e5e78c"
+      },
+      {
+        "path": "ai-service/summary_benchmark/ollama_session.py",
+        "sha256": "372b25b980c3dc366d48bd9e4176d9e352804d45b1fefdb4f3227f363d16a1bb"
+      },
+      {
+        "path": "ai-service/summary_benchmark/__init__.py",
+        "sha256": "211a45f57bff393fcc503ecd6ba90105044e92b9affded38c974c801592869de"
+      },
+      {
+        "path": "backend/package.json",
+        "sha256": "0b5c83cfd752db5bbe8a0257efee90182a25f31cdb071acfc3b3e88552de160a"
+      },
+      {
+        "path": "backend/package-lock.json",
+        "sha256": "14c885cee8ec73a2ae3d19466db58b531be424123ef3880bb774016e702e83e7"
+      },
+      {
+        "path": "backend/tsconfig.json",
+        "sha256": "5a18e2514e4210c3c70ce78894bfd0584f8eb3d6a3de5cde95554428ad58a4c1"
+      },
+      {
+        "path": "backend/src/server.ts",
+        "sha256": "09bf045f9cdeeef17906154e1762c9d3dc1584ae5499210e0fddc415a7e86ef5"
+      },
+      {
+        "path": "backend/src/app.ts",
+        "sha256": "731ad9cdb2ae315a1fe00bf0ac37b5a6911ac956a28e2f62e0fb4148ce2b9bda"
+      },
+      {
+        "path": "backend/src/http/errors.ts",
+        "sha256": "b3ebc29ce808a343386ea9ccfcd1d8525227cd65d4c36e677fd9a5f55d7b992f"
+      },
+      {
+        "path": "backend/src/b03-db-checks/integration.check.ts",
+        "sha256": "909c511dbe66933a70be64806bd548d4170c131eccc9ec166b599704c66adebb"
+      },
+      {
+        "path": "backend/src/auth/passwords.ts",
+        "sha256": "588d2c6fe47a004d01e306803b1248fe76c5a74e2cc5717d3f956e67d7eff7b9"
+      },
+      {
+        "path": "backend/src/auth/routes.ts",
+        "sha256": "def98f7307205781179bd6c3bc2f76ff587241e5034595ec0327631aa6268769"
+      },
+      {
+        "path": "backend/src/auth/tokens.ts",
+        "sha256": "d91fe86736c4084e34d3f98d28a9d9ee1707b9e024acce04652fd7ff73b508e2"
+      },
+      {
+        "path": "backend/src/auth/auth.test.ts",
+        "sha256": "1b74b1de1c279034d4a39fa1ad8751edadb4251c1278fdf6b4eb5f2a852f00b3"
+      },
+      {
+        "path": "backend/src/auth/middleware.ts",
+        "sha256": "156a578ef8fded0aa8167dfb6bf5be3abdc800e6e51b28862a4504f2f4adeef0"
+      },
+      {
+        "path": "backend/src/summaries/executor-entry.ts",
+        "sha256": "08844e1091c6e02256addce2fabddafc556dcf3b03be516e0172e391ef42ab35"
+      },
+      {
+        "path": "backend/src/summaries/routes.ts",
+        "sha256": "333fe80ffa4a115a4c7f5ee5107ecde9f5445f2ca974448a0bfeb710b4aa9eed"
+      },
+      {
+        "path": "backend/src/summaries/validation.ts",
+        "sha256": "27cd025a95365493885f4d5f85057190157daa4e683524e18186d654f780299a"
+      },
+      {
+        "path": "backend/src/summaries/client.ts",
+        "sha256": "6b0b54c2458fb509486322f8f4dcb33f41dd4627999aef13d7abcb6322962822"
+      },
+      {
+        "path": "backend/src/summaries/executor.ts",
+        "sha256": "7b86bf62dadc0b4394f858e7228d1390706ab297a080c6be8f63da98fe35cd0d"
+      },
+      {
+        "path": "backend/src/summaries/schema.generated.ts",
+        "sha256": "4fec36429950171c192b7731385143a2371670a0e1dab8853254e90dad7c9f6b"
+      },
+      {
+        "path": "backend/src/summaries/contracts.ts",
+        "sha256": "ad2ba38ab437dd61a6d8b8e8694cc7203ff786f8abba41905a5eea4146ece427"
+      },
+      {
+        "path": "backend/src/summaries/jobs.ts",
+        "sha256": "f6d5992ebfa7299a33622a716d64e87d0040406da383c9f2f139ba633b0b714e"
+      },
+      {
+        "path": "backend/src/background-db-checks/postgres.check.ts",
+        "sha256": "e8b2814eb9c514f7dc8b21d45ed3635b71b766d8a3496dcf204881a91cf521d0"
+      },
+      {
+        "path": "backend/src/documents/storage.ts",
+        "sha256": "c1242b441572d9e16859f5050572df1811633eced40324e363a77bfce7656fd3"
+      },
+      {
+        "path": "backend/src/documents/storage.test.ts",
+        "sha256": "95bf9ec24c4f46557e5f7fbe38c9e7ed1d432b56cfc99fe7a98c683c766ec44c"
+      },
+      {
+        "path": "backend/src/documents/file-access.ts",
+        "sha256": "615267af4457686a87fa46fb3a2ed5b692b61df806ac0f7244e5e44388f59029"
+      },
+      {
+        "path": "backend/src/documents/service.ts",
+        "sha256": "3f38390d171be94e33e8a362253ae12024f5544c7d3d4cf0acd91483545376f1"
+      },
+      {
+        "path": "backend/src/documents/routes.ts",
+        "sha256": "88e98c5b8f7d7cc9975c7ff3768b39bb23102284bbaa723f53d0b568f1c0162c"
+      },
+      {
+        "path": "backend/src/documents/validation.ts",
+        "sha256": "7db93473f6e03bb8919f46afc95659a3fd53b34c2a20b845a4a00a2bc1245bad"
+      },
+      {
+        "path": "backend/src/documents/validation-worker.ts",
+        "sha256": "cfe5fda298d1fb5205825f2b5f33bd1d2e405f56177c6d31afa1798be31c2f1c"
+      },
+      {
+        "path": "backend/src/documents/multipart.ts",
+        "sha256": "3df94928f73e7edf6c25aa81941a154018ae4a3b6fb1b1a604e5289b8a491a06"
+      },
+      {
+        "path": "backend/src/documents/original-reader.ts",
+        "sha256": "0592e629d779672f637351f77097c7cbd8de09b63862e02a62258d5b98d747f3"
+      },
+      {
+        "path": "backend/src/documents/repository.ts",
+        "sha256": "ca05b4db766821a04a4968b205d253c02a28ea15b69d76f2684da1e439e213d1"
+      },
+      {
+        "path": "backend/src/documents/storage-safety.ts",
+        "sha256": "035d365334b33d1ef67ab5da3b4f747a48324f9f276ed6b2d582281d568a33ea"
+      },
+      {
+        "path": "backend/src/documents/documents.test.ts",
+        "sha256": "5c8b5ba72175531d00bbb2569ba8713cbf66f2d00a4a82c4a0b083fb7cda9140"
+      },
+      {
+        "path": "backend/src/documents/integrity.ts",
+        "sha256": "4ab7e3482dea5606be7ad361b5ae48a4b65a8207ba5f66b59475eea971aef9aa"
+      },
+      {
+        "path": "backend/src/b03-checks/api.check.ts",
+        "sha256": "60cde69abbd69eb204c6bee765db3a2dcf8a7824f328b6af8b072537b05dbe24"
+      },
+      {
+        "path": "backend/src/config/documents.ts",
+        "sha256": "09eb7dfc162150c90098790cb42a4c32c4e8e3e7043bc437f8e832da2f92ea87"
+      },
+      {
+        "path": "backend/src/config/env.ts",
+        "sha256": "29d9796c34605f49722983b75c66a5d372b2842529d2b0f41c5c552d3f295f44"
+      },
+      {
+        "path": "backend/src/config/auth.ts",
+        "sha256": "533b96f761ff61fd30dcf2f99fbab7abd168af4c34938d00f6c9f2fea6036473"
+      },
+      {
+        "path": "backend/src/b02-checks/contracts.check.ts",
+        "sha256": "f33909bcbd17e98fe2cc8df6c13c8f9971f8e7a81be06d3c8bbae322a76bb1aa"
+      },
+      {
+        "path": "backend/src/integration/scoped-worker.ts",
+        "sha256": "fae41d9a220aefd5b88d7907ae1be88493e3549c8900b0a85a3ebda03b3a5367"
+      },
+      {
+        "path": "backend/src/integration/live-run.ts",
+        "sha256": "c0610c4f4106e9bebaad2deba1b91ca9023f84779d5f2e93f7c9f6b729f7023b"
+      },
+      {
+        "path": "backend/src/integration/aws-preflight.ts",
+        "sha256": "105f15a4e707e6b68abee937588ca58835be3789ec42478b396925e7177afc58"
+      },
+      {
+        "path": "backend/src/integration/cli.ts",
+        "sha256": "f7e9abc680ccc9564d32556209542a9898f2ceda5b4c670541ceaa2d30deb2e3"
+      },
+      {
+        "path": "backend/src/integration/guards.ts",
+        "sha256": "9863713d54b8fa6dd35bd05ff200a818cc3702c61229fee2213376bf7ef2ff3f"
+      },
+      {
+        "path": "backend/src/integration/workflow.ts",
+        "sha256": "2af75a70b10192861e465f750a32036905ef6d1ebefc4d1c52ab81d02ec8c815"
+      },
+      {
+        "path": "backend/src/patients/validation.ts",
+        "sha256": "5f6d7446c41c5f40bd2c0cd1dad66b589ecd4d1a5995400786ab21bc1525dda2"
+      },
+      {
+        "path": "backend/src/patients/repository.ts",
+        "sha256": "3daf795eca08a134a7fe99005503c45196f3e9050131eef22864990eb6ffaaf0"
+      },
+      {
+        "path": "backend/src/summary-db-checks/jobs.check.ts",
+        "sha256": "724d4384c2fdb66fabcf541279c57da4ddebaa5c3f59fbcc4bf61a51169c115b"
+      },
+      {
+        "path": "backend/src/summary-db-checks/lifecycle.check.ts",
+        "sha256": "ec60c83df013fa360c5a6ba1baccfb2e01d66c7053109990e6cf29c659b7d904"
+      },
+      {
+        "path": "backend/src/processing/extraction.ts",
+        "sha256": "558da0ccd8a8cfba1fc989b83d4e8234b2bd660b2b17dff204374c333e08b814"
+      },
+      {
+        "path": "backend/src/processing/background-runtime.ts",
+        "sha256": "9b3259d15509c3961ce9a10171cd2ff7736cd17202e7181dfe8260592c89c806"
+      },
+      {
+        "path": "backend/src/processing/retrieval.test.ts",
+        "sha256": "04244bc365fc9475cd7b5a237427a5a8c4998634c9ad87b8156580d92fcf1e93"
+      },
+      {
+        "path": "backend/src/processing/service.ts",
+        "sha256": "7b64c55d6bd9748c522763be08b5d47f637dcb38af9292ec74fb38409df912db"
+      },
+      {
+        "path": "backend/src/processing/api-repository.ts",
+        "sha256": "daa4981e2cbcddbf47f33f5495d034c2de65eaa4e97f5b002293b5567dd9570e"
+      },
+      {
+        "path": "backend/src/processing/config.ts",
+        "sha256": "b8afa1a3cc87313bcb987a77c13f3f0521c6fb9960b06c9874208538ac9aa9c7"
+      },
+      {
+        "path": "backend/src/processing/background-coordinator.ts",
+        "sha256": "070aaec6560e5ad7ca4dcd7d07cab9397224a24f4f06c1984a8f1046236fa8dc"
+      },
+      {
+        "path": "backend/src/processing/ocr-image-worker.ts",
+        "sha256": "28ae567191f70cfc0adc408769936efded2396f977b24d1d0d4c231446fee5d3"
+      },
+      {
+        "path": "backend/src/processing/persistence.test.ts",
+        "sha256": "bf1acaf179843fe76092fc1c43ab48ea5a95f3e2ad792302b7dcfb41e42eb6e0"
+      },
+      {
+        "path": "backend/src/processing/pdf-text.ts",
+        "sha256": "10b045d212c02b63ca70e1aea834d6529b0bb135019f997087bb4d15519dc76b"
+      },
+      {
+        "path": "backend/src/processing/digital-pdf.test.ts",
+        "sha256": "852ed07cc4b6f951b0cd1f470bcc435e9fdd6fc57a7e822c2c6a0c4b3fac4740"
+      },
+      {
+        "path": "backend/src/processing/worker.ts",
+        "sha256": "f24a66524b004d91aeb0bd33515ea45fda3559d128279b711738df885bf806ee"
+      },
+      {
+        "path": "backend/src/processing/repository.ts",
+        "sha256": "a2f77a6dea6ac068f57beae0e33234bc0bb01f2883704d4bc4d9782b7ff14d10"
+      },
+      {
+        "path": "backend/src/processing/ocr.test.ts",
+        "sha256": "b71866cf6232536db2efc443492c1e4fe74f63f1327a327743846dec9b65fdbf"
+      },
+      {
+        "path": "backend/src/processing/retrieval.ts",
+        "sha256": "491629ce21185c019e5e955b2c709bb9f3a3e37805b747b4e3748733a5deeccf"
+      },
+      {
+        "path": "backend/src/processing/background-runtime-core.ts",
+        "sha256": "fa53d3b5a6bbab2210442d0ebfd5afaecd98ad5fee1f1456549b5172f56e4ab8"
+      },
+      {
+        "path": "backend/src/processing/ocr-processor.ts",
+        "sha256": "08700e1939619cee41d0d193f246aa0eb839b092db597d174effa9ef438bb495"
+      },
+      {
+        "path": "backend/src/processing/ocr.ts",
+        "sha256": "7edb9a97300eaee1736cf51700cce3c7e36e3b91419f8cc7becbd07543ec52ed"
+      },
+      {
+        "path": "backend/src/processing/digital-pdf-processor.ts",
+        "sha256": "bbe8b8b7d3445770c3e5958371960713c786cdf5adb77d9889e3382c363877f3"
+      },
+      {
+        "path": "backend/src/processing/background-service.ts",
+        "sha256": "6a0e6b1e137140498d231857255e5b316c467a7e945412cc7232f45d25157ac3"
+      },
+      {
+        "path": "backend/src/processing/api.ts",
+        "sha256": "224180e71fe02a8abff74024ae10aab60429e3fba998f2ed3d6a6322afe208f2"
+      },
+      {
+        "path": "backend/src/processing/errors.ts",
+        "sha256": "69a9bee2ec72669f832ca51fa6176f4f990ce65079a0d17b4df3b33eaed62076"
+      },
+      {
+        "path": "backend/src/processing/background-entry.ts",
+        "sha256": "51fc6774177e39fc18f545b8466543531c1f0a842087b565cd2f1b586c35a215"
+      },
+      {
+        "path": "backend/src/processing/ocr-process.ts",
+        "sha256": "f717e0a04ef71977ee74cb75aa7ffbe588bd0ea5328ff01c20bed0e2e69a52b0"
+      },
+      {
+        "path": "backend/src/processing/pdf-text-worker.ts",
+        "sha256": "6100ce6e8a7ee4b3d3b62dc04500d064e0de5a64a3689e5725577ef441962968"
+      },
+      {
+        "path": "backend/src/processing/background-repository.ts",
+        "sha256": "76b9b6d2cc025d1852fb9f4550ec9344499f8b75b136d655e925b452cf4b6660"
+      },
+      {
+        "path": "backend/src/processing/background-config.ts",
+        "sha256": "5dfb2e63ff93635fa8bba620e1af54cdbb3710de8b012e4e5d7ca465b32402f3"
+      },
+      {
+        "path": "backend/src/processing/processing.test.ts",
+        "sha256": "563d4a10d484c5b04dbb7e2f5aea73d81069bd1ddc7c7412ea36db7bc5738760"
+      },
+      {
+        "path": "backend/src/processing/background-health.ts",
+        "sha256": "d229d7a0b9266880cb5df0b4dc38967515b37ade037fa8c70c8e20db1bf37287"
+      },
+      {
+        "path": "backend/src/processing/fixtures/pdf-fixtures.ts",
+        "sha256": "cbba83d04324c2437baed3bddddad4ed11c9893c67b0fb40ef3f589adb4963ee"
+      },
+      {
+        "path": "backend/src/processing/fixtures/ocr-fixtures.ts",
+        "sha256": "0005998d656fb16c9ea27c888ec567de85472c84c3afbc574ee980e8265dd70e"
+      },
+      {
+        "path": "backend/src/integration-checks/live-s3-ocr.check.ts",
+        "sha256": "ef5f619134a01339c4e5c2cd1e032055f4e059bf859ef30694e696f43ba0c9c5"
+      },
+      {
+        "path": "backend/src/background-checks/background.check.ts",
+        "sha256": "110bf1e058395012f1c066e6af5d072ca8810f55af9b1a6e025c2bf2b00e1d9b"
+      },
+      {
+        "path": "backend/src/database/migrations.ts",
+        "sha256": "79a62b00594fcfe9874e9ab06f30727c19edc276a58fbee8217601d25fdbd451"
+      },
+      {
+        "path": "backend/src/database/pool.ts",
+        "sha256": "e727f71012904fcc9cf584513c6119eb1fe3e8c2b287ea0d5a7ffe26d8cb16c7"
+      },
+      {
+        "path": "backend/src/database/schema.test.ts",
+        "sha256": "eb889d37839444d26cb58fb6767045a2ab496973011702e10a9518211e633fe0"
+      },
+      {
+        "path": "backend/src/database/migration-pool.ts",
+        "sha256": "dfea1ee0ffb9ff977fcdf579e7f0643d122c9ce26914f6db4ef52a010f44fbc4"
+      },
+      {
+        "path": "backend/src/database/migrate.ts",
+        "sha256": "a27264a3107dcb96746c348b8f0ff87caa65fdf979f4aabbb0308bbc33e420f6"
+      },
+      {
+        "path": "backend/src/database/security.test.ts",
+        "sha256": "9d801506fa97a04476f6c5ac403bd446e1ec4784b382c5fd4c7ed0bcef4c7003"
+      },
+      {
+        "path": "backend/src/canary-checks/system-manager.check.ts",
+        "sha256": "d4d309eb7498724e703bc38a9778bd794b88a2607672a6898f7f25b6a51b1d7d"
+      },
+      {
+        "path": "backend/src/canary-checks/supervision-probe.ts",
+        "sha256": "ca48d26369b24e8db33673801b10e9ff8cd02b0f93e87651e9940fbc84c418b7"
+      },
+      {
+        "path": "backend/src/canary-checks/postgres.canary.ts",
+        "sha256": "992aae66ac6b97e153962991ee428c6bb7f66750f549bf3765974f0c3b6722cd"
+      },
+      {
+        "path": "backend/src/canary-checks/hardening.canary.ts",
+        "sha256": "fd9cbd54c6f69bf1bf9488ab7c33b7e71a5d5b24bb226eb9141f9618ea29c9db"
+      },
+      {
+        "path": "backend/src/canary-checks/credentials.check.ts",
+        "sha256": "8a45475894575eab61bfdfa45aca5cad8fe6558d09e463507fcc66338be77cfb"
+      },
+      {
+        "path": "backend/src/canary-checks/hardening.check.ts",
+        "sha256": "1576d99e9cfcf18a8e784ec998812f9890f6313987bd60c5c0cf3ce434357bf8"
+      },
+      {
+        "path": "backend/src/canary-checks/preparation.check.ts",
+        "sha256": "103b964e938d2065e3766aeae9fe5d7ae0dafb5f4819f7f9085528334519948e"
+      },
+      {
+        "path": "backend/src/stage-c/receipts.ts",
+        "sha256": "2515636119408401d6730172c5d23fb2fdcf7cda2b0f090f36c55c06b7eef29f"
+      },
+      {
+        "path": "backend/src/stage-c/controller.ts",
+        "sha256": "0fe4d0e2bd5e6382d4365561d9a53489f5ce9ede400906314470cc9a2308b17b"
+      },
+      {
+        "path": "backend/src/stage-c/evidence.ts",
+        "sha256": "89e84066960a7536a9741bac511696d3f11e0f22587efafbf7f0c6c741c8d111"
+      },
+      {
+        "path": "backend/src/stage-c/system-credentials.ts",
+        "sha256": "c0bf8a5b4e00ee0be034f0f7cd724cec4a29f7d2c34c2de78cdcf4153613c1c9"
+      },
+      {
+        "path": "backend/src/stage-c/system-supervision.ts",
+        "sha256": "06e5da0851549d041ee3c8781af29ed8dd23447bf68add4c42855fa740f5c95f"
+      },
+      {
+        "path": "backend/src/stage-c/live-composition.ts",
+        "sha256": "8a3f7f9edc7d4fc7d464c0458a9257359c56cdb448bb8a41ef93c24487207806"
+      },
+      {
+        "path": "backend/src/stage-c/inside-protection.ts",
+        "sha256": "0329601283b4980d83cf08fff14f29871e79fffedcbb0be907c89a7bf9af8761"
+      },
+      {
+        "path": "backend/src/stage-c/preservation.ts",
+        "sha256": "31943cf33b8a4cff042eb28d6802d746c8e6f6ded4610ebadf772bf29308c80d"
+      },
+      {
+        "path": "backend/src/stage-c/system-supervision-proof.ts",
+        "sha256": "3a1123c63e02e33a3053b4c27c2499d1e7bdc64b7e09180756fd615dcf5fbd9e"
+      },
+      {
+        "path": "backend/src/stage-c/manager-selection.ts",
+        "sha256": "74fc78adad5896ab34b66b6cd90a43f3b940a3114770e6be6267bfbecb6670f5"
+      },
+      {
+        "path": "backend/src/stage-c/adapters.ts",
+        "sha256": "ccfdc468fe037acc088b5d12dd5aa43c50bc4775e24d2fb346a9339364443b5b"
+      },
+      {
+        "path": "backend/src/stage-c/credential-files.ts",
+        "sha256": "88fcd7cd16db9eec91151f8f18860ecdc396461fbc231791503cc87ac92ecf38"
+      },
+      {
+        "path": "backend/src/stage-c/supervision.ts",
+        "sha256": "a85b5ba5656dbdc7777d9338c8c8bdec125de7b34fc5cdf8656e062758558b1f"
+      },
+      {
+        "path": "backend/src/stage-c/cli.ts",
+        "sha256": "43e684f5fcf666d0f8e0ba6d97cef87fe756f220a91a69b41378aad5c5397632"
+      },
+      {
+        "path": "backend/src/stage-c/runtime-flags.ts",
+        "sha256": "0cd75f0e2265cdffc4e08f8413e2020e03adde6776f4b237c0d6dd060cf17182"
+      },
+      {
+        "path": "backend/src/stage-c/systemd-adapter.ts",
+        "sha256": "469fa5b1f7e7f82c40ca046cfc3598596bf6398f33b1b9731086a182f88e39d7"
+      },
+      {
+        "path": "backend/src/stage-c/inside-entry.ts",
+        "sha256": "f393cf375368d17b6a45ba0dabc9869ebc26b5403d92d10e3c057e83a7f4708d"
+      },
+      {
+        "path": "backend/src/stage-c/proof.ts",
+        "sha256": "e3ded1ed6e9f91872a7df768f1254093aa69b709390719f670cf2100ba3a3794"
+      },
+      {
+        "path": "backend/src/stage-c/database.ts",
+        "sha256": "08686c9a33d747e8b0fe943a62d2806b77e000b971aabf22cb4868c2875823bc"
+      },
+      {
+        "path": "backend/src/stage-c/live-runtime.ts",
+        "sha256": "9cabab683f16c694e35b0221248b4567cfb3e7dd684c3e1c5810d1250fe41168"
+      },
+      {
+        "path": "backend/src/stage-c/runtime-policies.ts",
+        "sha256": "dd9f9d62fda5f201c81e597ab59996ae3444cfea52a70a84fa12de2553efc2bc"
+      },
+      {
+        "path": "backend/src/stage-c/safety.ts",
+        "sha256": "8ba0d0ce455048ddea42a817518fa53fde548a586d554c275e3cff65a6d898f4"
+      },
+      {
+        "path": "backend/src/stage-c/private-files.ts",
+        "sha256": "ad67184f22f428f19e9cb56af0105781ca4734dd542856a901815db1653d6fee"
+      },
+      {
+        "path": "backend/src/summary-checks/benchmark.check.ts",
+        "sha256": "699cc4bfd3a631cbabad3ce1c746584114bb85c33a607d52c7d7239d3a69ee9c"
+      },
+      {
+        "path": "backend/src/summary-checks/evaluation.check.ts",
+        "sha256": "7dde9ef40cb16a9391982d3c6d1c8e122c10b776741148041c35f3abf8a6c5cb"
+      },
+      {
+        "path": "backend/src/summary-checks/contracts.check.ts",
+        "sha256": "657b22c925e161b04c2d01a47ac848dcfd9a820fadc6e9d4b1e656299a8466a9"
+      },
+      {
+        "path": "backend/src/summary-checks/jobs.unit.ts",
+        "sha256": "551c4104b5b3791a47cd97e9d1c5d9dc0f58a3186343ac6929cad10385a18a01"
+      },
+      {
+        "path": "backend/src/summary-checks/executor.unit.ts",
+        "sha256": "b783ede96cf5679cfd5ac81afdc3b799420de4c90eb194be507edcacbc7d7401"
+      },
+      {
+        "path": "backend/src/summary-checks/client.service.ts",
+        "sha256": "1128a0c0ac85ba2b93228e0817d23bc0a2759b15de6a0f152e77ac17ccffdd7e"
+      },
+      {
+        "path": "backend/migrations/0001_initial_schema.sql",
+        "sha256": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1"
+      },
+      {
+        "path": "backend/migrations/0003_lease_fenced_extraction.sql",
+        "sha256": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3"
+      },
+      {
+        "path": "backend/migrations/0002_document_processing_lifecycle.sql",
+        "sha256": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7"
+      },
+      {
+        "path": "backend/migrations/0004_medical_summary_jobs.sql",
+        "sha256": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b"
+      },
+      {
+        "path": "docs/BACKEND_MASTER_ROADMAP.md",
+        "sha256": "57404b4d93c5f7824c2858be5bcc81697b5dc0048524b17ad6ec564e488eea45"
+      },
+      {
+        "path": "docs/PROJECT_IMPLEMENTATION_STATUS.md",
+        "sha256": "8db3957939e09033acd7f1877a6d74ba71df2a7cef896f8ee1536bd28143f9d4"
+      },
+      {
+        "path": "docs/B01_DECISIONS_AND_BASELINE.md",
+        "sha256": "53d2e172f40c45f36633c89cf66c66c3c4666cfd18ba021aeb0c679e4485e5ac"
+      },
+      {
+        "path": "docs/PHASE_3A_5B_PROVIDER_PRIVACY_REVIEW.md",
+        "sha256": "81d53b10281e81b527b56815e8f7e6ee92a237e8b0d8bb1e75300736a10e2db4"
+      },
+      {
+        "path": "docs/PHASE_3A_1_MEDICAL_SUMMARY_CONTRACTS.md",
+        "sha256": "d9d5c55a148e0cac8d3eece96029e1c002352f883528d8e8580a440073dccb70"
+      },
+      {
+        "path": "docs/PHASE_3A_4_PATIENT_SUMMARY_APIS_EXECUTOR.md",
+        "sha256": "fd768cc75ea81aa750461b34284a8855714c5cff4b0d9cc6bdc3366d0f849259"
+      },
+      {
+        "path": "docs/PHASE_2_2D_CONTROLLED_LIVE_VERIFICATION.md",
+        "sha256": "8e6c0523a786dd74fafab25e650d8b78f7524a1aa98d529c33eb9188e2985a19"
+      },
+      {
+        "path": "docs/PHASE_1_5_AUTHENTICATION.md",
+        "sha256": "14ef0bbe205e55912bae79dc765ec6d6787f3c4e56b73209ffecbd17ab4fc0ce"
+      },
+      {
+        "path": "docs/B03_1_SHORT_LEASE_QUALIFICATION_20261023_vo18r4sc.md",
+        "sha256": "2f828d590474a0f5a7ab3a96afca40254a9bf085e6671d80f1c8625d03705a75"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_B.md",
+        "sha256": "a15f0a8ba4fda94f6c23588a7b72452159b26216494294d644684665cf50975d"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_C_HARDENING.md",
+        "sha256": "37f7be0010ec80481e981532d3d3595d6c50eb39c2f2e7a0ef6c99d1fe0c1824"
+      },
+      {
+        "path": "docs/PHASE_2_2C_B_DIGITAL_PDF_TEXT.md",
+        "sha256": "0e4f09e4cde9c261047ecd71ab68ca112a192e1bfd0b2eabf34fb603732f063b"
+      },
+      {
+        "path": "docs/AI_Health_Wallet_Module_Wise_PRD_v1_0.docx",
+        "sha256": "b2053bcdad3e2dda701a0b0fea8632a8cf0f92e34ce2970374cc37bf4211cf10"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_C_PREPARATION.md",
+        "sha256": "6ff781f41c8c994c291b188b0bc8bf2aa90c8e96862b167bc1c149ea46582576"
+      },
+      {
+        "path": "docs/PHASE_2_2C_C_SCANNED_PDF_IMAGE_OCR.md",
+        "sha256": "39d86df5fcb6be157b17a67c604f54a9d52d2e9f42e0141301a38770b401c9d8"
+      },
+      {
+        "path": "docs/PHASE_3A_5A_OFFLINE_SUMMARY_EVALUATION.md",
+        "sha256": "6781d9a138d558ecf78323078ecd6cdb0da76f83cfeb7fb85abf39f7ca568a59"
+      },
+      {
+        "path": "docs/B03_2_HISTORICAL_SHORT_LEASE_DIAGNOSTICS_20261023_akm0ts7.md",
+        "sha256": "d612eef9caa1c1be75f2befbddaa12b55ca9d6065ff5f41d0baf2fa8cd77762d"
+      },
+      {
+        "path": "docs/PHASE_3A_5C_OFFLINE_OLLAMA.md",
+        "sha256": "9343fbd16d7ff7dbc808746e0590b6b595325e22687763dc4ccab45905033406"
+      },
+      {
+        "path": "docs/PHASE_1_4A_DATABASE_SECURITY.md",
+        "sha256": "6c7d7476b2aa60dddcda1388501601d05a462a6bd314a11e86bf168f69be15fa"
+      },
+      {
+        "path": "docs/PHASE_2_2B_INTERNAL_RETRIEVAL.md",
+        "sha256": "e02402660b2029aa189f2ed0ec2b542bd7eca0e135dd0beebee210686e1581a1"
+      },
+      {
+        "path": "docs/AI_Health_Wallet_Final_SRS_v3.docx",
+        "sha256": "e401b0aaa64f0a8ef4f393eb1a8f41dd8b029c7166728b34aa6c2e478c19c591"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_A.md",
+        "sha256": "e7f005e0b0ff5b43ee8b722dcb9e9c498f751a0248607080e3f3a6e59026161e"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_C_GATE_1B.md",
+        "sha256": "d4461ec4ebeedac9e0c69a2cfe16212dccf50f6c14332ff66b391260d34a56de"
+      },
+      {
+        "path": "docs/PHASE_1_4_DATABASE.md",
+        "sha256": "3a1c7299438c376d100ead36cee474e26cf83d6e51b3ff9cc14f9c0baffc9be7"
+      },
+      {
+        "path": "docs/PHASE_3A_2_FASTAPI_SUMMARY_SERVICE.md",
+        "sha256": "86f0ecff31e881a70cd76f92196b8b78822f9c7f84bd5a4c3ea32a2f9e01dfe4"
+      },
+      {
+        "path": "docs/PHASE_2_2C_A_EXTRACTION_PERSISTENCE.md",
+        "sha256": "85c8a0d330d66837de3559719678849e79d404635caaa09edc0582b0aa8cc1b2"
+      },
+      {
+        "path": "docs/PHASE_3A_3_SUMMARY_DATABASE_JOBS.md",
+        "sha256": "9927a5b785939403729e167d6b72faf3ee73491a367f1228166adc581d271df7"
+      },
+      {
+        "path": "docs/PHASE_2_2A_PROCESSING_LIFECYCLE.md",
+        "sha256": "90811073c3c41e9a00ad9ec84d29b0a4fea3c75b3cca0010eb7ef1849ec16d36"
+      },
+      {
+        "path": "docs/PHASE_2_1_MEDICAL_DOCUMENTS.md",
+        "sha256": "b80b05be34ad0b0819adef4007e3adcb06718e9fd2a3e14c7697935e38087e44"
+      },
+      {
+        "path": "docs/B02_PATIENT_DOCUMENT_CONTRACTS.md",
+        "sha256": "54aba839ba2ee1b86ab19e43bf8d504a93921af53966489b87d8d730ce43e09a"
+      },
+      {
+        "path": "docs/SRS_REQUIREMENTS_TRACEABILITY.md",
+        "sha256": "72e1f3334b4d2f3f25ff5d23fedf2a1ce572867125c8ae376f2439ca7a16c294"
+      },
+      {
+        "path": "docs/PHASE_3A_5B_BENCHMARK_PREPARATION.md",
+        "sha256": "152a7d59c29a9adb0a8e9b8f46c1578975832c0d80867de8581d4122f817dd4d"
+      },
+      {
+        "path": "docs/B03_CONTROLLED_OCR_INTEGRATION.md",
+        "sha256": "4765e344334844eb1bdaf19d56d4bfdf8d6be584dc7990a8bb8b6792a6a4af06"
+      },
+      {
+        "path": "docs/PHASE_2_3_STAGE_C_GATE_1A.md",
+        "sha256": "f65b55600a5a249fe7cdece79aba1e27235c8b98f6df885094cfc7a77dff659e"
+      },
+      {
+        "path": "docs/baselines/B01_VALIDATION_RECEIPT.json",
+        "sha256": "10bcc0e51fa70f933d441e30504b891935418b72ea121b2186737a80edef76e0"
+      },
+      {
+        "path": "docs/baselines/B01_SOURCE_MANIFEST.json",
+        "sha256": "fcfb0dc6cc07df2dbc289e582452decf0801ca923d22add841b97ce0d3c26afa"
+      },
+      {
+        "path": "docs/baselines/B03_1_QUALIFICATION_20261023_vo18r4sc.json",
+        "sha256": "06694eb005847a8fe090ca3afd8b3f41f9183ee9aa8ea49cc5c513c0d56e14a3"
+      },
+      {
+        "path": "docs/baselines/B03_VALIDATION_RECEIPT.json",
+        "sha256": "bf9ffdce882f706194a302bca27708b944d69cecd69b57a9cf4d833455413141"
+      },
+      {
+        "path": "docs/baselines/B02_VALIDATION_RECEIPT.json",
+        "sha256": "c6809e5fcc421efa0f498b7be650320406f6a4590f6fa0721e5f4f6c6fb50285"
+      },
+      {
+        "path": "docs/baselines/B03_2_DIAGNOSTIC_QUALIFICATION_20261023_akm0ts7.json",
+        "sha256": "b63a31e463f3ee5af38c26c82ba94efe3d0f40dacd5dae017fc31963b80b74ce"
+      },
+      {
+        "path": "infrastructure/database-roles.sql",
+        "sha256": "520795c599a903fd26e406798c6499beadcafc304f2f7b46f70645f87a49ba55"
+      },
+      {
+        "path": "infrastructure/docker-compose.yml",
+        "sha256": "ce4a57ac7a251393f3962fef93eee6f6b029f0edf9b2142438b52f9d433a6ea3"
+      },
+      {
+        "path": "infrastructure/scripts/provision-roles.mjs",
+        "sha256": "de1d161d1de2de55eb501ea2433e20cdc377c203f42cdf1c9a266f48b8035bb1"
+      },
+      {
+        "path": "infrastructure/stage-b/run.mjs",
+        "sha256": "7ad72fe93feabcdfd6988cbbf0f4a58bc03fabfea28e2cbf294e6cfc1ea41cdc"
+      },
+      {
+        "path": "infrastructure/stage-b/bootstrap.ts",
+        "sha256": "598d58a6f3644effa865d6017e9e2a084a7f0ce350538d7b6e181a432d94a3c6"
+      },
+      {
+        "path": "infrastructure/stage-b/offline-image.mjs",
+        "sha256": "f8b695a1e406c4d4bb673b02517e182c58483f16684649eb3caf46bd49cb7520"
+      },
+      {
+        "path": "infrastructure/stage-b/isolation.ts",
+        "sha256": "3d9c1647bc3447a37de6bd2e98b07ddb261a867a8588b62665b43beb219650f6"
+      },
+      {
+        "path": "infrastructure/stage-b/Dockerfile",
+        "sha256": "c7e51a34dcaa1a178a7dea7a48def6f288977154bbae4b561d169a60554cbf63"
+      },
+      {
+        "path": "infrastructure/stage-b/run-tests.ts",
+        "sha256": "12ce46c4cff65bff0e88a056e7d0d166ce1ec9a2894f4c098a5c4e6546e1ea21"
+      },
+      {
+        "path": "infrastructure/baseline/test_baseline.py",
+        "sha256": "8b6767957bfcef8b3bdb50ddcbae574e8e8ec84fb7c5c8fb9732036221a47d2d"
+      },
+      {
+        "path": "infrastructure/baseline/node-network-guard.mjs",
+        "sha256": "ee81d273c91776543470d09582df162d178658dced5ccc27e5ec4b2977b6cc4c"
+      },
+      {
+        "path": "infrastructure/baseline/baseline.py",
+        "sha256": "429c8be56b4b0bfd1ed7b2be93af0aa910f73ce3a99d73745e2de9180f892243"
+      },
+      {
+        "path": "infrastructure/baseline/run_offline.py",
+        "sha256": "e36d7bb5a260df1b041c0beff9c59a488d36a5fc4177bcfa7e769d151ce7a396"
+      },
+      {
+        "path": "infrastructure/baseline/guards/sitecustomize.py",
+        "sha256": "9c20a53d9ef876b3d669d319fb2bcdd18e9f81fc1174775fbec74dc6fabb3bfb"
+      },
+      {
+        "path": "infrastructure/summary-db/run.mjs",
+        "sha256": "56e6da419c822b940958dc034089c7e302ebf6d46a54d79794f838eed24d792f"
+      },
+      {
+        "path": "infrastructure/summary-db/bootstrap.ts",
+        "sha256": "67c57c623561edca262d8cea02e95afbed64913b77cffb45989198b40b8b3eee"
+      },
+      {
+        "path": "infrastructure/summary-db/cleanup.mjs",
+        "sha256": "d1a0b5fba5609de5cddcfe958447609845af0a5aa0fa94862cceb2ac6b5324e9"
+      },
+      {
+        "path": "infrastructure/summary-db/run-tests.ts",
+        "sha256": "bdd6c3a7a962514de7dde0b872175241f6569a26c496723e39c920d6df947883"
+      },
+      {
+        "path": "shared/medical-summary/v1.schema.json",
+        "sha256": "35770082cdbdf86fbdef14ebb13aa12f339a19ad219cc0c268936b0f4bee4a91"
+      },
+      {
+        "path": "shared/medical-summary/fixtures.json",
+        "sha256": "1eccd7b36a6f628882b97bfb364fb7a3b62182be4fe7d93c554b305558a37a95"
+      },
+      {
+        "path": "shared/medical-summary/glossary-v1.json",
+        "sha256": "02a0088e3866da34471dfc1fe3adbd9f8297f4900de6a4d0e3473e2e85d80681"
+      },
+      {
+        "path": "shared/medical-summary/evaluation/reference-v1.json",
+        "sha256": "b7dd9f24a071778d68ac0d3b1c2a87859f7d5ecdac84deb8556514bed277143f"
+      },
+      {
+        "path": "shared/medical-summary/evaluation/receipt.schema.json",
+        "sha256": "067b0d0cfe4b9b54b8336b9842bfacbe8c0f45ec1375981e6e1bd57391bd0cc5"
+      },
+      {
+        "path": "shared/medical-summary/evaluation/scenarios-v1.json",
+        "sha256": "01b4c5244262a1613c4992ccb08300740b92db2f47302c1e33b0cf045f3740d9"
+      },
+      {
+        "path": "shared/medical-summary/evaluation/pins-v1.json",
+        "sha256": "5ad81955753235b12c4bb090f30c2d655f016d208c463b6d52030f09c6dc0ff1"
+      },
+      {
+        "path": "shared/medical-summary/benchmark/manifest.schema.json",
+        "sha256": "2e4552de4916b01ce95c771ade9d042ba9e6425b7b290e7376a627a182de89cd"
+      },
+      {
+        "path": "shared/medical-summary/benchmark/pins-v1.json",
+        "sha256": "2ec351dcb61ec925f44770666dcb2e674b6ca62cf6636b1ec13b2064590adfe5"
+      },
+      {
+        "path": "shared/medical-summary/benchmark/held-out-v1.json",
+        "sha256": "20662186cb5b539375152d00561af747ebad50fc18d2a13c36365b2a4ed27c62"
+      },
+      {
+        "path": "shared/medical-summary/benchmark/prompt-v1.txt",
+        "sha256": "0c8586303933d9af23c3b10bda77c909ffe076fd37229abb1c7d931604fd90b2"
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "d2afd3eedc8d21abf2e2ac133187eb851a240740aca6862fb3d83205eba04ec2"
+      }
+    ],
+    "historical": [
+      {
+        "path": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.1-short-lease-20261023-vo18r4sc",
+        "index_sha256": "2189930429d07cd20ed691cdcb19affdc12f6ef4850b73122406787a88db80d0",
+        "index_type": "dict"
+      },
+      {
+        "path": "/home/m-tayyab-aslam/Music/ai-health-wallet/.private-evidence/b03.2-short-lease-20261023-akm0ts7",
+        "index_sha256": "6066a75faedaf3beb1bfda55ccf8ad413b103bc41573225cbd6500c78d73929a",
+        "index_type": "dict"
+      }
+    ]
+  },
+  "source_tested_sha256": {
+    "backend/src/summary-db-checks/lifecycle.check.ts": "57d9797298c4093bbffc84d93c82a6aa1c2a96c295a8484d0b94d3648b5eb6e1",
+    "backend/src/summary-db-checks/b033-concurrency.check.ts": "2ab586bc4705d89407f6c843f6195cb4a2c98b901f0deb8e6f32596351b464a4"
+  },
+  "limits": [
+    "No causal reconstruction of original B03 or B03.2 failures; exact old query delay, lock holder and commit timings were not retained.",
+    "Controlled observer withholding and row locks establish mechanisms and invalid test assumptions, not proof those schedules occurred historically.",
+    "No per-server COMMIT timestamp/recurrence probability measured; true heartbeat response follows acknowledged transaction commit; expiry uses SQL database clock.",
+    "The 300 ms lease remains sensitive to real host stalls; tests do not guarantee arbitrary scheduler latency.",
+    "Global single-running-job admission can legitimately idle behind another running job; per-patient recovery cannot recover another scope. No unrestricted recovery was introduced.",
+    "No application-level system-manager, credential/network, live cloud, real-patient, clinical or release verification.",
+    "Legacy full_851_regression_verified uses exact old 510-TS count; report actual 512 TS plus 341 Python plus 25 baseline."
+  ],
+  "restrictions": {
+    "aws_accessed": false,
+    "development_production_db_accessed": false,
+    "real_credentials_loaded": false,
+    "real_patient_data": false,
+    "systemd_operations": false,
+    "model_execution": false,
+    "paid_api_spend": 0,
+    "packages_installed": false,
+    "migrations_modified": false,
+    "deployment_modified": false,
+    "automatic_processing_activated": false,
+    "b04_started": false,
+    "commit_push_merge": false
+  }
+}
