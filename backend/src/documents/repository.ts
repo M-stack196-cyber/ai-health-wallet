@@ -4,22 +4,22 @@ import type { DocumentFilters, DocumentMetadata, FileType, MetadataPatch } from 
 export interface DocumentRow extends QueryResultRow {
   id: string; original_filename: string; file_type: FileType; category: string;
   hospital_name: string | null; document_date: string | null; uploaded_at: Date;
-  processing_status: string; sort_date: string; sort_date_source: "document_date" | "uploaded_at";
+  content_type: string | null; size_bytes: string | null; sha256: string | null; processing_status: string; sort_date: string; sort_date_source: "document_date" | "uploaded_at";
 }
 export interface DocumentReference extends DocumentRow { s3_bucket: string; s3_object_key: string; }
 export interface NewDocument extends DocumentMetadata {
-  id: string; patientId: string; bucket: string; key: string; name: string; type: FileType;
+  id: string; patientId: string; bucket: string; key: string; name: string; type: FileType; mime: string; bytes: number; checksum: string;
 }
 const projection = `id, original_filename, file_type, category, hospital_name, document_date::text AS document_date,
-  uploaded_at, processing_status, COALESCE(document_date, (uploaded_at AT TIME ZONE 'UTC')::date)::text AS sort_date,
+  uploaded_at, content_type, size_bytes, sha256, processing_status, COALESCE(document_date, (uploaded_at AT TIME ZONE 'UTC')::date)::text AS sort_date,
   CASE WHEN document_date IS NULL THEN 'uploaded_at' ELSE 'document_date' END AS sort_date_source`;
 export function createDocumentRepository(database: PatientDatabase) {
   return {
     async insert(input: NewDocument): Promise<DocumentRow> {
       const result = await database.query<DocumentRow>(`INSERT INTO public.medical_documents
-        (id, patient_id, s3_bucket, s3_object_key, original_filename, file_type, category, hospital_name, document_date, processing_status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'processing') RETURNING ${projection}`,
-      [input.id, input.patientId, input.bucket, input.key, input.name, input.type, input.category, input.hospital_name, input.document_date ?? null]);
+        (id, patient_id, s3_bucket, s3_object_key, original_filename, file_type, category, hospital_name, document_date, content_type, size_bytes, sha256, processing_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'processing') RETURNING ${projection}`,
+      [input.id, input.patientId, input.bucket, input.key, input.name, input.type, input.category, input.hospital_name, input.document_date ?? null, input.mime, input.bytes, Buffer.from(input.checksum,"base64").toString("hex")]);
       if (!result.rows[0]) throw new Error("Document insert result unavailable.");
       return result.rows[0];
     },
@@ -52,6 +52,6 @@ export function createDocumentRepository(database: PatientDatabase) {
 }
 export function publicDocument(row: DocumentRow): DocumentRow {
   // Explicit allowlist also strips private references from internal read-back rows.
-  const { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, processing_status, sort_date, sort_date_source } = row;
-  return { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, processing_status, sort_date, sort_date_source };
+  const { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, processing_status, sort_date, sort_date_source } = row;
+  return { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, processing_status, sort_date, sort_date_source };
 }

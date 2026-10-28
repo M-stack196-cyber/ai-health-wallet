@@ -35,7 +35,7 @@ export function createDocumentService(repository: ReturnType<typeof createDocume
       }
       try {
         return await repository.insert({ ...upload.metadata, id, patientId, bucket: storage.bucket,
-          key, name: upload.name, type: upload.type });
+          key, name: upload.name, type: upload.type, mime: upload.mime, bytes: upload.bytes, checksum: upload.checksum });
       } catch {
         // A connection may fail after an autocommit INSERT committed. Never
         // delete an original on an ambiguous database result without read-back.

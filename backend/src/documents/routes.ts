@@ -1,10 +1,11 @@
+import {createDocumentLifecycle} from "./lifecycle.js";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { AuthenticationConfig } from "../config/auth.js";
 import type { DocumentConfig } from "../config/documents.js";
 import type { PatientDatabase } from "../patients/repository.js";
 import { createTokenService } from "../auth/tokens.js";
-import { requirePatient, patientIdentity, requireJson, rejectQueryParameters, rejectRequestBody } from "../auth/middleware.js";
+import { requirePatient, assertCurrentPatient, patientIdentity, requireJson, rejectQueryParameters, rejectRequestBody } from "../auth/middleware.js";
 import { ApiError } from "../http/errors.js";
 import type { DocumentStorage } from "./storage.js";
 import { createDocumentRepository, publicDocument } from "./repository.js";
@@ -18,6 +19,7 @@ export function createDocumentRoutes(database: PatientDatabase, auth: Authentica
   const router = Router();
   const repository = createDocumentRepository(database);
   const service = createDocumentService(repository, storage);
+  const lifecycle=createDocumentLifecycle(database,storage);
   const deliverFile = createPatientFileAccess(repository, storage, config, database);
   let activeUploads = 0;
   router.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); }, requirePatient(createTokenService(auth),database));
@@ -41,6 +43,7 @@ export function createDocumentRoutes(database: PatientDatabase, auth: Authentica
     try {
       upload = await parseUpload(req, config, controller.signal);
       await verifyIntegrity(upload, config, controller.signal);
+      await assertCurrentPatient(req,database);
       const row = await service.upload(upload, patientIdentity(req), controller.signal);
       if (!res.destroyed) res.status(201).json({ success: true, document: publicDocument(row) });
     } catch (error) {
@@ -64,6 +67,18 @@ export function createDocumentRoutes(database: PatientDatabase, auth: Authentica
     message:{success:false,error:{code:"DOWNLOAD_RATE_LIMITED",message:"Too many download attempts. Try again later."}}});
   router.get("/:id/download", rejectQueryParameters, rejectRequestBody, fileLimiter, async (req, res) => {
     await deliverFile(documentId(req.params.id), patientIdentity(req), req, res);
+  });
+  router.get("/:id/readiness",rejectQueryParameters,rejectRequestBody,async(req,res)=>{
+    res.json({success:true,readiness:await lifecycle.readiness(documentId(req.params.id),patientIdentity(req))});
+  });
+  const retryLimiter=rateLimit({windowMs:60000,limit:5,keyGenerator:req=>patientIdentity(req),
+    legacyHeaders:false,standardHeaders:"draft-8",
+    message:{success:false,error:{code:"DOCUMENT_RETRY_RATE_LIMITED",message:"Too many retry attempts. Try again later."}}});
+  router.post("/:id/retries",rejectQueryParameters,requireJson,retryLimiter,async(req,res)=>{
+    if(!req.body||typeof req.body!=="object"||Array.isArray(req.body)||Object.keys(req.body).length)
+      throw new ApiError(400,"INVALID_DOCUMENT_INPUT","An empty JSON object is required.");
+    const readiness=await lifecycle.retry(documentId(req.params.id),{patientId:patientIdentity(req),sessionId:req.auth!.sessionId!});
+    res.status(202).json({success:true,readiness});
   });
   router.get("/:id", rejectQueryParameters, rejectRequestBody, async (req, res) => {
     const row = await repository.reference(documentId(req.params.id), patientIdentity(req));

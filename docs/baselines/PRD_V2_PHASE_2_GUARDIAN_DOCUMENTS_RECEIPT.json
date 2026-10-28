@@ -1,0 +1,492 @@
+{
+  "phase": "PRD v2 Phase 2 guardian lifecycle/documents",
+  "date_local": "2026-10-28",
+  "timezone": "Asia/Karachi",
+  "base_commit": "b88e9dbda524e46784a6f9cf2f1e97a281700472",
+  "authority": {
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84"
+  },
+  "inventory": {
+    "requirements": 232,
+    "modules": 18,
+    "exact_ids_text_and_mappings_preserved": true,
+    "non_M02_M03_rows_unchanged": true
+  },
+  "status_totals": {
+    "IMPLEMENTED": 46,
+    "PARTIAL": 58,
+    "NEEDS_REVERIFICATION": 8,
+    "MISSING": 101,
+    "BLOCKED": 19
+  },
+  "module_progress": [
+    {
+      "module": "M01",
+      "rows": 14,
+      "implemented": 14,
+      "partial": 0,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "100% backend"
+    },
+    {
+      "module": "M02",
+      "rows": 10,
+      "implemented": 10,
+      "partial": 0,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "100% backend"
+    },
+    {
+      "module": "M03",
+      "rows": 12,
+      "implemented": 5,
+      "partial": 5,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 2,
+      "estimate": "62.5%"
+    },
+    {
+      "module": "M04",
+      "rows": 14,
+      "implemented": 6,
+      "partial": 4,
+      "missing": 4,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "57%"
+    },
+    {
+      "module": "M05",
+      "rows": 10,
+      "implemented": 2,
+      "partial": 5,
+      "missing": 1,
+      "blocked": 0,
+      "needs_reverification": 2,
+      "estimate": "45%"
+    },
+    {
+      "module": "M06",
+      "rows": 8,
+      "implemented": 3,
+      "partial": 2,
+      "missing": 3,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "50%"
+    },
+    {
+      "module": "M07",
+      "rows": 11,
+      "implemented": 0,
+      "partial": 6,
+      "missing": 4,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "27%"
+    },
+    {
+      "module": "M08",
+      "rows": 22,
+      "implemented": 0,
+      "partial": 3,
+      "missing": 17,
+      "blocked": 2,
+      "needs_reverification": 0,
+      "estimate": "7%"
+    },
+    {
+      "module": "M09",
+      "rows": 19,
+      "implemented": 1,
+      "partial": 5,
+      "missing": 12,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "18%"
+    },
+    {
+      "module": "M10",
+      "rows": 14,
+      "implemented": 0,
+      "partial": 2,
+      "missing": 10,
+      "blocked": 2,
+      "needs_reverification": 0,
+      "estimate": "7%"
+    },
+    {
+      "module": "M11",
+      "rows": 11,
+      "implemented": 1,
+      "partial": 0,
+      "missing": 10,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "9%"
+    },
+    {
+      "module": "M12",
+      "rows": 10,
+      "implemented": 1,
+      "partial": 0,
+      "missing": 9,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "10%"
+    },
+    {
+      "module": "M13",
+      "rows": 22,
+      "implemented": 0,
+      "partial": 0,
+      "missing": 21,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "0%"
+    },
+    {
+      "module": "M14",
+      "rows": 11,
+      "implemented": 0,
+      "partial": 9,
+      "missing": 0,
+      "blocked": 1,
+      "needs_reverification": 1,
+      "estimate": "41%"
+    },
+    {
+      "module": "M15",
+      "rows": 12,
+      "implemented": 1,
+      "partial": 4,
+      "missing": 6,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "25%"
+    },
+    {
+      "module": "M16",
+      "rows": 10,
+      "implemented": 0,
+      "partial": 5,
+      "missing": 1,
+      "blocked": 3,
+      "needs_reverification": 1,
+      "estimate": "25%"
+    },
+    {
+      "module": "M17",
+      "rows": 11,
+      "implemented": 0,
+      "partial": 5,
+      "missing": 3,
+      "blocked": 1,
+      "needs_reverification": 2,
+      "estimate": "23%"
+    },
+    {
+      "module": "M18",
+      "rows": 11,
+      "implemented": 2,
+      "partial": 3,
+      "missing": 0,
+      "blocked": 6,
+      "needs_reverification": 0,
+      "estimate": "32%"
+    }
+  ],
+  "scoped_requirements": [
+    {
+      "prd_id": "M02-001",
+      "mapping": "FR-040",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-02/03/20/23",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-002",
+      "mapping": "FR-041",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-05/06/07/09",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-003",
+      "mapping": "DEC-18",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-02/20 and focused M01 registration",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-004",
+      "mapping": "DEC-18",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-08/11/21",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-005",
+      "mapping": "FR-040",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-03/04/12/20",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-006",
+      "mapping": "FR-040; FR-041",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-02/03/06/07/12",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-007",
+      "mapping": "FR-041",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-05/06/07",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-008",
+      "mapping": "FR-041",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-06/07/09/12",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-009",
+      "mapping": "FR-040; CFG-11",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-03/04/11/21",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M02-010",
+      "mapping": "NFR-01; CFG-11",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference W: P2-05/08/09/11/12",
+      "remaining_gap": "Backend lifecycle qualified with synthetic accounts. CFG-11 legal/privacy approval, actual provider/client/deployed acceptance and future M10 send-boundary integration remain OPEN."
+    },
+    {
+      "prd_id": "M03-001",
+      "mapping": "FR-004",
+      "status": "PARTIAL",
+      "evidence": "Reference X: P2-13/16",
+      "remaining_gap": "Backend upload qualified; React Native application/journey remains absent."
+    },
+    {
+      "prd_id": "M03-002",
+      "mapping": "FR-005",
+      "status": "NEEDS_REVERIFICATION",
+      "evidence": "Reference X: P2-13; private S3 SDK mock suite",
+      "remaining_gap": "No new live AWS/S3 qualification; historical receipts preserved, current approved deployment still needs verification."
+    },
+    {
+      "prd_id": "M03-003",
+      "mapping": "FR-010",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference X: P2-13/14/17/22",
+      "remaining_gap": "No narrow backend gap: decoder validation plus stored digest and pre-stream comparison. Legacy NULL integrity needs controlled future qualification."
+    },
+    {
+      "prd_id": "M03-004",
+      "mapping": "FR-004; DEC-07",
+      "status": "PARTIAL",
+      "evidence": "Reference X: P2-13/14",
+      "remaining_gap": "PDF/JPG/JPEG/PNG backend evidence passes; patient mobile integration remains absent."
+    },
+    {
+      "prd_id": "M03-005",
+      "mapping": "FR-010; DEC-07; CFG-03",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference X: P2-13/14/22; SDK mock suite",
+      "remaining_gap": "Backend size/type/signature/decoder quotas enforced. CFG-03 release thresholds still require owner review."
+    },
+    {
+      "prd_id": "M03-006",
+      "mapping": "FR-010; V-04",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference X: P2-14/15/22; SDK mock suite",
+      "remaining_gap": "Rejected files never reach storage or document insertion; retained conditional-write cleanup guards and ambiguous-commit protection."
+    },
+    {
+      "prd_id": "M03-007",
+      "mapping": "FR-005; NFR-01",
+      "status": "NEEDS_REVERIFICATION",
+      "evidence": "Reference X: P2-13/16/18; SDK mock suite",
+      "remaining_gap": "Owner identity is immutable and adapter privacy guards pass locally; actual private S3/deployed path remains unqualified."
+    },
+    {
+      "prd_id": "M03-008",
+      "mapping": "FR-006; FR-007; DEC-07",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference X: P2-13/15/18",
+      "remaining_gap": "Required metadata persists; new uploads add MIME/size/SHA256; no OCR metadata overwrite producer is introduced."
+    },
+    {
+      "prd_id": "M03-009",
+      "mapping": "DEC-07",
+      "status": "PARTIAL",
+      "evidence": "Reference X: P2-18/19",
+      "remaining_gap": "False extraction-only completion corrected. Full OCR/AI aggregate completion authority remains deferred to M05 and downstream contracts."
+    },
+    {
+      "prd_id": "M03-010",
+      "mapping": "DEC-07; V-06",
+      "status": "PARTIAL",
+      "evidence": "Reference X: P2-18/19",
+      "remaining_gap": "Processing failure retains original and authenticated retrieval. Categorization/embedding/real-summary integrated failure paths remain unqualified."
+    },
+    {
+      "prd_id": "M03-011",
+      "mapping": "DEC-07; V-06",
+      "status": "PARTIAL",
+      "evidence": "Reference X: P2-18/19",
+      "remaining_gap": "Existing owner/source/attempt-fenced retry preserved and tested. Public retry remains canary-approval gated; stable product/Python retry needs later work."
+    },
+    {
+      "prd_id": "M03-012",
+      "mapping": "NFR-01; V-02",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference X: P2-16/17; focused M01 authorization and in-flight revocation cases",
+      "remaining_gap": "Current patient session, owner, immutable reference and stored hash verified before bytes. Future doctor access requires its own M09 grant policy; no doctor route exists."
+    }
+  ],
+  "migration": {
+    "new": "backend/migrations/0007_guardian_documents.sql",
+    "disposable_postgresql": 16,
+    "restricted_migration_role": "health_wallet_migrator",
+    "runtime_role": "health_wallet_app",
+    "rollback_and_reapply_passed": true,
+    "legacy_source_identity_preserved": true,
+    "legacy_completed_reclassified": "processing; extraction evidence retained",
+    "legacy_integrity": "NULL until separately qualified",
+    "normal_development_applied": false,
+    "production_applied": false,
+    "historical_migration_hashes": {
+      "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+      "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+      "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+      "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+      "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+      "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f"
+    }
+  },
+  "checks": {
+    "phase2": {
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0
+    },
+    "M01_compatibility": {
+      "passed": 39,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "Prior development-checkpoint restore test requires explicit checkpoint option; not needed for this fresh cluster qualification."
+    },
+    "typecheck": "PASS",
+    "build": "PASS",
+    "git_diff_check": "PASS",
+    "exact_232_requirement_inventory": "PASS",
+    "historical_preservation": "PASS",
+    "private_tap_raw_token_scan": "PASS"
+  },
+  "attempts": [
+    {
+      "label": "initial-fixture",
+      "path": ".private-evidence/prd-v2-phase2-20261028/initial-fixture.tap",
+      "sha256": "2d9b1d4f82b022df96a8e6fbcc43402ee47efab20abafac72cd8958296d31bdf",
+      "source_cluster": "/tmp/hw-phase1-pg-pWUgeK",
+      "cluster_stopped": true,
+      "passed": 10,
+      "failed": 19,
+      "skipped": 0
+    },
+    {
+      "label": "upload-timeout",
+      "path": ".private-evidence/prd-v2-phase2-20261028/upload-timeout.tap",
+      "sha256": "7e825988d29d14c03e4d14d299246596ce795d8cf117eeca75415a36b41a1a46",
+      "source_cluster": "/tmp/hw-phase1-pg-mkhUWE",
+      "cluster_stopped": true,
+      "passed": 23,
+      "failed": 6,
+      "skipped": 0
+    },
+    {
+      "label": "diagnostic-pass",
+      "path": ".private-evidence/prd-v2-phase2-20261028/diagnostic-pass.tap",
+      "sha256": "9b4182954a9b1e47fd062c4db8eb7b13eb2fa39984ef841a20003cbefd489566",
+      "source_cluster": "/tmp/hw-phase1-pg-wZWt1G",
+      "cluster_stopped": true,
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "label": "clean-expanded",
+      "path": ".private-evidence/prd-v2-phase2-20261028/clean-expanded.tap",
+      "sha256": "a0c95597eac0a8ab33ed63ed51d4822ffd4bf214c9328712188ab20aef317530",
+      "source_cluster": "/tmp/hw-phase1-pg-fuzV5z",
+      "cluster_stopped": true,
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "label": "final-phase2",
+      "path": ".private-evidence/prd-v2-phase2-20261028/final-phase2.tap",
+      "sha256": "69bb9299aba720da04fb793c34d36d107ae3212cec57632d9794aa6c810722ac",
+      "source_cluster": "/tmp/hw-phase1-pg-bOCDlG",
+      "cluster_stopped": true,
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "label": "final-m01",
+      "path": ".private-evidence/prd-v2-phase2-20261028/final-m01.tap",
+      "sha256": "24cab8be3e1b00044ed6652848982e6ba9f56191fe534d44f8deab8459a943a4",
+      "source_cluster": "/tmp/hw-phase1-pg-dGPXZK",
+      "cluster_stopped": true,
+      "passed": 39,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "files_sha256": {
+    "backend/migrations/0007_guardian_documents.sql": "15dc8294da358ca94cc5a1e73aae2b7731f54f8fd0a4a8e2ced46affe4cd5c23",
+    "backend/package.json": "e4698f99ca8a848cdccc40655e543bead1eb0c49ee05cc8418ab452f75ae6834",
+    "backend/src/app.ts": "f11c4683742af488533de430f11ea67cdb7029e2112f3d2f0aa55826e6cd5495",
+    "backend/src/auth/identity-security.test.ts": "67e888d1b7ac3316b82625ae2f3fa81ab5fdb8c7c1241a0899bd8b7f1bc7c9c0",
+    "backend/src/auth/routes.ts": "21ca5ad105a986b30482c0f207511d64960d8d82b0f3691775a540edce3cb509",
+    "backend/src/auth/security-email.ts": "8ef31f26aee484b16951650ebf5f8fc7b830321c3a62f9117651b61390e76fb3",
+    "backend/src/documents/file-access.ts": "6010c1ae1575586ac21b316b38d7936bb996759f0bafeae911f52f07fff07f2f",
+    "backend/src/documents/repository.ts": "b55133a5aa2033ed8477b8f4ac52207ea4e3b0c433905e708c983007eab4453d",
+    "backend/src/documents/routes.ts": "59aa917d06ef9ccaf96d71b38d48d41ad49360f3dfe882003bb9cf292660cb35",
+    "backend/src/documents/service.ts": "cead0364d57a3c91169b351486c60dad069118fc47646cda04b2543873c8f39c",
+    "backend/src/guardians/phase2.test.ts": "7472e62afcdaecf9e8c4f4747fa1a030a5ffa51fa79535da54cbc7347cb323cb",
+    "backend/src/guardians/repository.ts": "23be8ad522dcad9fd731a4766afa96271688059b7b3b848f626b27fff2cd16ee",
+    "backend/src/guardians/routes.ts": "8d1e8f8670c5bb64a3f5434dd41cda0036719dda0f9d461494f3cbb5f48c7ca3",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "fa0d3153e4a4379524b0ff0ba0cf83f30f83d778a6cc6d16c7986ce39cebeeb7",
+    "docs/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS.md": "e62d45fb481f02c455cabe0f4cf4725658c5449ef1bdd8afdbdb2125f2bd1fff",
+    "infrastructure/identity/run.mjs": "fa0e67ad977c6576fdd0745502f892f62d2eb790f15249414fc6175c67fee975"
+  },
+  "limitations": [
+    "M02 backend lifecycle only; CFG-11 privacy/consent review and actual provider/client/deployed qualification remain open.",
+    "M10 medical sender absent; future send-boundary reauthorization and revocation fencing required.",
+    "M03 mobile, actual S3 deployment, full downstream aggregate readiness/failure paths, stable approved product/Python retry and legacy integrity remain open.",
+    "One early upload-timeout run has no independently isolated root cause; subsequent clean and concurrent focused qualification passed.",
+    "No normal-development/production migration, real email, AWS/model call, full regression suite or later-phase work."
+  ],
+  "git": {
+    "committed": false,
+    "pushed": false
+  },
+  "stop": "Owner review; no Phase 3 started"
+}

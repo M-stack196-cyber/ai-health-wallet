@@ -1,3 +1,4 @@
+import {createGuardianRepository} from '../guardians/repository.js';
 import {Router, type Request} from 'express';
 import {rateLimit} from 'express-rate-limit';
 import type {AuthenticationConfig} from '../config/auth.js';
@@ -12,7 +13,7 @@ import {getSecurityPolicy,type SecurityPolicy} from './security-policy.js';
 
 /** Transport receives secrets only in memory. It must not log payloads or persist plaintext.
  * No real email provider or live sends are enabled by default. */
-export interface SecurityMailMessage {to:string;purpose:ChallengePurpose;token:string;expiresIn:number;}
+export interface SecurityMailMessage {to:string;purpose:ChallengePurpose|'guardian_invitation';token:string;expiresIn:number;}
 export interface SecurityMailer {
  send(message:SecurityMailMessage):Promise<void>;
  enqueue?(message:SecurityMailMessage,client:PatientConnection):Promise<void>;
@@ -83,7 +84,12 @@ export function createPatientRoutes(database:PatientDatabase,config:Authenticati
  }
  auth.post('/verify-email',requireJson,async(req,res)=>{
   const input=fields(req.body,['token']),token=tokenField(input.token);await rate(req,'verify:consume',undefined,true);
-  if(!await security.consumeChallenge(token,'verify_email'))throw badChallenge();res.json({success:true});
+  if(!await security.consumeChallenge(token,'verify_email'))throw badChallenge();
+  if(options.mailer?.enqueue){
+   try{await createGuardianRepository(database,policy,options.mailer).registrationIntent(token);}
+   catch{await security.audit('delivery_failed').catch(()=>{});}
+  }
+  res.json({success:true});
  });
  auth.post('/reset-password',requireJson,async(req,res)=>{
   const input=fields(req.body,['token','new_password']),token=tokenField(input.token),replacement=password(input.new_password,true);

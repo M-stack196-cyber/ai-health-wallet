@@ -50,7 +50,9 @@
     "identity:phase1:test": "node ../infrastructure/identity/run.mjs --execute-isolated",
     "identity:email:drain": "node --import tsx src/auth/security-email-entry.ts --drain-once",
     "identity:phase1b:test": "node ../infrastructure/identity/run.mjs --execute-isolated",
-    "identity:email:sandbox": "node --import tsx src/auth/security-email-sandbox.ts --local-synthetic-only"
+    "identity:email:sandbox": "node --import tsx src/auth/security-email-sandbox.ts --local-synthetic-only",
+    "phase2:guardian-documents:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase2",
+    "documents:closure:test": "node ../infrastructure/identity/run.mjs --execute-isolated --m03-only"
   },
   "keywords": [],
   "author": "",

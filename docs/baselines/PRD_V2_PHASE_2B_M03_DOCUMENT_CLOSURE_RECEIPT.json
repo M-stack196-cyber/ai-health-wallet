@@ -1,0 +1,388 @@
+{
+  "phase": "PRD v2 Phase 2B M03 document backend closure",
+  "date_local": "2026-10-28",
+  "timezone": "Asia/Karachi",
+  "git_head": "b88e9dbda524e46784a6f9cf2f1e97a281700472",
+  "entry_state": "Existing uncommitted Phase 2 source/docs preserved; Phase 2 receipt is the previous qualified source snapshot.",
+  "authoritative_baseline": {
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84"
+  },
+  "new_migrations": [],
+  "existing_migrations_0001_to_0007_unchanged": true,
+  "protected_phase2_report_and_receipt_unchanged": true,
+  "normal_development_database_accessed": false,
+  "production_accessed": false,
+  "live_s3": {
+    "performed": false,
+    "configured_storage_names_and_local_aws_files_exist": true,
+    "current_approved_nonproduction_qualification_scope_identified": false,
+    "reason": "Configuration and historical fixed-target/canary receipts do not establish a currently approved non-production synthetic qualification scope. No AWS/STS/S3 request or credential invention.",
+    "requirements_retained_needs_reverification": [
+      "M03-002",
+      "M03-007"
+    ]
+  },
+  "implementation": {
+    "backend_code_and_M03_contracts_qualified": true,
+    "whole_M03_module_accepted": false,
+    "frontend_implemented": false,
+    "OCR_or_AI_implemented_or_executed": false,
+    "readiness": "Coherent read-only snapshot; extraction completion and downstream completion separated; downstream completion not qualified.",
+    "retry": "Current-session owner admission of same integrity-known failed job; failure, attempt, race and rate bounds; no worker launch; historical canary endpoint remains gated."
+  },
+  "tests": {
+    "focused_final": {
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0
+    },
+    "test_files": [
+      "backend/src/documents/closure.test.ts",
+      "backend/src/documents/storage.test.ts"
+    ],
+    "typecheck": "PASS",
+    "build": "PASS",
+    "git_diff_check": "PASS",
+    "schema_security": "Existing schema migrations executed as restricted migrator; application-role APIs, immutable original and owner/account denials exercised; existing migration 0007 rollback/reapply probe reused.",
+    "fault_injection": "Four named downstream faults are simulated at M03 generic failure boundary; no real OCR/categorization/embedding/summary execution.",
+    "broad_regression_run": false
+  },
+  "evidence": [
+    {
+      "label": "initial22",
+      "file": ".private-evidence/prd-v2-phase2b-20261028/initial22.tap",
+      "sha256": "5ba6d65c59d156dd8906f7832ad987e44bd990dbed02c1c04a02e50e888dbe10",
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "source_cluster": "/tmp/hw-phase1-pg-5LiN2P",
+      "cluster_stopped": true
+    },
+    {
+      "label": "final24",
+      "file": ".private-evidence/prd-v2-phase2b-20261028/final24.tap",
+      "sha256": "461380ed44f419079f0640ef7195be53fd44a5c1ec7393798c0b7873852f8636",
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "source_cluster": "/tmp/hw-phase1-pg-soVZAb",
+      "cluster_stopped": true
+    }
+  ],
+  "inventory": {
+    "requirements": 232,
+    "modules": 18,
+    "exact_ids_text_mappings_preserved": true,
+    "non_M03_requirement_statuses_unchanged": true
+  },
+  "M03_requirements": [
+    {
+      "id": "M03-001",
+      "mapping": "FR-004",
+      "status": "PARTIAL",
+      "evidence": "Reference Y: M03-13/16/25",
+      "remaining_gap": "Backend upload qualified; React Native/mobile integrated acceptance remains external and unimplemented in M11."
+    },
+    {
+      "id": "M03-002",
+      "mapping": "FR-005",
+      "status": "NEEDS_REVERIFICATION",
+      "evidence": "Reference Y: M03-13; retained SDK mock suite; live approval audit",
+      "remaining_gap": "S3 code and SDK privacy guards qualified locally; no current explicit non-production environment approval/synthetic scope found. No AWS call made. Live requirement remains NEEDS_REVERIFICATION."
+    },
+    {
+      "id": "M03-003",
+      "mapping": "FR-010",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-13/14/17/22",
+      "remaining_gap": "New uploads have decoder validation and persisted/pre-stream digest checks. Legacy unknown integrity is not fabricated and requires controlled object requalification."
+    },
+    {
+      "id": "M03-004",
+      "mapping": "FR-004; DEC-07",
+      "status": "PARTIAL",
+      "evidence": "Reference Y: M03-13/14",
+      "remaining_gap": "All four backend types qualified; mobile client remains absent and outside Phase 2B."
+    },
+    {
+      "id": "M03-005",
+      "mapping": "FR-010; DEC-07; CFG-03",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-13/14/22",
+      "remaining_gap": "Configured backend type/signature/size/page/pixel controls pass; final CFG-03 release values remain subject to review."
+    },
+    {
+      "id": "M03-006",
+      "mapping": "FR-010; V-04",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-14/15/22; retained SDK suite",
+      "remaining_gap": "Malformed/rejected uploads precede storage/record insertion; retained private SDK/conditional-write/cleanup guards pass. Live cloud validation remains separately tracked."
+    },
+    {
+      "id": "M03-007",
+      "mapping": "FR-005; NFR-01",
+      "status": "NEEDS_REVERIFICATION",
+      "evidence": "Reference Y: M03-13/16/18/24/25; retained SDK suite; live approval audit",
+      "remaining_gap": "Exact owner/source immutability and private adapter guards pass; current approved live S3 object/privacy/deployed path remains unqualified."
+    },
+    {
+      "id": "M03-008",
+      "mapping": "FR-006; FR-007; DEC-07",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-13/15/18/24",
+      "remaining_gap": "Owner, categories, hospital/edit, document/upload dates, filename, MIME, size, digest and private reference persist. No OCR metadata writer added."
+    },
+    {
+      "id": "M03-009",
+      "mapping": "DEC-07",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-18/19/26/27/29 readiness",
+      "remaining_gap": "M03 readiness contract qualified: processing/failed document status and separately verified extraction completion; downstream completion explicitly not qualified. Actual OCR/AI completion production belongs to M05/later modules."
+    },
+    {
+      "id": "M03-010",
+      "mapping": "DEC-07; V-06",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-18/26 simulated stage failures through existing failure repository",
+      "remaining_gap": "M03 retention boundary qualified with simulated OCR/category/embedding/summary failures through the existing generic failure repository; real downstream stage integrations remain external, not asserted."
+    },
+    {
+      "id": "M03-011",
+      "mapping": "DEC-07; V-06",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-18/24/25/26/27/29 actual owner retry API",
+      "remaining_gap": "Authenticated owner retry now queues only the same integrity-known failed job within failure/attempt/rate bounds and current session; concurrent duplicate denied. No processor activation or canary-approval artifact."
+    },
+    {
+      "id": "M03-012",
+      "mapping": "NFR-01; V-02",
+      "status": "IMPLEMENTED",
+      "evidence": "Reference Y: M03-16/17/25/28",
+      "remaining_gap": "Current owner/session/account and immutable original/digest checks pass, including in-flight restriction. No ID/URL bypass; future doctor routes remain M09 scope."
+    }
+  ],
+  "totals": {
+    "IMPLEMENTED": 49,
+    "PARTIAL": 55,
+    "NEEDS_REVERIFICATION": 8,
+    "MISSING": 101,
+    "BLOCKED": 19
+  },
+  "module_progress": [
+    {
+      "module": "M01",
+      "requirements": 14,
+      "implemented": 14,
+      "partial": 0,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "100% backend"
+    },
+    {
+      "module": "M02",
+      "requirements": 10,
+      "implemented": 10,
+      "partial": 0,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "100% backend"
+    },
+    {
+      "module": "M03",
+      "requirements": 12,
+      "implemented": 8,
+      "partial": 2,
+      "missing": 0,
+      "blocked": 0,
+      "needs_reverification": 2,
+      "estimate": "75%"
+    },
+    {
+      "module": "M04",
+      "requirements": 14,
+      "implemented": 6,
+      "partial": 4,
+      "missing": 4,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "57%"
+    },
+    {
+      "module": "M05",
+      "requirements": 10,
+      "implemented": 2,
+      "partial": 5,
+      "missing": 1,
+      "blocked": 0,
+      "needs_reverification": 2,
+      "estimate": "45%"
+    },
+    {
+      "module": "M06",
+      "requirements": 8,
+      "implemented": 3,
+      "partial": 2,
+      "missing": 3,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "50%"
+    },
+    {
+      "module": "M07",
+      "requirements": 11,
+      "implemented": 0,
+      "partial": 6,
+      "missing": 4,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "27%"
+    },
+    {
+      "module": "M08",
+      "requirements": 22,
+      "implemented": 0,
+      "partial": 3,
+      "missing": 17,
+      "blocked": 2,
+      "needs_reverification": 0,
+      "estimate": "7%"
+    },
+    {
+      "module": "M09",
+      "requirements": 19,
+      "implemented": 1,
+      "partial": 5,
+      "missing": 12,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "18%"
+    },
+    {
+      "module": "M10",
+      "requirements": 14,
+      "implemented": 0,
+      "partial": 2,
+      "missing": 10,
+      "blocked": 2,
+      "needs_reverification": 0,
+      "estimate": "7%"
+    },
+    {
+      "module": "M11",
+      "requirements": 11,
+      "implemented": 1,
+      "partial": 0,
+      "missing": 10,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "9%"
+    },
+    {
+      "module": "M12",
+      "requirements": 10,
+      "implemented": 1,
+      "partial": 0,
+      "missing": 9,
+      "blocked": 0,
+      "needs_reverification": 0,
+      "estimate": "10%"
+    },
+    {
+      "module": "M13",
+      "requirements": 22,
+      "implemented": 0,
+      "partial": 0,
+      "missing": 21,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "0%"
+    },
+    {
+      "module": "M14",
+      "requirements": 11,
+      "implemented": 0,
+      "partial": 9,
+      "missing": 0,
+      "blocked": 1,
+      "needs_reverification": 1,
+      "estimate": "41%"
+    },
+    {
+      "module": "M15",
+      "requirements": 12,
+      "implemented": 1,
+      "partial": 4,
+      "missing": 6,
+      "blocked": 1,
+      "needs_reverification": 0,
+      "estimate": "25%"
+    },
+    {
+      "module": "M16",
+      "requirements": 10,
+      "implemented": 0,
+      "partial": 5,
+      "missing": 1,
+      "blocked": 3,
+      "needs_reverification": 1,
+      "estimate": "25%"
+    },
+    {
+      "module": "M17",
+      "requirements": 11,
+      "implemented": 0,
+      "partial": 5,
+      "missing": 3,
+      "blocked": 1,
+      "needs_reverification": 2,
+      "estimate": "23%"
+    },
+    {
+      "module": "M18",
+      "requirements": 11,
+      "implemented": 2,
+      "partial": 3,
+      "missing": 0,
+      "blocked": 6,
+      "needs_reverification": 0,
+      "estimate": "32%"
+    }
+  ],
+  "phase2b_files_sha256": {
+    "backend/src/documents/lifecycle.ts": "5d1d151114dca77c5a8fee82025c639e7cd3832febfc3c1cf83589df2bbe5b95",
+    "backend/src/documents/routes.ts": "862fa72ce04837e464b83360c80caebbf9e34cf174538bd9926e12f3cf724c27",
+    "backend/src/processing/api-repository.ts": "4930cf231f5e806ffc1766ef684428f21c80c72d0259b65d340426e9fa734dcb",
+    "backend/src/documents/closure.test.ts": "acd1828b3488d228b2e525e03b1b2bad60b0c6078296fa5e38df164068c3dc2a",
+    "infrastructure/identity/run.mjs": "fff20ef6984b330ad11e8900ef59af0e6c6b7fb14a353b408f668484f3dde089",
+    "backend/package.json": "a31b969da52924701fdcc2d88c68e328ce67dec5f95fb137ac59f04e8a4ff369",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "7602eac04a49d5e36d00a0fab944a0199c04184fc19ad2bbcdaf766a576b15aa",
+    "docs/PRD_V2_PHASE_2B_M03_DOCUMENT_CLOSURE.md": "12963719d1cec30012de0e6fc107d58ad5e06bf6af587104fdd6891d15c74819"
+  },
+  "phase_entry_protected_hashes": {
+    "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+    "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+    "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+    "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+    "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+    "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f",
+    "backend/migrations/0007_guardian_documents.sql": "15dc8294da358ca94cc5a1e73aae2b7731f54f8fd0a4a8e2ced46affe4cd5c23",
+    "docs/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS.md": "e62d45fb481f02c455cabe0f4cf4725658c5449ef1bdd8afdbdb2125f2bd1fff",
+    "docs/baselines/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS_RECEIPT.json": "e7d983e5824b09fb16a3582602f3d489d08318a9952a590b297f31b5f1ec323a"
+  },
+  "remaining_release_obligations": [
+    "Approved current live S3 privacy/object access qualification",
+    "React Native mobile integration",
+    "Legacy unknown integrity controlled attestation",
+    "CFG-03 final quotas and operational/load qualification",
+    "Prior Phase 2 schema/application activation remains coordinated owner work",
+    "Actual downstream OCR/AI completion, failure and stage-specific retry integration"
+  ],
+  "git": {
+    "commit": false,
+    "push": false
+  },
+  "phase3": "Not started; requires owner review and separate bounded authorization."
+}

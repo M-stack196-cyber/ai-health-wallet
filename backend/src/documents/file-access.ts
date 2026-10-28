@@ -1,4 +1,5 @@
 import {chmod, mkdtemp, open, rm} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -47,11 +48,17 @@ export function createPatientFileAccess(repository:ReturnType<typeof createDocum
       const info=await file.stat();
       if(!info.isFile() || info.size<1 || info.size>config.maxFileBytes || info.size!==receipt.bytes
         || info.uid!==process.getuid?.() || (info.mode&0o077)!==0)throw storageUnavailable();
+      if(row.size_bytes !== null && row.size_bytes !== undefined && Number(row.size_bytes)!==info.size)throw storageUnavailable();
+      if(row.sha256){
+        const hash=createHash('sha256');
+        for await(const chunk of file.createReadStream({autoClose:false,start:0}))hash.update(chunk);
+        if(hash.digest('hex')!==row.sha256)throw storageUnavailable();
+      }
       // Recheck ownership and immutable storage identity after acquisition, before bytes.
       const current=await repository.reference(id,patientId);
       if(!current)throw notFound();
       if(current.s3_bucket!==row.s3_bucket || current.s3_object_key!==row.s3_object_key
-        || current.file_type!==row.file_type)throw storageUnavailable();
+        || current.file_type!==row.file_type || current.sha256!==row.sha256 || current.size_bytes!==row.size_bytes)throw storageUnavailable();
       controller.signal.throwIfAborted();
       if(!database)throw storageUnavailable();
       await assertCurrentPatient(req,database);
@@ -59,7 +66,7 @@ export function createPatientFileAccess(repository:ReturnType<typeof createDocum
       const encoded=encodeURIComponent(row.original_filename).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
       res.status(200).set({'Content-Type':mime,'Content-Length':String(info.size),'Cache-Control':'private, no-store',
         'X-Content-Type-Options':'nosniff','Content-Disposition':`attachment; filename="document.${row.file_type}"; filename*=UTF-8''${encoded}`});
-      await pipeline(file.createReadStream({autoClose:false}),res,{signal:controller.signal});
+      await pipeline(file.createReadStream({autoClose:false,start:0}),res,{signal:controller.signal});
     } catch(error) {
       if(res.headersSent || res.destroyed){res.destroy();return;}
       if(error instanceof ApiError)throw error;

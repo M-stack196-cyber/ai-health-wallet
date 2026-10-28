@@ -5,7 +5,8 @@ import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const args=process.argv.slice(2);
-if(args[0]!=='--execute-isolated'||(args.length!==1&&!(args.length===3&&args[1]==='--development-schema')))throw Error('Explicit --execute-isolated required.');
+const phase2=args[1]==='--phase2',m03=args[1]==='--m03-only';
+if(args[0]!=='--execute-isolated'||(args.length!==1&&!((phase2||m03)&&args.length===2)&&!(args.length===3&&args[1]==='--development-schema')))throw Error('Explicit --execute-isolated required.');
 const dir=await mkdtemp(join(tmpdir(),'hw-phase1-pg-'));await chmod(dir,0o700);
 const root=fileURLToPath(new URL('../../',import.meta.url)),bin='/usr/lib/postgresql/16/bin/';
 const env={PATH:process.env.PATH,LANG:'C.UTF-8',IDENTITY_TEST_SOCKET:dir};
@@ -18,7 +19,7 @@ try{
  await writeFile(join(dir,'phase1-owned'),'identity-security-v1\n',{mode:0o600});
  const start=command(bin+'pg_ctl',['-D',join(dir,'data'),'-l',join(dir,'postgres.log'),'-o',"-c listen_addresses='' -k "+dir+" -p 55481 -c unix_socket_permissions=0700 -c log_statement=none -c log_min_error_statement=panic",'-w','start']);
  if(start.status!==0)throw Error('Disposable PostgreSQL start failed.');started=true;
- const run=command(process.execPath,['--import','tsx','--test','--test-concurrency=1','src/auth/identity-security.test.ts']);
+ const run=command(process.execPath,['--import','tsx','--test','--test-concurrency=1',...(m03?['src/documents/closure.test.ts','src/documents/storage.test.ts']:phase2?['src/guardians/phase2.test.ts','src/documents/storage.test.ts']:['src/auth/identity-security.test.ts'])]);
  await writeFile(join(dir,'focused.tap'),(run.stdout??'')+(run.stderr??''),{mode:0o600});
  process.stdout.write(run.stdout??'');process.stderr.write(run.stderr??'');
  if(run.status!==0)process.exitCode=1;

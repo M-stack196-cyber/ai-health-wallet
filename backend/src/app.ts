@@ -1,3 +1,4 @@
+import {createGuardianRoutes} from "./guardians/routes.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -49,6 +50,7 @@ export function createApp(options: { auth?: AuthenticationConfig; database?: Pat
   app.use("/api/v1", createSummaryRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.summaries));
   app.use("/api/v1", createProcessingRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.processingApi));
   app.use("/api/v1/documents", documents);
+  app.use("/api/v1",createGuardianRoutes(options.database ?? pool,auth,identity));
   app.use((_req, _res, next) => next(new ApiError(404, "NOT_FOUND", "Endpoint not found.")));
   app.use(errorHandler);
   return app;

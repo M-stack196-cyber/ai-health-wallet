@@ -12,7 +12,7 @@ import {createSecurityEmailSandbox} from './security-email-sandbox.js';
 import pg from 'pg';
 import {SignJWT} from 'jose';
 import type {AuthenticationConfig} from '../config/auth.js';
-import {createPatientRoutes,type SecurityMailer} from './routes.js';
+import {createPatientRoutes,type SecurityMailer,type SecurityMailMessage} from './routes.js';
 import {createDocumentRoutes} from '../documents/routes.js';
 import {createProcessingRoutes} from '../processing/api.js';
 import {createSummaryRoutes} from '../summaries/routes.js';
@@ -28,7 +28,7 @@ const policy={...getSecurityPolicy(),challengeRateMax:10000,resendCooldownSecond
 const conn={host:socket,port:55481,database:'hw_identity_phase1'};
 const admin=new pg.Pool({...conn,user:userInfo().username});
 const db=new pg.Pool({...conn,user:'health_wallet_app',max:12});
-const mail:Array<{to:string;purpose:'verify_email'|'reset_password';token:string;expiresIn:number}>=[];
+const mail:SecurityMailMessage[]=[];
 let failMail=false,storageReads=0,fileHook:(()=>Promise<void>)|undefined;
 const mailer:SecurityMailer={async send(m){if(failMail)throw Error('synthetic provider failure');mail.push(m);}};
 const repo=createSecurityRepository(db,policy),password='Synthetic secure passphrase 310!',replacement='Replacement secure phrase 498!';
@@ -39,12 +39,13 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_identity_phase1');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,6);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,7);
  if(process.env.IDENTITY_TEST_SCHEMA_FILE){
   assert.equal(process.env.IDENTITY_TEST_SCHEMA_FILE,socket+'/development-schema.dump');
   const restored=spawnSync('/usr/bin/pg_restore',['--no-owner','--no-privileges','--exit-on-error','--host='+socket,'--port=55481','--username='+userInfo().username,'--dbname=hw_identity_phase1',process.env.IDENTITY_TEST_SCHEMA_FILE],{encoding:'utf8',timeout:30000});
   assert.equal(restored.status,0,'development schema archive restores into disposable cluster');
   await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app; GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO health_wallet_app; REVOKE UPDATE,DELETE ON patient_security_events,patient_refresh_history FROM health_wallet_app; REVOKE DELETE ON patient_auth_sessions,patient_auth_challenges,patient_auth_rate_limits,patient_security_email_deliveries FROM health_wallet_app; REVOKE UPDATE ON patient_security_email_payloads FROM health_wallet_app');
+  await admin.query(await readFile(new URL('../../migrations/0007_guardian_documents.sql',import.meta.url),'utf8'));
  }else for(const f of files){
   if(f.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await admin.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
@@ -62,7 +63,7 @@ async function request(path:string,body?:unknown,token?:string,method=body===und
 }
 async function registered(verify=true){const email='synthetic-'+randomUUID()+'@example.invalid';const r=await request('/auth/register',{email,password,full_name:'Synthetic Patient',sex_gender:'prefer_not_to_say',pending_guardian_email:'future@example.invalid'});assert.equal(r.status,201);const challenge=mail.find(m=>m.to===email&&m.purpose==='verify_email')!;assert.ok(challenge);if(verify)assert.equal((await request('/auth/verify-email',{token:challenge.token})).status,200);return {email,id:r.data.patient.id,challenge};}
 async function login(email:string,pass=password){const r=await request('/auth/login',{email,password:pass});assert.equal(r.status,200);return r.data as {access_token:string;refresh_token:string};}
-async function doc(patient:string){const id=randomUUID();await db.query(`INSERT INTO public.medical_documents(id,patient_id,s3_bucket,s3_object_key,original_filename,file_type,category,hospital_name,processing_status) VALUES($1,$2,$3,$4,'synthetic.pdf','pdf','lab_report','Synthetic Hospital','failed')`,[id,patient,storage.bucket,storage.prefix+id+'.pdf']);return id;}
+async function doc(patient:string){const id=randomUUID();await db.query(`INSERT INTO public.medical_documents(id,patient_id,s3_bucket,s3_object_key,original_filename,file_type,category,hospital_name,processing_status,content_type,size_bytes,sha256) VALUES($1,$2,$3,$4,'synthetic.pdf','pdf','lab_report','Synthetic Hospital','failed','application/pdf',24,'02be06dafdca1e35e82ce33d549485f29627c07274b644fafb0e54befbe732de')`,[id,patient,storage.bucket,storage.prefix+id+'.pdf']);return id;}
 
 test('registration is unverified, profile fields are scoped and no guardian relationship is activated',async()=>{
  const u=await registered(false);assert.equal((await request('/auth/login',{email:u.email,password})).status,401);
