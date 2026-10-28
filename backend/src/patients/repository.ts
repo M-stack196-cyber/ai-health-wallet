@@ -5,6 +5,7 @@ import type { ProfileChanges, RegistrationInput } from "./validation.js";
 export interface PatientDatabase {
   query<Row extends QueryResultRow>(sql: string, values: unknown[]): Promise<{ rows: Row[] }>;
 }
+export interface PatientConnection extends Pick<PatientDatabase, 'query'> { release(error?: Error | boolean): void; }
 export interface PatientProfile extends QueryResultRow {
   id: string;
   email: string;
@@ -15,16 +16,16 @@ export interface PatientProfile extends QueryResultRow {
   updated_at: Date;
 }
 // Explicit projection keeps credential columns out of profile reads and writes.
-const profileColumns = "id, email, full_name, date_of_birth::text AS date_of_birth, phone_number, created_at, updated_at";
+const profileColumns = "id, email, full_name, date_of_birth::text AS date_of_birth, phone_number, sex_gender, pending_guardian_email, email_verified_at, account_status, created_at, updated_at";
 
 export function createPatientRepository(database: PatientDatabase) {
   return {
     async register(input: RegistrationInput, hash: string): Promise<PatientProfile> {
       try {
         const result = await database.query<PatientProfile>(`INSERT INTO public.patients
-          (email, password_hash, full_name, date_of_birth, phone_number)
-          VALUES ($1, $2, $3, $4, $5) RETURNING ${profileColumns}`,
-        [input.email, hash, input.full_name, input.date_of_birth ?? null, input.phone_number ?? null]);
+          (email, password_hash, full_name, date_of_birth, phone_number, sex_gender, pending_guardian_email)
+          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${profileColumns}`,
+        [input.email, hash, input.full_name, input.date_of_birth ?? null, input.phone_number ?? null, input.sex_gender ?? null, input.pending_guardian_email ?? null]);
         return result.rows[0];
       } catch (error) {
         if (error && typeof error === "object" && "code" in error && error.code === "23505") {
@@ -45,7 +46,7 @@ export function createPatientRepository(database: PatientDatabase) {
     },
     async update(patientId: string, changes: ProfileChanges): Promise<PatientProfile> {
       // SQL identifiers come only from this constant allowlist, never request keys.
-      const keys = (["full_name", "date_of_birth", "phone_number"] as const).filter(key => Object.hasOwn(changes, key));
+      const keys = (["full_name", "date_of_birth", "phone_number", "sex_gender", "pending_guardian_email"] as const).filter(key => Object.hasOwn(changes, key));
       const assignments = keys.map((key, index) => key + " = $" + (index + 2)).join(", ");
       const result = await database.query<PatientProfile>(`UPDATE public.patients SET ${assignments}
         WHERE id = $1 RETURNING ${profileColumns}`, [patientId, ...keys.map(key => changes[key])]);

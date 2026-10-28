@@ -1,0 +1,421 @@
+{
+  "schema_version": 1,
+  "kind": "prd-v2-phase1b-security-email-qualification",
+  "date": "2026-10-28",
+  "timezone": "Asia/Karachi",
+  "outcome": "M01_BACKEND_QUALIFIED_RELEASE_ACCEPTANCE_OPEN",
+  "m01": {
+    "implemented_backend": 14,
+    "partial_backend": 0,
+    "release_deployment_client_acceptance": "OPEN"
+  },
+  "focused_tests": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "mode": "isolated restore of actual migrated development schema; original checkpoint restore verified"
+  },
+  "typecheck": true,
+  "build": true,
+  "diff_check": true,
+  "broad_regression_run": false,
+  "source_sha256": {
+    "backend/.env.example": "708a89ac0526a0fff3f682c0f1bbc37aaccd8fc52df65c332e37ce1523e4ea3d",
+    "backend/package.json": "4f4b8e0cbd3f5d0ed6f5d4d89963ca745e248f47e602df5b5c72b3d892aae179",
+    "backend/src/app.ts": "4b8ed9c7760a76f59214ecac813328ac4c75940fa80fffe804eeab040d31c690",
+    "backend/src/auth/routes.ts": "a0b3054b0aa21093dac52465304e10ca2d5333accc1df0fddf03a4219f478b3f",
+    "backend/src/auth/security-repository.ts": "f4d59e81006c006a78c0f6c456dc969f86401a12464aaa262e00fef8bc6634e9",
+    "backend/src/auth/identity-security.test.ts": "038be2671b054929dbd46bfeb064e3662809db7a3af0e1d072d074128728fa41",
+    "infrastructure/identity/run.mjs": "3957cf1cd4a9f1b9dbccc0a780ffb5ee37aa7304a8bb69f3f7e6877ca92baead",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "28282b381a3038b0d6a6805410a84ec42a25b5c89d2a610aca94ac2b908c501d",
+    "docs/PRD_V2_PHASE_1_IDENTITY_SECURITY.md": "f5035e3a42e3cb195bbaf735f7f17a60976b60d706d711b6b4033b6b56802a0e",
+    "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f",
+    "backend/src/auth/security-email.ts": "dc94c47238f3cb3748d9c56e6da809786a9faa539f394250d867897d99cfc636",
+    "backend/src/auth/security-email-entry.ts": "b54999324423a9473272f3f26f3fe0d08e58d74d0247db355ad5ed2cd558d9b2",
+    "backend/src/auth/security-email-sandbox.ts": "10a4a6c2aec942b60edfbf62a21363b01b1998a132fbb15610369cc7559b5154",
+    "infrastructure/identity/qualify-development.mjs": "64c5db2dc6f84cc13d44c40ab39c65073fe1832cdd49c26a31410d56aaf935d5",
+    "infrastructure/identity/apply-development.mjs": "523abeb4abe414b6b1a9ce66bcf89b14b38c882b0eb2de9ec73686111f8b1775",
+    "docs/PRD_V2_PHASE_1B_SECURITY_EMAIL_QUALIFICATION.md": "395f6989d58843ec887e356143559b7df6af4c70be8ae7d28f63b3606f76b1df"
+  },
+  "historical_migration_sha256": {
+    "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+    "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+    "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+    "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+    "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32"
+  },
+  "prior_phase1_receipt_sha256": "3ef19984baefa332d0e6a4e452c703c3248683927f909a3f321c4b4a479c4574",
+  "baseline_sha256": {
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+  },
+  "development": {
+    "target": "127.0.0.1:5433/ai_health_wallet",
+    "server_version": 160015,
+    "versions_before": [
+      "0001",
+      "0002",
+      "0003"
+    ],
+    "versions_after": [
+      "0001",
+      "0002",
+      "0003",
+      "0004",
+      "0005",
+      "0006"
+    ],
+    "applied": [
+      "0004",
+      "0005",
+      "0006"
+    ],
+    "backup_verified": true,
+    "backup_restore_verified": true,
+    "original_tables_preserved": 15,
+    "real_development_auth_test_rows": {
+      "challenges": 0,
+      "deliveries": 0
+    },
+    "runtime_privileges_verified": {
+      "audit_update": false,
+      "audit_delete": false,
+      "delivery_update": true,
+      "payload_update": false
+    },
+    "private_checkpoint": ".private-evidence/prd-v2-phase1b-development-6JElZz",
+    "schema_archive_sha256": "677be7d71194e6ea0247059ad1ebebdaeedbdee9c213acc160d408a2df570aa1",
+    "backup_sha256": "7d3fbe3e83df14910b21aea7fd859e14a7c00170075c097ef6674c2e5d37a4c9"
+  },
+  "mail": {
+    "qualified_transport": "shipped loopback synthetic HTTP sandbox",
+    "provider_independent": true,
+    "plaintext_token_storage": false,
+    "encrypted_queue": "AES-256-GCM",
+    "retry_max": 3,
+    "automatic_worker_installed": false,
+    "production_provider_approved": false,
+    "real_email_sent": false,
+    "external_provider_contacted": false
+  },
+  "attempts": [
+    {
+      "label": "initial37",
+      "directory": "/tmp/hw-phase1-pg-TmcNju",
+      "result": "37/37 fresh disposable SQL"
+    },
+    {
+      "label": "restore_setup",
+      "directory": "/tmp/hw-phase1-pg-RAJMKh",
+      "result": "setup hook blocked functional cases: default public schema removed"
+    },
+    {
+      "label": "restore_timezone",
+      "directory": "/tmp/hw-phase1-pg-0GuI3b",
+      "result": "39/40; restored timestamp JSON used Asia/Karachi instead of source UTC"
+    },
+    {
+      "label": "final40",
+      "directory": "/tmp/hw-phase1-pg-kQh9tS",
+      "result": "40/40, migrated development schema and original backup restore"
+    }
+  ],
+  "tests": [
+    {
+      "id": "T01",
+      "name": "registration is unverified, profile fields are scoped and no guardian relationship is activated"
+    },
+    {
+      "id": "T02",
+      "name": "email verification is hashed, purpose-bound, single-use and rejects expiry/unknown tokens"
+    },
+    {
+      "id": "T03",
+      "name": "resend is generic, cooldown bounded, invalidates old challenge and enforces persisted rates"
+    },
+    {
+      "id": "T04",
+      "name": "unverified/unknown/verified recovery has the same response; only verified active email receives reset"
+    },
+    {
+      "id": "T05",
+      "name": "login preserves generic errors, emits bounded access/session tokens and denies expired/malformed/legacy JWTs"
+    },
+    {
+      "id": "T06",
+      "name": "refresh rotates once, has a fixed absolute bound and replay commits family revocation"
+    },
+    {
+      "id": "T07",
+      "name": "random invalid refresh secret cannot revoke a valid session"
+    },
+    {
+      "id": "T08",
+      "name": "simultaneous refresh has one rotation and reuse permanently denies resulting credentials"
+    },
+    {
+      "id": "T09",
+      "name": "logout revokes the current session immediately without revoking another login"
+    },
+    {
+      "id": "T10",
+      "name": "absolute and idle expired sessions deny protected requests and refresh"
+    },
+    {
+      "id": "T11",
+      "name": "reset token is expiring/one-use, changes credential and invalidates every prior session"
+    },
+    {
+      "id": "T12",
+      "name": "reset racing refresh never permits pre-reset credentials to regain access"
+    },
+    {
+      "id": "T13",
+      "name": "authenticated password change rejects wrong/weak inputs and invalidates all prior sessions"
+    },
+    {
+      "id": "T14",
+      "name": "suspended/deleted/restricted/revoked accounts deny login/access/refresh; reactivation does not resurrect sessions"
+    },
+    {
+      "id": "T15",
+      "name": "cross-patient profile/document isolation and current authorization cover file, processing and summary paths"
+    },
+    {
+      "id": "T16",
+      "name": "revocation during original acquisition denies bytes before streaming"
+    },
+    {
+      "id": "T17",
+      "name": "tokens never persist plaintext; audit is minimized and append-only for runtime role"
+    },
+    {
+      "id": "T18",
+      "name": "resend/recovery endpoints apply persistent limits and generic errors"
+    },
+    {
+      "id": "T19",
+      "name": "login endpoint bounds repeated attempts including unknown identities"
+    },
+    {
+      "id": "T20",
+      "name": "missing email transport fails closed uniformly without creating an account"
+    },
+    {
+      "id": "T21",
+      "name": "simultaneous verification consumes a challenge once and database rate admission is atomic"
+    },
+    {
+      "id": "T22",
+      "name": "refresh response reflects remaining absolute expiry rather than extending it"
+    },
+    {
+      "id": "T23",
+      "name": "reset rolls back credential, challenge and sessions when required audit persistence fails"
+    },
+    {
+      "id": "T24",
+      "name": "equal idle and absolute lifetime configuration creates a valid bounded session"
+    },
+    {
+      "id": "T25",
+      "name": "1B verification dispatch crosses HTTP sandbox with purpose-specific code; API does not wait for provider"
+    },
+    {
+      "id": "T26",
+      "name": "1B reset dispatch uses verified email, generic recovery response and a different purpose"
+    },
+    {
+      "id": "T27",
+      "name": "1B transient relay failure records safe metadata and retries with one stable idempotency key"
+    },
+    {
+      "id": "T28",
+      "name": "1B permanent failure is terminal without retry or account activation"
+    },
+    {
+      "id": "T29",
+      "name": "1B transient retries exhaust at three and cannot become an unbounded duplicate-send loop"
+    },
+    {
+      "id": "T30",
+      "name": "1B expired queued challenge is not sent and expired code never verifies"
+    },
+    {
+      "id": "T31",
+      "name": "1B resend supersedes old queued mail and invalidates old code without duplicate sends"
+    },
+    {
+      "id": "T32",
+      "name": "1B concurrent enqueue/drain and repeated sends dispatch the same challenge once"
+    },
+    {
+      "id": "T33",
+      "name": "1B metadata omits secrets/email bodies; ciphertext is authenticated and removed after success"
+    },
+    {
+      "id": "T34",
+      "name": "1B wrong encryption key fails closed without logging raw provider/token details"
+    },
+    {
+      "id": "T35",
+      "name": "1B timeout is bounded and retries remain observable"
+    },
+    {
+      "id": "T36",
+      "name": "1B disabled/sandbox/production configuration fails closed without leaking config values"
+    },
+    {
+      "id": "T37",
+      "name": "1B account/email security version changes supersede outstanding queued verification and reset"
+    },
+    {
+      "id": "T38",
+      "name": "1B enqueue failure rolls back issuance and cannot enumerate recovery accounts"
+    },
+    {
+      "id": "T39",
+      "name": "1B shipped local sandbox provides memory-only review and idempotent actual HTTP delivery"
+    },
+    {
+      "id": "T40",
+      "name": "1B original development checkpoint restores into an isolated database with all original rows intact"
+    }
+  ],
+  "prd_mapping": {
+    "M01-001": [
+      "T01"
+    ],
+    "M01-002": [
+      "T01",
+      "T05",
+      "T14"
+    ],
+    "M01-003": [
+      "T01",
+      "T15"
+    ],
+    "M01-004": [
+      "T01",
+      "T02",
+      "T03",
+      "T21",
+      "T25",
+      "T30",
+      "T31",
+      "T36",
+      "T37",
+      "T38",
+      "T39"
+    ],
+    "M01-005": [
+      "T05",
+      "T06",
+      "T08",
+      "T09",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T15",
+      "T16",
+      "T22",
+      "T24"
+    ],
+    "M01-006": [
+      "T04",
+      "T11",
+      "T12",
+      "T18",
+      "T23",
+      "T26",
+      "T27",
+      "T28",
+      "T29",
+      "T30",
+      "T33",
+      "T35",
+      "T36",
+      "T37",
+      "T38",
+      "T40"
+    ],
+    "M01-007": [
+      "T01",
+      "T04",
+      "T26",
+      "T37",
+      "T38"
+    ],
+    "M01-008": [
+      "T01",
+      "T15"
+    ],
+    "M01-009": [
+      "T05",
+      "T06",
+      "T10",
+      "T14",
+      "T15",
+      "T16",
+      "T37"
+    ],
+    "M01-010": [
+      "T09",
+      "T15",
+      "T16"
+    ],
+    "M01-011": [
+      "T06",
+      "T07",
+      "T08",
+      "T10",
+      "T12",
+      "T22",
+      "T24"
+    ],
+    "M01-012": [
+      "T02",
+      "T04",
+      "T11",
+      "T12",
+      "T18",
+      "T23",
+      "T26",
+      "T30",
+      "T37",
+      "T38"
+    ],
+    "M01-013": [
+      "T17",
+      "T23",
+      "T27",
+      "T28",
+      "T29",
+      "T33",
+      "T34",
+      "T38"
+    ],
+    "M01-014": [
+      "T01",
+      "T15"
+    ]
+  },
+  "tracker_status_totals": {
+    "IMPLEMENTED": 36,
+    "MISSING": 107,
+    "PARTIAL": 62,
+    "NEEDS_REVERIFICATION": 8,
+    "BLOCKED": 19
+  },
+  "private_tap_directory": ".private-evidence/prd-v2-phase1b-20261028",
+  "phase1_report_append_only": true,
+  "production_touched": false,
+  "commit": false,
+  "push": false,
+  "next_phase_started": false,
+  "recommendation": "M02/M03 safe for owner-approved synthetic development after review; no automatic continuation"
+}

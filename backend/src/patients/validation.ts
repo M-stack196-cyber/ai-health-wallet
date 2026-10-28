@@ -4,6 +4,8 @@ export interface ProfileChanges {
   full_name?: string;
   date_of_birth?: string | null;
   phone_number?: string | null;
+  sex_gender?: string | null;
+  pending_guardian_email?: string | null;
 }
 export interface RegistrationInput extends ProfileChanges {
   email: string;
@@ -34,7 +36,7 @@ export function normalizeEmail(value: unknown): string {
       || !/[a-z]/.test(labels.at(-1)!)) invalid();
   return email;
 }
-function password(value: unknown, registration: boolean): string {
+export function password(value: unknown, registration: boolean): string {
   if (typeof value !== "string" || [...value].length > 128 || Buffer.byteLength(value, "utf8") > 512
       || /[\u0000-\u001f\u007f]/.test(value)) invalid();
   if (registration) {
@@ -45,6 +47,11 @@ function password(value: unknown, registration: boolean): string {
 }
 function profile(value: Record<string, unknown>): ProfileChanges {
   const changes: ProfileChanges = {};
+  if (Object.hasOwn(value, 'sex_gender')) {
+    if (value.sex_gender !== null && !['female','male','other','prefer_not_to_say'].includes(value.sex_gender as string)) invalid();
+    changes.sex_gender = value.sex_gender as string | null;
+  }
+  if (Object.hasOwn(value, 'pending_guardian_email')) changes.pending_guardian_email = value.pending_guardian_email === null ? null : normalizeEmail(value.pending_guardian_email);
   if (Object.hasOwn(value, "full_name")) {
     if (typeof value.full_name !== "string") invalid();
     const name = value.full_name.trim();
@@ -74,7 +81,7 @@ function profile(value: Record<string, unknown>): ProfileChanges {
   return changes;
 }
 export function validateRegistration(body: unknown): RegistrationInput {
-  const input = object(body, ["email", "password", "full_name", "date_of_birth", "phone_number"]);
+  const input = object(body, ["email", "password", "full_name", "date_of_birth", "phone_number", "sex_gender", "pending_guardian_email"]);
   const changes = profile(input);
   if (!changes.full_name) invalid();
   return { ...changes, full_name: changes.full_name, email: normalizeEmail(input.email), password: password(input.password, true) };
@@ -84,7 +91,7 @@ export function validateLogin(body: unknown): { email: string; password: string 
   return { email: normalizeEmail(input.email), password: password(input.password, false) };
 }
 export function validateProfilePatch(body: unknown): ProfileChanges {
-  const input = object(body, ["full_name", "date_of_birth", "phone_number"]);
+  const input = object(body, ["full_name", "date_of_birth", "phone_number", "sex_gender", "pending_guardian_email"]);
   if (Object.keys(input).length === 0) invalid();
   return profile(input);
 }

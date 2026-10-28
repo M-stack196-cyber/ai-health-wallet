@@ -29,7 +29,7 @@ export function createProcessingRoutes(database:PatientDatabase,auth:Authenticat
  const limit=options.retryLimit??5;if(!Number.isInteger(limit)||limit<1||limit>20)throw Error('Invalid processing API limits.');
  const readLimit=options.readLimit??120;if(!Number.isInteger(readLimit)||readLimit<1||readLimit>1000)throw Error('Invalid processing API limits.');
  const repository=createPatientProcessingRepository(database,approval?.canary),router=Router();
- const authenticate=requirePatient(createTokenService(auth));
+ const authenticate=requirePatient(createTokenService(auth),database);
  const noStore=(_req:unknown,res:{set(k:string,v:string):unknown},next:()=>void)=>{res.set('Cache-Control','no-store');next();};
  const limiter=rateLimit({windowMs:60000,limit,keyGenerator:req=>patientIdentity(req),standardHeaders:'draft-8',legacyHeaders:false,
   message:{success:false,error:{code:'PROCESSING_RETRY_RATE_LIMITED',message:'Too many extraction retry requests. Try again later.'}}});

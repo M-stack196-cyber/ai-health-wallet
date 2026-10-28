@@ -3,7 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import { checkDatabaseConnection, pool } from "./database/pool.js";
 import { getAuthenticationConfig, type AuthenticationConfig } from "./config/auth.js";
-import { createPatientRoutes } from "./auth/routes.js";
+import { createPatientRoutes, type IdentityOptions } from "./auth/routes.js";
+import {configuredSecurityEmail} from "./auth/security-email.js";
 import { ApiError, errorHandler } from "./http/errors.js";
 import type { PatientDatabase } from "./patients/repository.js";
 import { getDocumentConfig, type DocumentConfig } from "./config/documents.js";
@@ -13,11 +14,12 @@ import { createS3Storage, type DocumentStorage } from "./documents/storage.js";
 import {createProcessingRoutes,type ProcessingApiOptions} from "./processing/api.js";
 import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.js";
 
-export function createApp(options: { auth?: AuthenticationConfig; database?: PatientDatabase;
+export function createApp(options: { auth?: AuthenticationConfig; database?: PatientDatabase; identity?: IdentityOptions;
   documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; processingApi?: ProcessingApiOptions } = {}) {
   const app = express();
   const auth = options.auth ?? getAuthenticationConfig();
-  const routes = createPatientRoutes(options.database ?? pool, auth);
+  const identity = options.identity ?? {mailer:configuredSecurityEmail(options.database ?? pool)?.mailer};
+  const routes = createPatientRoutes(options.database ?? pool, auth, identity);
   const documentConfig = options.documentConfig ?? getDocumentConfig();
   const storage = options.documentStorage === undefined
     ? (documentConfig.storage ? createS3Storage(documentConfig.storage) : null) : options.documentStorage;

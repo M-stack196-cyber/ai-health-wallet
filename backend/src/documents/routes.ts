@@ -18,9 +18,9 @@ export function createDocumentRoutes(database: PatientDatabase, auth: Authentica
   const router = Router();
   const repository = createDocumentRepository(database);
   const service = createDocumentService(repository, storage);
-  const deliverFile = createPatientFileAccess(repository, storage, config);
+  const deliverFile = createPatientFileAccess(repository, storage, config, database);
   let activeUploads = 0;
-  router.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); }, requirePatient(createTokenService(auth)));
+  router.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); }, requirePatient(createTokenService(auth),database));
   const limiter = rateLimit({ windowMs: 900000, limit: config.uploadRateLimitMax,
     legacyHeaders: false, standardHeaders: "draft-8", validate: { xForwardedForHeader: false },
     message: { success: false, error: { code: "UPLOAD_RATE_LIMITED", message: "Too many upload attempts. Try again later." } } });

@@ -1,21 +1,30 @@
 import type { Request, RequestHandler } from "express";
 import { ApiError } from "../http/errors.js";
 import type { createTokenService } from "./tokens.js";
+import type {PatientDatabase} from '../patients/repository.js';
+import {createSecurityRepository} from './security-repository.js';
+import {getSecurityPolicy} from './security-policy.js';
 
-export interface PatientAuthentication { readonly patientId: string; }
+export interface PatientAuthentication { readonly patientId: string; readonly sessionId?: string; }
 declare global {
   namespace Express {
     interface Request { auth?: PatientAuthentication; }
   }
 }
 
-export function requirePatient(tokens: ReturnType<typeof createTokenService>): RequestHandler {
+export async function assertCurrentPatient(req: Request, database: PatientDatabase): Promise<void> {
+  if(!req.auth?.sessionId || !await createSecurityRepository(database,getSecurityPolicy()).authorize({patientId:req.auth.patientId,sessionId:req.auth.sessionId}))
+    throw new ApiError(401,'UNAUTHORIZED','A valid access token is required.');
+}
+export function requirePatient(tokens: ReturnType<typeof createTokenService>, database?: PatientDatabase): RequestHandler {
   return async (req, _res, next) => {
     const header = req.get("Authorization");
     const match = header && header.length <= 4096 ? /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i.exec(header) : null;
     if (!match) { next(new ApiError(401, "UNAUTHORIZED", "A valid access token is required.")); return; }
     try {
-      req.auth = Object.freeze({ patientId: await tokens.verify(match[1]) });
+      req.auth = Object.freeze(await tokens.verifySession(match[1]));
+      if(!database)throw Error('Authorization database required.');
+      await assertCurrentPatient(req,database);
       next();
     } catch {
       next(new ApiError(401, "UNAUTHORIZED", "A valid access token is required."));

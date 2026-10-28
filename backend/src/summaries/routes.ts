@@ -31,7 +31,7 @@ export function createSummaryRoutes(documentsDatabase:PatientDatabase,auth:Authe
   if(typeof enabled!=='boolean'||![requestLimit,readLimit,windowMs].every(Number.isSafeInteger)||requestLimit<1||requestLimit>100||readLimit<1||readLimit>1000||windowMs<100||windowMs>900000||(enabled&&(!options.database||typeof options.catalogue!=='function')))throw new Error('Invalid summary API configuration.');
   const database=options.database,catalogue=options.catalogue;
   const router=Router(),documents=createDocumentRepository(documentsDatabase);
-  const authorize=requirePatient(createTokenService(auth));
+  const authorize=requirePatient(createTokenService(auth),documentsDatabase);
   const noStore:RequestHandler=(_req,res,next)=>{res.set('Cache-Control','no-store');next();};
   const own:RequestHandler=async(req,_res,next)=>{const row=await documents.reference(documentId(req.params.id),patientIdentity(req));if(!row)throw notFound();next();};
   const noBody:RequestHandler=(req,_res,next)=>{if(req.body!==undefined||req.get('Transfer-Encoding')||Number(req.get('Content-Length')??0)>0)throw new ApiError(400,'INVALID_INPUT','A request body is not permitted.');next();};

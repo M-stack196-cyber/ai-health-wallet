@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "kind": "prd-v2-phase1-identity-security",
+  "date": "2026-10-28",
+  "timezone": "Asia/Karachi",
+  "outcome": "FOCUSED_BACKEND_QUALIFIED_MODULE_ACCEPTANCE_OPEN",
+  "counts": {
+    "tests": 24,
+    "passed": 24,
+    "failed": 0,
+    "skipped": 0
+  },
+  "typecheck": true,
+  "build": true,
+  "broad_regression_run": false,
+  "database": "Disposable PostgreSQL16.15, private Unix socket, TCP disabled",
+  "adapters": {
+    "mail": "synthetic injected port; no live provider",
+    "storage": "synthetic bytes; no AWS"
+  },
+  "source_sha256": {
+    "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+    "backend/package.json": "212631533940145d9db58fcf4968ff975959a1cddba9faa9351557c1f4eb1f1f",
+    "backend/src/app.ts": "25e2e05790bb0a83300b73f1348662b0953f10e74cf109987cba0df6d174878d",
+    "backend/src/auth/identity-security.test.ts": "19288b4093466d9791f8c44e2383468fb3ef44458b86a88b7575dd789594dc69",
+    "backend/src/auth/middleware.ts": "b8c3a1b4b788110bebf1f455102941f3f7eedc3f57e78809e3dba334163a1433",
+    "backend/src/auth/routes.ts": "dd55216fee343ab8b4c08dab41404c6fd15d93dd706188b4f3652a059fd98afc",
+    "backend/src/auth/security-policy.ts": "9a87f5a5c5694d06daba7188276e2a10544840d2774a6c9966f40cd884d4f9f1",
+    "backend/src/auth/security-repository.ts": "e3fcc3801200af5fe8f955ecd997b1bcab9b5b8e75d2392e86bc956a63356933",
+    "backend/src/auth/tokens.ts": "9f09268ab66cd45e405e99b6f79462c05f8b4e2df6afc05486bfb3ad5ebcb722",
+    "backend/src/documents/file-access.ts": "e7c41940ca41571b5f839f459cc37280ca01d6ac5c9bb1c6ebdf19c274240983",
+    "backend/src/documents/routes.ts": "00c11180dc7329972fc415081b7a953e0926d3d08f50dbd457e1f7bc0f25561f",
+    "backend/src/patients/repository.ts": "5bf306d8293b64dac429344b4bb5a089842275b6740783c95c4087321ecd58bf",
+    "backend/src/patients/validation.ts": "a0c988a5befa9159e16da372d20c3ba44ce5822e9d1351dbeee681e093943551",
+    "backend/src/processing/api.ts": "302ee1e8d0ae75e15ed095d380bc629f9763f3cc686b7e9dd16750f0175b9e40",
+    "backend/src/summaries/routes.ts": "1b073c66746411ab2fbe1a3ad553b051e05051f0a87b020c8354dd4aa8f3865f",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "e588b5fe0a97b30acca771c929c3464528cb913d55f1e55becbd9b2c5c35998a",
+    "infrastructure/identity/run.mjs": "b77d1c9fcdd91ad046a2653a438c840fc22ac16df98f38f388c0453dac7b1739"
+  },
+  "baseline_sha256": {
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84"
+  },
+  "migration": "backend/migrations/0005_patient_identity_security.sql",
+  "historical_migrations_changed": false,
+  "historical_receipts_unchanged": 13,
+  "tracker_counts": {
+    "IMPLEMENTED": 34,
+    "PARTIAL": 64,
+    "MISSING": 107,
+    "NEEDS_REVERIFICATION": 8,
+    "BLOCKED": 19
+  },
+  "tests": [
+    {
+      "id": "T01",
+      "name": "registration is unverified, profile fields are scoped and no guardian relationship is activated"
+    },
+    {
+      "id": "T02",
+      "name": "email verification is hashed, purpose-bound, single-use and rejects expiry/unknown tokens"
+    },
+    {
+      "id": "T03",
+      "name": "resend is generic, cooldown bounded, invalidates old challenge and enforces persisted rates"
+    },
+    {
+      "id": "T04",
+      "name": "unverified/unknown/verified recovery has the same response; only verified active email receives reset"
+    },
+    {
+      "id": "T05",
+      "name": "login preserves generic errors, emits bounded access/session tokens and denies expired/malformed/legacy JWTs"
+    },
+    {
+      "id": "T06",
+      "name": "refresh rotates once, has a fixed absolute bound and replay commits family revocation"
+    },
+    {
+      "id": "T07",
+      "name": "random invalid refresh secret cannot revoke a valid session"
+    },
+    {
+      "id": "T08",
+      "name": "simultaneous refresh has one rotation and reuse permanently denies resulting credentials"
+    },
+    {
+      "id": "T09",
+      "name": "logout revokes the current session immediately without revoking another login"
+    },
+    {
+      "id": "T10",
+      "name": "absolute and idle expired sessions deny protected requests and refresh"
+    },
+    {
+      "id": "T11",
+      "name": "reset token is expiring/one-use, changes credential and invalidates every prior session"
+    },
+    {
+      "id": "T12",
+      "name": "reset racing refresh never permits pre-reset credentials to regain access"
+    },
+    {
+      "id": "T13",
+      "name": "authenticated password change rejects wrong/weak inputs and invalidates all prior sessions"
+    },
+    {
+      "id": "T14",
+      "name": "suspended/deleted/restricted/revoked accounts deny login/access/refresh; reactivation does not resurrect sessions"
+    },
+    {
+      "id": "T15",
+      "name": "cross-patient profile/document isolation and current authorization cover file, processing and summary paths"
+    },
+    {
+      "id": "T16",
+      "name": "revocation during original acquisition denies bytes before streaming"
+    },
+    {
+      "id": "T17",
+      "name": "tokens never persist plaintext; audit is minimized and append-only for runtime role"
+    },
+    {
+      "id": "T18",
+      "name": "resend/recovery endpoints apply persistent limits and generic errors"
+    },
+    {
+      "id": "T19",
+      "name": "login endpoint bounds repeated attempts including unknown identities"
+    },
+    {
+      "id": "T20",
+      "name": "missing email transport fails closed uniformly without creating an account"
+    },
+    {
+      "id": "T21",
+      "name": "simultaneous verification consumes a challenge once and database rate admission is atomic"
+    },
+    {
+      "id": "T22",
+      "name": "refresh response reflects remaining absolute expiry rather than extending it"
+    },
+    {
+      "id": "T23",
+      "name": "reset rolls back credential, challenge and sessions when required audit persistence fails"
+    },
+    {
+      "id": "T24",
+      "name": "equal idle and absolute lifetime configuration creates a valid bounded session"
+    }
+  ],
+  "prd_test_mapping": {
+    "M01-001": [
+      "T01"
+    ],
+    "M01-002": [
+      "T01",
+      "T05",
+      "T14"
+    ],
+    "M01-003": [
+      "T01",
+      "T15"
+    ],
+    "M01-004": [
+      "T01",
+      "T02",
+      "T03",
+      "T21"
+    ],
+    "M01-005": [
+      "T05",
+      "T06",
+      "T08",
+      "T09",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T15",
+      "T16",
+      "T22",
+      "T24"
+    ],
+    "M01-006": [
+      "T04",
+      "T11",
+      "T12",
+      "T18",
+      "T23"
+    ],
+    "M01-007": [
+      "T01",
+      "T04"
+    ],
+    "M01-008": [
+      "T01",
+      "T15"
+    ],
+    "M01-009": [
+      "T05",
+      "T06",
+      "T10",
+      "T14",
+      "T15",
+      "T16"
+    ],
+    "M01-010": [
+      "T09",
+      "T15",
+      "T16"
+    ],
+    "M01-011": [
+      "T06",
+      "T07",
+      "T08",
+      "T10",
+      "T12",
+      "T22",
+      "T24"
+    ],
+    "M01-012": [
+      "T02",
+      "T04",
+      "T11",
+      "T12",
+      "T18",
+      "T23"
+    ],
+    "M01-013": [
+      "T17",
+      "T23"
+    ],
+    "M01-014": [
+      "T01",
+      "T15"
+    ]
+  },
+  "attempts": [
+    {
+      "scope": "initial focused",
+      "result": "17/17",
+      "directory": "/tmp/hw-phase1-pg-8CMUwC"
+    },
+    {
+      "scope": "expanded focused",
+      "result": "21/22; timestamp fixture/edge failure retained",
+      "directory": "/tmp/hw-phase1-pg-vMyeDq"
+    },
+    {
+      "scope": "final focused",
+      "result": "24/24",
+      "directory": "/tmp/hw-phase1-pg-OPuM4f"
+    }
+  ],
+  "private_evidence": ".private-evidence/prd-v2-phase1-20261028",
+  "cleanup": {
+    "final_disposable_cluster_stopped": true,
+    "scratch_cluster_stopped": true
+  },
+  "external_operations": {
+    "development_database": false,
+    "AWS": false,
+    "real_email": false,
+    "models": false,
+    "deployment": false,
+    "commit": false,
+    "push": false
+  },
+  "remaining": [
+    "Real security-email transport configuration/delivery and timing/reliability qualification",
+    "CFG-16 release/security review and client token storage integration",
+    "M01 whole-module mobile/deployed acceptance",
+    "Historical stateless-login/file test fixtures need session-aware requalification before use",
+    "Later modules and unresolved clinical/privacy/operations/AI gates untouched"
+  ],
+  "report_sha256": "36ad2d7e8a97b6ccd1c30c95896255c54eede29b1ce150b548fd11a722ae39f5"
+}

@@ -10,10 +10,12 @@ import type {DocumentStorage} from './storage.js';
 import {validStorageReference} from './storage-safety.js';
 import {ApiError} from '../http/errors.js';
 import {notFound, storageUnavailable} from './service.js';
+import {assertCurrentPatient} from '../auth/middleware.js';
+import type {PatientDatabase} from '../patients/repository.js';
 
 // Patient requests only: no URL signing, OCR, processing claims or sharing grants.
 // Future doctor delivery must supply its own current-grant authorization policy.
-export function createPatientFileAccess(repository:ReturnType<typeof createDocumentRepository>, storage:DocumentStorage|null, config:DocumentConfig) {
+export function createPatientFileAccess(repository:ReturnType<typeof createDocumentRepository>, storage:DocumentStorage|null, config:DocumentConfig, database?:PatientDatabase) {
   let active=0;
   return async (id:string, patientId:string, req:Request, res:Response):Promise<void> => {
     const row=await repository.reference(id,patientId);
@@ -51,6 +53,8 @@ export function createPatientFileAccess(repository:ReturnType<typeof createDocum
       if(current.s3_bucket!==row.s3_bucket || current.s3_object_key!==row.s3_object_key
         || current.file_type!==row.file_type)throw storageUnavailable();
       controller.signal.throwIfAborted();
+      if(!database)throw storageUnavailable();
+      await assertCurrentPatient(req,database);
       const mime=row.file_type==='pdf'?'application/pdf':row.file_type==='png'?'image/png':'image/jpeg';
       const encoded=encodeURIComponent(row.original_filename).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
       res.status(200).set({'Content-Type':mime,'Content-Length':String(info.size),'Cache-Control':'private, no-store',
