@@ -39,14 +39,16 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_identity_phase1');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,9);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,10);
  if(process.env.IDENTITY_TEST_SCHEMA_FILE){
   assert.equal(process.env.IDENTITY_TEST_SCHEMA_FILE,socket+'/development-schema.dump');
   const restored=spawnSync('/usr/bin/pg_restore',['--no-owner','--no-privileges','--exit-on-error','--host='+socket,'--port=55481','--username='+userInfo().username,'--dbname=hw_identity_phase1',process.env.IDENTITY_TEST_SCHEMA_FILE],{encoding:'utf8',timeout:30000});
   assert.equal(restored.status,0,'development schema archive restores into disposable cluster');
   await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app; GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO health_wallet_app; REVOKE UPDATE,DELETE ON patient_security_events,patient_refresh_history FROM health_wallet_app; REVOKE DELETE ON patient_auth_sessions,patient_auth_challenges,patient_auth_rate_limits,patient_security_email_deliveries FROM health_wallet_app; REVOKE UPDATE ON patient_security_email_payloads FROM health_wallet_app');
+  await admin.query('CREATE EXTENSION IF NOT EXISTS vector');
   for(const migration of files.filter(f=>f>='0007'))await admin.query(await readFile(new URL('../../migrations/'+migration,import.meta.url),'utf8'));
  }else for(const f of files){
+  if(f.startsWith('0010'))await admin.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(f.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await admin.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
  }

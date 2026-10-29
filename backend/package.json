@@ -54,7 +54,8 @@
     "phase2:guardian-documents:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase2",
     "documents:closure:test": "node ../infrastructure/identity/run.mjs --execute-isolated --m03-only",
     "phase3:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase3",
-    "phase4:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase4"
+    "phase4:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase4",
+    "phase5:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase5"
   },
   "keywords": [],
   "author": "",
