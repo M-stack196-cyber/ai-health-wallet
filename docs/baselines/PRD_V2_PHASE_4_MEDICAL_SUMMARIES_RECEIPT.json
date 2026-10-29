@@ -1,0 +1,440 @@
+{
+  "phase": "PRD_V2_PHASE_4_MEDICAL_SUMMARIES",
+  "recorded_at_utc": "2026-10-29T09:47:48.570181+00:00",
+  "baseline": {
+    "git_entry_and_current_head": "fc91077a1e284e495a07bcb8431e02f9cdc4f139",
+    "tracked_worktree_clean_at_entry": true,
+    "authoritative_document_sha256": {
+      "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+      "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+    },
+    "source": "SRS v4.0 + PRD v2.0; current tracker/reconciliation/Phase 3 report"
+  },
+  "scope": [
+    "M07 patient report summaries",
+    "M07 bounded source-separated history",
+    "minimum M14/M15/M18 source/privacy/schema/traceability support"
+  ],
+  "not_performed": [
+    "commit",
+    "push",
+    "deployment",
+    "normal development or production migration",
+    "AWS request",
+    "hosted LLM request",
+    "Ollama launch/query/model download",
+    "real patient processing",
+    "M08 RAG/embedding implementation",
+    "M09 doctor workflow",
+    "M10 medical email",
+    "frontend/Admin",
+    "broad regression/final E2E"
+  ],
+  "implementation": {
+    "report": "Real Node/private FastAPI/synthetic-provider/validated fenced SQL path for narrow English lab catalogue",
+    "history": "Immutable current-source manifests reference existing report jobs/results; deterministic chronological source-separated composition, not unrestricted clinical synthesis",
+    "provider": "synthetic-fake/extractive-fixture revision 1, explicitly labelled synthetic-offline",
+    "default_application_enabled": false,
+    "explicit_runtime_factory": "backend/src/summaries/offline-runtime.ts:createOfflineSummaryRuntime",
+    "limits": {
+      "source_text_bytes": 32768,
+      "facts": 32,
+      "history_candidates": 20
+    },
+    "unknown_source_behavior": "insufficiency or explicit omitted unsupported record; no grounded success",
+    "all_M07_complete": false
+  },
+  "migration": {
+    "added": "backend/migrations/0009_summary_history.sql",
+    "sha256": "37872698dcec9fde301a69c4c63a56120e3a0398bfa390a9272b11cf91d8e350",
+    "0001_through_0008_unchanged": true,
+    "disposable_postgresql_16_fresh_apply": true,
+    "non_superuser_migrator_rollback_reapply": true,
+    "legacy_source_retained": true,
+    "development_or_production_applied": false,
+    "earlier_test_schema_counts_updated_only": true
+  },
+  "tests": {
+    "node": {
+      "command": "PHASE3_PYTHON=/tmp/hw-phase3-python/bin/python node infrastructure/identity/run.mjs --execute-isolated --phase4",
+      "total": 130,
+      "pass": 130,
+      "fail": 0,
+      "new_phase4": 10,
+      "reused_summary_checks": 120,
+      "private_evidence": ".private-evidence/prd-v2-phase4-20261029/node-final.tap",
+      "sha256": "c5a6554da279c848dd7127ad3a5b8fa3092fa982cafa0282d5eb614259645fe7"
+    },
+    "python": {
+      "command": "PYTHONPATH=ai-service /tmp/hw-phase3-python/bin/python -m unittest discover -s ai-service/tests -p test_service.py",
+      "total": 110,
+      "pass": 110,
+      "fail": 0,
+      "private_evidence": ".private-evidence/prd-v2-phase4-20261029/python-service.log",
+      "sha256": "708cc14942cfddaa815638789030676e64205ba3f497e8ece9d429ef4e16286b"
+    },
+    "offline_evaluation": {
+      "command": "PYTHONPATH=ai-service /tmp/hw-phase3-python/bin/python -m summary_evaluation.runner --receipt .private-evidence/prd-v2-phase4-20261029/offline-evaluation.json",
+      "scenarios": 42,
+      "expectations_met": 42,
+      "accepted_reference_outputs": 11,
+      "expected_refusals": 31,
+      "accepted_reference_facts": 14,
+      "accepted_covered_facts": 14,
+      "accepted_measured_errors": 0,
+      "reference_fixture_sha256": "4f67f1f569fda62286d3dbb23af1eba871696c0879e908c5ce6b5136bb821ff2",
+      "evaluator_sha256": "603afb1e33c7d9551552f0ec2d896803a433779a51adbc11520ec205951c4c32",
+      "private_evidence": ".private-evidence/prd-v2-phase4-20261029/offline-evaluation.json",
+      "sha256": "d39819fe2413728b84d00b4c3c6614698abd7a36dec8354ee2931987b8da1a9a",
+      "criteria": "Existing synthetic fixture criteria unchanged; not approved CFG-10 thresholds; not actual-model or broad new-catalogue accuracy"
+    },
+    "typecheck": {
+      "command": "npm --prefix backend run typecheck",
+      "result": "PASS",
+      "sha256": "98c10d93158e72af04aa7608d9a86d3904d60c993d0497329207fb9793b2d872"
+    },
+    "build": {
+      "command": "npm --prefix backend run build",
+      "result": "PASS",
+      "sha256": "3ca97bea7e1b6611b20d1b7f750f70a87d9068d19ff07f2e40976146059d2d81"
+    },
+    "git_diff_check": "PASS",
+    "earlier_attempts": [
+      {
+        "evidence": ".private-evidence/prd-v2-phase4-20261029/node-attempt-1.tap",
+        "sha256": "32a2b84d7e9fa69e8883b950963db793640591c253fad395b90d12bed4e1e14b",
+        "outcome": "119/127; fact-ID schema mismatch and obsolete projection/privileged fixture assumptions corrected"
+      },
+      {
+        "evidence": ".private-evidence/prd-v2-phase4-20261029/node-attempt-2.tap",
+        "sha256": "c6cd884265cfcc35a75f0a07d0f8c6aa36c57422e65c561d39662fc10d645b64",
+        "outcome": "126/127; retry-delay fixture corrected without relaxing transition guard"
+      },
+      {
+        "evidence": ".private-evidence/prd-v2-phase4-20261029/node-attempt-3.tap",
+        "sha256": "18d9ce486ac972a5b3905c73e0132ac2169076b6cfb75f07d2078c61efee36be",
+        "outcome": "129/129; final history timestamp/failure/retry check subsequently added"
+      }
+    ]
+  },
+  "isolation": {
+    "final_disposable_directory": "/tmp/hw-phase1-pg-Yf01xO",
+    "postgres_stopped": true,
+    "summary_python_child_stopped": true,
+    "database_transport": "Unix socket only",
+    "summary_http": "loopback only",
+    "source_extraction": "seeded via existing fenced service; Phase 3 real OCR evidence reused",
+    "original_storage": "synthetic in-memory fixture",
+    "live_cloud": false,
+    "hosted_provider": false,
+    "real_patient_data": false,
+    "private_directory_mode": "0700",
+    "private_files_mode": "0600",
+    "test_log_scan": "No bearer token, DB URL or service token assignment"
+  },
+  "accounting": {
+    "source_docx_inventory_verified": true,
+    "requirements": 232,
+    "modules": 18,
+    "all_original_source_text_mapping_priority_preserved": true,
+    "out_of_scope_221_rows_identical": true,
+    "entry_totals": {
+      "IMPLEMENTED": 63,
+      "PARTIAL": 51,
+      "MISSING": 93,
+      "BLOCKED": 19,
+      "NEEDS_REVERIFICATION": 6
+    },
+    "final_totals": {
+      "IMPLEMENTED": 66,
+      "PARTIAL": 50,
+      "MISSING": 91,
+      "BLOCKED": 19,
+      "NEEDS_REVERIFICATION": 6
+    },
+    "weighted_control_percent": 39.22,
+    "module_progress": {
+      "M01": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 14,
+          "PARTIAL": 0,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 100.0
+      },
+      "M02": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 10,
+          "PARTIAL": 0,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 100.0
+      },
+      "M03": {
+        "requirements": 12,
+        "statuses": {
+          "IMPLEMENTED": 8,
+          "PARTIAL": 2,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 2
+        },
+        "weighted_control_percent": 75.0
+      },
+      "M04": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 11,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 89.29
+      },
+      "M05": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 9,
+          "PARTIAL": 1,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 95.0
+      },
+      "M06": {
+        "requirements": 8,
+        "statuses": {
+          "IMPLEMENTED": 5,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 81.25
+      },
+      "M07": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 3,
+          "PARTIAL": 5,
+          "MISSING": 2,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 50.0
+      },
+      "M08": {
+        "requirements": 22,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 3,
+          "MISSING": 17,
+          "BLOCKED": 2,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 6.82
+      },
+      "M09": {
+        "requirements": 19,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 5,
+          "MISSING": 12,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 18.42
+      },
+      "M10": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 2,
+          "MISSING": 10,
+          "BLOCKED": 2,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 7.14
+      },
+      "M11": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 0,
+          "MISSING": 10,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 9.09
+      },
+      "M12": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 0,
+          "MISSING": 9,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 10.0
+      },
+      "M13": {
+        "requirements": 22,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 0,
+          "MISSING": 21,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 0.0
+      },
+      "M14": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 9,
+          "MISSING": 0,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 1
+        },
+        "weighted_control_percent": 40.91
+      },
+      "M15": {
+        "requirements": 12,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 4,
+          "MISSING": 6,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 25.0
+      },
+      "M16": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 5,
+          "MISSING": 1,
+          "BLOCKED": 3,
+          "NEEDS_REVERIFICATION": 1
+        },
+        "weighted_control_percent": 25.0
+      },
+      "M17": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 5,
+          "MISSING": 3,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 2
+        },
+        "weighted_control_percent": 22.73
+      },
+      "M18": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 2,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 6,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 31.82
+      }
+    },
+    "M07_final_status": {
+      "M07-001": "PARTIAL",
+      "M07-002": "PARTIAL",
+      "M07-003": "MISSING",
+      "M07-004": "PARTIAL",
+      "M07-005": "PARTIAL",
+      "M07-006": "IMPLEMENTED",
+      "M07-007": "PARTIAL",
+      "M07-008": "IMPLEMENTED",
+      "M07-009": "MISSING",
+      "M07-010": "IMPLEMENTED",
+      "M07-011": "BLOCKED"
+    }
+  },
+  "qualification": {
+    "bounded_offline_report_backend": "IMPLEMENTED and focused-qualified",
+    "bounded_source_separated_history_backend": "IMPLEMENTED and focused-qualified",
+    "general_M07_report_and_longitudinal_AI": "PARTIAL",
+    "actual_provider_approval": "OPEN CFG-01",
+    "formal_quality_approval": "BLOCKED CFG-10",
+    "doctor_access": "MISSING, requires M09",
+    "client_live_deployment_clinical_acceptance": false
+  },
+  "open_gates": [
+    "CFG-01 provider/model/data handling/geography approval",
+    "CFG-10 formal clinical/quality thresholds and representative actual-model/source evaluation",
+    "General report catalogue and longitudinal clinical synthesis coverage",
+    "M09 real doctor grant/OTP/revocation/expiry summary access",
+    "CFG-12/18 physical retention/erasure/backups/legal holds approval",
+    "Live S3, client, service supervision/secrets/deployment and changed-source attestation"
+  ],
+  "preserved_immutable_sha256": {
+    "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+    "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+    "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+    "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+    "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+    "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f",
+    "backend/migrations/0007_guardian_documents.sql": "15dc8294da358ca94cc5a1e73aae2b7731f54f8fd0a4a8e2ced46affe4cd5c23",
+    "backend/migrations/0008_document_access_processing_timeline.sql": "0c55c0f7bfdc75c215c5bb922b474711ab08fbc4178bf9eb76d3caa199f3d8e5",
+    "docs/baselines/B01_SOURCE_MANIFEST.json": "fcfb0dc6cc07df2dbc289e582452decf0801ca923d22add841b97ce0d3c26afa",
+    "docs/baselines/B01_VALIDATION_RECEIPT.json": "10bcc0e51fa70f933d441e30504b891935418b72ea121b2186737a80edef76e0",
+    "docs/baselines/B02_VALIDATION_RECEIPT.json": "c6809e5fcc421efa0f498b7be650320406f6a4590f6fa0721e5f4f6c6fb50285",
+    "docs/baselines/B03_1_QUALIFICATION_20261023_vo18r4sc.json": "06694eb005847a8fe090ca3afd8b3f41f9183ee9aa8ea49cc5c513c0d56e14a3",
+    "docs/baselines/B03_2_DIAGNOSTIC_QUALIFICATION_20261023_akm0ts7.json": "b63a31e463f3ee5af38c26c82ba94efe3d0f40dacd5dae017fc31963b80b74ce",
+    "docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json": "488760cb16e5adbffebe6f7b6ee35b3c45071e5a94ecb0066b7ef6e943f5e47b",
+    "docs/baselines/B03_4_OPERATIONAL_QUALIFICATION_20261023_w_f16tm8.json": "81ca67e5be0f36dd8b03d1123de403cc6a1f7f78c773bf9b90e1a8d4aae6858b",
+    "docs/baselines/B03_5_OFFLINE_QUALIFICATION_20261024_yUoBzOMA.json": "c45666b5e5ff0e2a24cb49bfb4ba3e435ce5625f832421c98a602e623ba013a6",
+    "docs/baselines/B03_6_OFFLINE_QUALIFICATION_20261024_Ea1lzg2d.json": "d2f841f8fe09e66d8d9f1a2d55f149cc5c70551eb3dc06b1be6305459aa02d20",
+    "docs/baselines/B03_7_OFFLINE_QUALIFICATION_20261024_5uWELmBA.json": "e2fc856c55ea0fcf6a1cdb73b6834ece04eb5e65cd94dede7e29ce1055ee07f1",
+    "docs/baselines/B03_VALIDATION_RECEIPT.json": "bf9ffdce882f706194a302bca27708b944d69cecd69b57a9cf4d833455413141",
+    "docs/baselines/MODULE_01_QUALIFICATION_20261024.json": "f1e129ea41f86a42d8b45e95916c8694de80ef547510ec0c52458c764aaba6bc",
+    "docs/baselines/PRD_MODULE_DELIVERY.json": "27c7155ece62cfc1f1d6532885fdcc227b6aec97aac5d679b3980bdc04ccf98e",
+    "docs/baselines/PRD_V2_PHASE_1B_SECURITY_EMAIL_QUALIFICATION_RECEIPT.json": "0f5b96956c333124dae58aee68b0c76d583f74933c9d80c149b33a12fc733f19",
+    "docs/baselines/PRD_V2_PHASE_1_IDENTITY_SECURITY_RECEIPT.json": "3ef19984baefa332d0e6a4e452c703c3248683927f909a3f321c4b4a479c4574",
+    "docs/baselines/PRD_V2_PHASE_2B_M03_DOCUMENT_CLOSURE_RECEIPT.json": "bcd8a6c874a7bb8affff660264fa9bd853c9c6dc4d610714bddd005ef4143b49",
+    "docs/baselines/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS_RECEIPT.json": "e7d983e5824b09fb16a3582602f3d489d08318a9952a590b297f31b5f1ec323a",
+    "docs/baselines/PRD_V2_PHASE_3_DOCUMENT_PROCESSING_TIMELINE_RECEIPT.json": "d0f3d7eab4c64521be8344256ae712449bd6e039d4e08a4098c6352ae7bbae27",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+  },
+  "changed_file_sha256_excluding_this_receipt": {
+    "ai-service/summary_service/entry.py": "80ff818dc9d7ead00784728b07b5b5e4b43e42929609b27736a4558dedc2d11e",
+    "backend/.env.example": "5a5849bc6f00f9805379e9dfe3cf245bb693155bed57cee5f149a0bacfca1818",
+    "backend/migrations/0009_summary_history.sql": "37872698dcec9fde301a69c4c63a56120e3a0398bfa390a9272b11cf91d8e350",
+    "backend/package.json": "b88af4311dd0db7afac6c593726edc8e454fba3d402ed5a50ad8964231964b16",
+    "backend/src/auth/identity-security.test.ts": "bda663d4b7d97bea92b60c23896b9dbd02af3fee7ffd8dcad518c29c6203bc07",
+    "backend/src/documents/closure.test.ts": "9346a35576b9725fd254a479547c39462fe1f7545c2edbeeaf06cf211a0d54dc",
+    "backend/src/guardians/phase2.test.ts": "2265ad86409129682937a7d850eee5f08d660ac44793697a2cea729fc17105bb",
+    "backend/src/phase3/phase3.test.ts": "941968c88b127084773d6e906dffc23eba673899131ae09f4227df06589039ad",
+    "backend/src/phase4/catalogue.test.ts": "7a83d1afb5e9d193fb0d03e004d4d9b86ea5ff16d66d1ee62e9cf5823a52f1c0",
+    "backend/src/phase4/phase4.test.ts": "00823c944b77c0c402506e504d2e1cc15ff3e99f34b559602b3b46679e7c074f",
+    "backend/src/summaries/catalogue.ts": "824bbe75b04d85debb504a894e218a8e8cad726b8f2f320584130cc3f89f1e77",
+    "backend/src/summaries/history.ts": "c0c6d5a3a2194ab515c0fe8fa91a17f417b55fc54c76e6ee5c790dcb9bf3c355",
+    "backend/src/summaries/http-transport.ts": "80601a7add9d6c56deb72a69b2a4ef9dda8d0532ab635fbe16e9f0a482285484",
+    "backend/src/summaries/jobs.ts": "f1da1eaadd4bb56fce016ba7ff76a0dcf42a33aafa3eaf26f905a358a694b8d4",
+    "backend/src/summaries/offline-runtime.ts": "0a4372966f75272a3b1157ae2741845e657013866b61305820eaa628ff654347",
+    "backend/src/summaries/routes.ts": "1e6f21c5d11191e198dc1797097e7cdd2690b3fd997e0dd0467439378ecabacb",
+    "backend/src/summary-checks/executor.unit.ts": "39f1a91fdca0fc1f55418c845c7eeb596ff44ce8df59fe28d6f5137b380657e2",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "197368ad3774f5a7df6ce448ab741caf2326b6dde2ec254c31905502c6449551",
+    "docs/PRD_V2_PHASE_4_MEDICAL_SUMMARIES.md": "bdf9efc87a77639a27e93e960a10bac0a33bafe424663771ae49ea8db5bbef19",
+    "infrastructure/identity/run.mjs": "c256190122190c1247f3aa1d5d4892d2f7eaa670dd48653c333c79783d24f9dd"
+  },
+  "stop": "Owner review required; Phase 5 not started or automatically authorized"
+}

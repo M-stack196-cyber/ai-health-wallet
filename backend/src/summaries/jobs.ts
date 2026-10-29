@@ -89,7 +89,7 @@ export function createSummaryJobRepository(database:SummaryDatabase,patientId:st
             public.summary_extraction_fingerprint(e.id,e.extracted_text,e.source_metadata,e.extractor_version,e.processing_attempt,e.processing_claim_token)
           FROM public.extracted_medical_text e JOIN public.document_processing_jobs j ON (j.document_id,j.patient_id)=(e.document_id,e.patient_id)
           JOIN public.medical_documents d ON (d.id,d.patient_id)=(e.document_id,e.patient_id)
-          WHERE e.document_id=$1 AND e.patient_id=$2 AND e.processing_status='completed' AND j.state='completed' AND d.processing_status='completed'
+          WHERE e.document_id=$1 AND e.patient_id=$2 AND e.processing_status='completed' AND j.state='completed' AND public.document_accessible(d.id,d.patient_id)
             AND e.processing_attempt=j.attempt_count AND e.processing_claim_token IS NOT NULL AND octet_length(e.extracted_text)<=32768
           ON CONFLICT(extraction_id,processing_attempt,processing_claim_token,source_fingerprint) DO NOTHING RETURNING *`,[documentId,patientId])).rows[0];
         if(row)return row;
@@ -117,9 +117,10 @@ export function createSummaryJobRepository(database:SummaryDatabase,patientId:st
     async publish(c:SummaryClaim,candidate:unknown,signal?:AbortSignal):Promise<boolean>{
       claim(c);return tx(async db=>{
         const interrupted=()=>{if(signal?.aborted)throw new SummaryJobError('PUBLICATION_INTERRUPTED');};interrupted();
-        const j=(await db.query<SummaryJob>(`SELECT j.* FROM public.medical_summary_jobs j WHERE ${live} FOR UPDATE`,identity(c))).rows[0];if(!j)return false;
+        let j=(await db.query<SummaryJob>(`SELECT j.* FROM public.medical_summary_jobs j WHERE ${live}`,identity(c))).rows[0];if(!j)return false;
         const s=(await db.query<SummarySnapshot>('SELECT * FROM public.summary_source_snapshots WHERE id=$1 AND patient_id=$2',[j.snapshot_id,patientId])).rows[0];
         if(!s||(await db.query('SELECT 1 FROM public.summary_source_snapshots s WHERE s.id=$1 AND s.patient_id=$2 AND public.lock_summary_source(s)',[j.snapshot_id,patientId])).rows.length!==1)return false;
+        j=(await db.query<SummaryJob>(`SELECT j.* FROM public.medical_summary_jobs j WHERE ${live} FOR UPDATE`,identity(c))).rows[0];if(!j)return false;
         interrupted();const {input,context,recipe}=authority(j,s);let output,text;
         try{output=validateSummaryOutput(candidate,input,context,recipe);text=renderSummary(output,input,context,recipe);}catch{throw new SummaryJobError('INVALID_SUMMARY');}
         await db.query(`INSERT INTO public.ai_report_summaries(document_id,patient_id,summary_text,processing_status,model_name,model_version,generated_at,
@@ -132,6 +133,7 @@ export function createSummaryJobRepository(database:SummaryDatabase,patientId:st
       });
     },
     async fail(c:SummaryClaim,code:StoredSummaryFailure,retryable=false){claim(c);if(!summaryFailureCodes.includes(code)||typeof retryable!=='boolean')throw new SummaryJobError('INVALID_INPUT');return tx(async db=>(await db.query(`UPDATE public.medical_summary_jobs j SET state=CASE WHEN $5 AND attempt_count<max_attempts THEN 'retry_wait' ELSE 'failed' END,finished_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,attempt_deadline_at=NULL,last_error_code=$4,next_attempt_at=clock_timestamp()+LEAST($7::double precision,$6*power(2,attempt_count-1))*interval '1 millisecond' WHERE ${live} RETURNING id`,[...identity(c),code,retryable,config.retryBaseMs,config.retryMaxMs])).rows.length===1);},
+    async retry(jobId:string){id(jobId);return tx(async db=>(await db.query(`UPDATE public.medical_summary_jobs j SET state='retry_wait',next_attempt_at=clock_timestamp(),last_error_code='MODEL_FAILED' WHERE j.id=$1 AND j.patient_id=$2 AND j.state='failed' AND j.attempt_count<j.max_attempts AND ${current} RETURNING id`,[jobId,patientId])).rows.length===1);},
     async cancel(jobId:string){id(jobId);return tx(async db=>(await db.query(`UPDATE public.medical_summary_jobs SET state='cancelled',finished_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,attempt_deadline_at=NULL,last_error_code='CANCELLED' WHERE id=$1 AND patient_id=$2 AND state IN ('pending','retry_wait','running') RETURNING id`,[jobId,patientId])).rows.length===1);},
     async recover(){return tx(async db=>(await db.query(`WITH candidates AS(SELECT j.id FROM public.medical_summary_jobs j WHERE j.patient_id=$1
       AND j.state IN ('pending','retry_wait','running') AND (NOT ${current} OR (j.state='running' AND (j.lease_expires_at<=clock_timestamp() OR j.attempt_deadline_at<=clock_timestamp())))
@@ -141,8 +143,8 @@ export function createSummaryJobRepository(database:SummaryDatabase,patientId:st
       last_error_code=CASE WHEN NOT ${current} THEN 'SOURCE_SUPERSEDED' ELSE 'LEASE_EXPIRED' END,
       next_attempt_at=clock_timestamp()+LEAST($4::double precision,$3*power(2,GREATEST(attempt_count-1,0)))*interval '1 millisecond'
       FROM candidates x WHERE j.id=x.id AND j.patient_id=$1 RETURNING j.id`,[patientId,config.recoveryBatch,config.retryBaseMs,config.retryMaxMs])).rows.length);},
-    async summaries(documentId:string){id(documentId);return tx(async db=>(await db.query(`SELECT a.*,CASE WHEN a.summary_contract_version=1 THEN public.summary_source_current(s) ELSE false END AS is_current
+    async summaries(documentId:string){id(documentId);return tx(async db=>(await db.query(`SELECT a.*,s.extraction_id,s.processing_attempt,s.extractor_version,CASE WHEN a.summary_contract_version=1 THEN public.summary_source_current(s) ELSE false END AS is_current
       FROM public.ai_report_summaries a LEFT JOIN public.summary_source_snapshots s ON s.id=a.source_snapshot_id AND s.patient_id=a.patient_id
-      WHERE a.document_id=$1 AND a.patient_id=$2 AND a.processing_status='completed' ORDER BY a.created_at DESC,a.id LIMIT 50`,[documentId,patientId])).rows);},
+      WHERE a.document_id=$1 AND a.patient_id=$2 AND a.processing_status='completed' AND a.summary_contract_version=1 AND public.summary_source_current(s) ORDER BY a.created_at DESC,a.id LIMIT 50`,[documentId,patientId])).rows);},
   };
 }
