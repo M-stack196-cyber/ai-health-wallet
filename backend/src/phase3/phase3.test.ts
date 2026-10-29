@@ -64,7 +64,7 @@ before(async()=>{
  try{await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_phase3');}finally{await bootstrap.end();}
  await admin.query('GRANT USAGE,CREATE ON SCHEMA public TO health_wallet_migrator');
  fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 498!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,11);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,12);
  for(const file of files){
   if(file.startsWith('0010'))await admin.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');

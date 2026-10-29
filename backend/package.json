@@ -56,7 +56,9 @@
     "phase3:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase3",
     "phase4:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase4",
     "phase5:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase5",
-    "phase6:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase6"
+    "phase6:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase6",
+    "phase7:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase7",
+    "guardian-notifications:synthetic:once": "node --import tsx src/guardian-notifications/entry.ts --owned-synthetic-once"
   },
   "keywords": [],
   "author": "",
