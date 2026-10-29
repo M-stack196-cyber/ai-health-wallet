@@ -1,0 +1,439 @@
+{
+  "phase": "PRD_V2_PHASE_3_DOCUMENT_PROCESSING_TIMELINE",
+  "recorded_at_utc": "2026-10-29T09:25:36.038035+00:00",
+  "baseline": {
+    "srs": "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx",
+    "prd": "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx",
+    "authoritative_sha256": {
+      "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+      "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+    },
+    "git_entry_and_current_head": "716ac351a79b0b626d5f26a3d71e3f8d78f88d03",
+    "tracked_worktree_clean_at_entry": true
+  },
+  "authorized_scope": [
+    "M04 patient backend library/access/deletion",
+    "M05 private Python OCR and Node orchestration",
+    "M06 patient timeline and trusted future selected-source contract",
+    "minimum M14/M15/M18 security/privacy/schema/traceability support"
+  ],
+  "actions_not_performed": [
+    "commit",
+    "push",
+    "deployment",
+    "production/development database migration",
+    "AWS request",
+    "frontend",
+    "summary generation",
+    "RAG/embedding producer",
+    "doctor authorization/sharing API",
+    "guardian medical-email sender",
+    "broad regression"
+  ],
+  "migration": {
+    "new": "backend/migrations/0008_document_access_processing_timeline.sql",
+    "sha256": "0c55c0f7bfdc75c215c5bb922b474711ab08fbc4178bf9eb76d3caa199f3d8e5",
+    "old_0001_through_0007_unchanged": true,
+    "tested_disposable_postgresql_16": true,
+    "non_superuser_migrator_transactional_apply_rollback_reapply": true,
+    "legacy_original_preserved": true,
+    "normal_development_or_production_applied": false
+  },
+  "verification": {
+    "node": {
+      "command": "PHASE3_PYTHON=/tmp/hw-phase3-python/bin/python node infrastructure/identity/run.mjs --execute-isolated --phase3",
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "phase3_cases": 13,
+      "sdk_children": 9,
+      "sdk_parent_counted": 1,
+      "scope": "real Node/private HTTP/Python/native OCR/PostgreSQL, synthetic originals in memory; SDK mocked with no AWS calls",
+      "private_tap": ".private-evidence/prd-v2-phase3-20261028/node-final.tap",
+      "sha256": "e20a6c542be56ca9095ecaac90a777a7ae1351f3d7e9d0abf30367064922e378"
+    },
+    "python": {
+      "command": "PYTHONPATH=ai-service /tmp/hw-phase3-python/bin/python -m unittest discover -s ai-service/tests_ocr -p test_ocr.py",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "deadline_cancel_tests_mock_extraction": true,
+      "private_log": ".private-evidence/prd-v2-phase3-20261028/python-final.log",
+      "sha256": "9b70aacca6360e649e4fd234c6372e876a0b0689f5b0b117fc864661cb8a6399"
+    },
+    "typecheck": {
+      "command": "npm run typecheck",
+      "cwd": "backend",
+      "result": "PASS",
+      "private_log": ".private-evidence/prd-v2-phase3-20261028/typecheck-final.log",
+      "sha256": "98c10d93158e72af04aa7608d9a86d3904d60c993d0497329207fb9793b2d872"
+    },
+    "build": {
+      "command": "npm run build",
+      "cwd": "backend",
+      "result": "PASS",
+      "private_log": ".private-evidence/prd-v2-phase3-20261028/build-final.log",
+      "sha256": "3ca97bea7e1b6611b20d1b7f750f70a87d9068d19ff07f2e40976146059d2d81"
+    },
+    "git_diff_check": "PASS",
+    "history": {
+      "prior_interrupted_tmp_artifacts_available": false,
+      "prior_runs_reported_in_conversation": {
+        "initial_implementation_run": "RLS INSERT RETURNING lookup defect; corrected direct policy",
+        "subsequent_runs": "20/20 and 22/22 passed before final expanded cases"
+      },
+      "retained_resumed_failure": {
+        "node": "18/23 passed: test timing exhaustion and retained RAG fixture role mismatch; fixture/budgets corrected",
+        "tap": ".private-evidence/prd-v2-phase3-20261028/node-attempt-20261029-1.tap",
+        "sha256": "fed0e7fab762734e55bcacdf0a41f8abbdf5eaed548a2cda1261a032b9ab36f8"
+      },
+      "python_resumed_failure": "Two-second startup wait timeout; test allowance increased and failure cleanup added; final 9/9 pass"
+    }
+  },
+  "isolation": {
+    "final_disposable_evidence_directory": "/tmp/hw-phase1-pg-SiUbX1",
+    "postgres_stopped": true,
+    "python_test_service_stopped": true,
+    "database_network": "private Unix socket only",
+    "http_network": "loopback only",
+    "development_database_accessed": false,
+    "production_accessed": false,
+    "aws_accessed": false,
+    "real_patient_data_used": false,
+    "private_directory_mode": "0700",
+    "private_files_mode": "0600",
+    "logs_scan": "No bearer token, DB URL or OCR token assignment in retained test logs"
+  },
+  "accounting": {
+    "total_requirements": 232,
+    "modules": 18,
+    "source_docx_inventory_exact_requirement_text_verified": true,
+    "all_original_ids_source_mapping_priority_preserved": true,
+    "other_200_requirement_rows_unchanged": true,
+    "entry_totals": {
+      "IMPLEMENTED": 49,
+      "PARTIAL": 55,
+      "MISSING": 101,
+      "BLOCKED": 19,
+      "NEEDS_REVERIFICATION": 8
+    },
+    "final_totals": {
+      "IMPLEMENTED": 63,
+      "PARTIAL": 51,
+      "MISSING": 93,
+      "BLOCKED": 19,
+      "NEEDS_REVERIFICATION": 6
+    },
+    "weighted_control_percent": 38.15,
+    "module_progress": {
+      "M01": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 14,
+          "PARTIAL": 0,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 100.0
+      },
+      "M02": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 10,
+          "PARTIAL": 0,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 100.0
+      },
+      "M03": {
+        "requirements": 12,
+        "statuses": {
+          "IMPLEMENTED": 8,
+          "PARTIAL": 2,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 2
+        },
+        "weighted_control_percent": 75.0
+      },
+      "M04": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 11,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 89.29
+      },
+      "M05": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 9,
+          "PARTIAL": 1,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 95.0
+      },
+      "M06": {
+        "requirements": 8,
+        "statuses": {
+          "IMPLEMENTED": 5,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 81.25
+      },
+      "M07": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 6,
+          "MISSING": 4,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 27.27
+      },
+      "M08": {
+        "requirements": 22,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 3,
+          "MISSING": 17,
+          "BLOCKED": 2,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 6.82
+      },
+      "M09": {
+        "requirements": 19,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 5,
+          "MISSING": 12,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 18.42
+      },
+      "M10": {
+        "requirements": 14,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 2,
+          "MISSING": 10,
+          "BLOCKED": 2,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 7.14
+      },
+      "M11": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 0,
+          "MISSING": 10,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 9.09
+      },
+      "M12": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 0,
+          "MISSING": 9,
+          "BLOCKED": 0,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 10.0
+      },
+      "M13": {
+        "requirements": 22,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 0,
+          "MISSING": 21,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 0.0
+      },
+      "M14": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 9,
+          "MISSING": 0,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 1
+        },
+        "weighted_control_percent": 40.91
+      },
+      "M15": {
+        "requirements": 12,
+        "statuses": {
+          "IMPLEMENTED": 1,
+          "PARTIAL": 4,
+          "MISSING": 6,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 25.0
+      },
+      "M16": {
+        "requirements": 10,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 5,
+          "MISSING": 1,
+          "BLOCKED": 3,
+          "NEEDS_REVERIFICATION": 1
+        },
+        "weighted_control_percent": 25.0
+      },
+      "M17": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 0,
+          "PARTIAL": 5,
+          "MISSING": 3,
+          "BLOCKED": 1,
+          "NEEDS_REVERIFICATION": 2
+        },
+        "weighted_control_percent": 22.73
+      },
+      "M18": {
+        "requirements": 11,
+        "statuses": {
+          "IMPLEMENTED": 2,
+          "PARTIAL": 3,
+          "MISSING": 0,
+          "BLOCKED": 6,
+          "NEEDS_REVERIFICATION": 0
+        },
+        "weighted_control_percent": 31.82
+      }
+    },
+    "scoped_requirement_status": {
+      "M04-001": "IMPLEMENTED",
+      "M04-002": "IMPLEMENTED",
+      "M04-003": "IMPLEMENTED",
+      "M04-004": "IMPLEMENTED",
+      "M04-005": "PARTIAL",
+      "M04-006": "IMPLEMENTED",
+      "M04-007": "IMPLEMENTED",
+      "M04-008": "IMPLEMENTED",
+      "M04-009": "IMPLEMENTED",
+      "M04-010": "PARTIAL",
+      "M04-011": "IMPLEMENTED",
+      "M04-012": "PARTIAL",
+      "M04-013": "IMPLEMENTED",
+      "M04-014": "IMPLEMENTED",
+      "M05-001": "IMPLEMENTED",
+      "M05-002": "IMPLEMENTED",
+      "M05-003": "IMPLEMENTED",
+      "M05-004": "IMPLEMENTED",
+      "M05-005": "IMPLEMENTED",
+      "M05-006": "IMPLEMENTED",
+      "M05-007": "IMPLEMENTED",
+      "M05-008": "IMPLEMENTED",
+      "M05-009": "PARTIAL",
+      "M05-010": "IMPLEMENTED",
+      "M06-001": "IMPLEMENTED",
+      "M06-002": "PARTIAL",
+      "M06-003": "IMPLEMENTED",
+      "M06-004": "IMPLEMENTED",
+      "M06-005": "IMPLEMENTED",
+      "M06-006": "PARTIAL",
+      "M06-007": "PARTIAL",
+      "M06-008": "IMPLEMENTED"
+    }
+  },
+  "retained_immutable_artifacts": {
+    "verified_count": 26,
+    "sha256": {
+      "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+      "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+      "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+      "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+      "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+      "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f",
+      "backend/migrations/0007_guardian_documents.sql": "15dc8294da358ca94cc5a1e73aae2b7731f54f8fd0a4a8e2ced46affe4cd5c23",
+      "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+      "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55",
+      "docs/baselines/B01_SOURCE_MANIFEST.json": "fcfb0dc6cc07df2dbc289e582452decf0801ca923d22add841b97ce0d3c26afa",
+      "docs/baselines/B01_VALIDATION_RECEIPT.json": "10bcc0e51fa70f933d441e30504b891935418b72ea121b2186737a80edef76e0",
+      "docs/baselines/B02_VALIDATION_RECEIPT.json": "c6809e5fcc421efa0f498b7be650320406f6a4590f6fa0721e5f4f6c6fb50285",
+      "docs/baselines/B03_1_QUALIFICATION_20261023_vo18r4sc.json": "06694eb005847a8fe090ca3afd8b3f41f9183ee9aa8ea49cc5c513c0d56e14a3",
+      "docs/baselines/B03_2_DIAGNOSTIC_QUALIFICATION_20261023_akm0ts7.json": "b63a31e463f3ee5af38c26c82ba94efe3d0f40dacd5dae017fc31963b80b74ce",
+      "docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json": "488760cb16e5adbffebe6f7b6ee35b3c45071e5a94ecb0066b7ef6e943f5e47b",
+      "docs/baselines/B03_4_OPERATIONAL_QUALIFICATION_20261023_w_f16tm8.json": "81ca67e5be0f36dd8b03d1123de403cc6a1f7f78c773bf9b90e1a8d4aae6858b",
+      "docs/baselines/B03_5_OFFLINE_QUALIFICATION_20261024_yUoBzOMA.json": "c45666b5e5ff0e2a24cb49bfb4ba3e435ce5625f832421c98a602e623ba013a6",
+      "docs/baselines/B03_6_OFFLINE_QUALIFICATION_20261024_Ea1lzg2d.json": "d2f841f8fe09e66d8d9f1a2d55f149cc5c70551eb3dc06b1be6305459aa02d20",
+      "docs/baselines/B03_7_OFFLINE_QUALIFICATION_20261024_5uWELmBA.json": "e2fc856c55ea0fcf6a1cdb73b6834ece04eb5e65cd94dede7e29ce1055ee07f1",
+      "docs/baselines/B03_VALIDATION_RECEIPT.json": "bf9ffdce882f706194a302bca27708b944d69cecd69b57a9cf4d833455413141",
+      "docs/baselines/MODULE_01_QUALIFICATION_20261024.json": "f1e129ea41f86a42d8b45e95916c8694de80ef547510ec0c52458c764aaba6bc",
+      "docs/baselines/PRD_MODULE_DELIVERY.json": "27c7155ece62cfc1f1d6532885fdcc227b6aec97aac5d679b3980bdc04ccf98e",
+      "docs/baselines/PRD_V2_PHASE_1B_SECURITY_EMAIL_QUALIFICATION_RECEIPT.json": "0f5b96956c333124dae58aee68b0c76d583f74933c9d80c149b33a12fc733f19",
+      "docs/baselines/PRD_V2_PHASE_1_IDENTITY_SECURITY_RECEIPT.json": "3ef19984baefa332d0e6a4e452c703c3248683927f909a3f321c4b4a479c4574",
+      "docs/baselines/PRD_V2_PHASE_2B_M03_DOCUMENT_CLOSURE_RECEIPT.json": "bcd8a6c874a7bb8affff660264fa9bd853c9c6dc4d610714bddd005ef4143b49",
+      "docs/baselines/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS_RECEIPT.json": "e7d983e5824b09fb16a3582602f3d489d08318a9952a590b297f31b5f1ec323a"
+    }
+  },
+  "qualification": {
+    "M04": "Patient backend implementation complete; full module open: 11 IMPLEMENTED, 3 PARTIAL",
+    "M05": "OCR producer/orchestration implementation complete; downstream AI isolation open: 9 IMPLEMENTED, 1 PARTIAL",
+    "M06": "Patient timeline implementation complete; doctor access open: 5 IMPLEMENTED, 3 PARTIAL",
+    "clinical_production_release_accepted": false,
+    "all_three_modules_fully_accepted": false
+  },
+  "open_gates": [
+    "CFG-12/18 retention/erasure/backups/legal holds and approvals",
+    "M09 real doctor current-grant/OTP/revocation/expiry flows",
+    "M07/M08 actual untrusted-document AI consumer isolation",
+    "M03 live private S3 and mobile qualification; M03-002/007 unchanged NEEDS_REVERIFICATION",
+    "Python secret distribution/supervision/deployed host isolation and changed-source attestation",
+    "CFG-10 representative OCR quality/performance/clinical evaluation and other existing controlled approvals"
+  ],
+  "changed_file_sha256_excluding_this_receipt": {
+    "ai-service/ocr_service/__init__.py": "237466b9d37aafd8e0932038f8a3d11a19eeec8d986a1893ed69dd6a29731e77",
+    "ai-service/ocr_service/app.py": "0fbae07287e709f7912654771f51d44096fb05a878eea1ad5ae90ec90e365af3",
+    "ai-service/ocr_service/engine.py": "5a24848a5a5604beef0eb4df655561b305736dde5157e8c572e1dc60e0d6cd54",
+    "ai-service/ocr_service/entry.py": "208e8e20c2bf869d12d34132bd67759d9f1dd3b48bed0f8b8af955a11952bb94",
+    "ai-service/requirements-ocr.txt": "128538bee532fbb4cf15596efa0a110cf27dcf69fdea2f33c19b0af3509af0d9",
+    "ai-service/tests_ocr/test_ocr.py": "2bc99a2001736b7ee664c4958288f04e69e166cb36f65f308d9c5ce0d9fc8e15",
+    "backend/.env.example": "89c1c282c5067843f21d7a57420f73aef4b5613a41e6cd5d27844ab7fdee80b5",
+    "backend/migrations/0008_document_access_processing_timeline.sql": "0c55c0f7bfdc75c215c5bb922b474711ab08fbc4178bf9eb76d3caa199f3d8e5",
+    "backend/package.json": "024b44f37b22b86e6de4596e6471aceabc384b2d2852a8da3289a0a81dc06c7a",
+    "backend/src/app.ts": "a04b943e19599a0667c9c2f39c65a36cf4063c46b96fc71e050f775bb2f8672e",
+    "backend/src/auth/identity-security.test.ts": "03966eac3c0765c133709f95b205b59ea70b0cc4104e8b5869cc6251e2eb287b",
+    "backend/src/documents/closure.test.ts": "5da649f8589aebb96d2cc81b5dcc5fb77bbda6fe77a8bfb217db4553066d8458",
+    "backend/src/documents/repository.ts": "91d59202b17b64285c3b202b17f477c2bacc425b88fff4de8d026dd595997fa4",
+    "backend/src/documents/routes.ts": "74c0cae3869282c89c794c46493d4279bc644131fd9b0cc7f85ea5d532bb3f39",
+    "backend/src/guardians/phase2.test.ts": "5f1dc402c294bd65ae9aa509f9163ddb99d2da8a2ea2f02fcf6fa4f0506ef1f1",
+    "backend/src/phase3/phase3.test.ts": "70b03fe19bec1a57f5c1ecba84fbe791dafb7f009bc6cc17a4e4c8e0cc16e182",
+    "backend/src/processing/background-runtime.ts": "0b02bf11b39f0432491dfe03191d3f95439a4623a71ff97c587ae8810ff2d4ee",
+    "backend/src/processing/extraction.ts": "f928e7a32d298c05dde0aa2d41e251e6e2466d71f78caadcaba0bfed52f5753c",
+    "backend/src/processing/python-processor.ts": "ff923dac151e38a05f6c42e6dad06b8c25b7b6d327c7c97f8ecc81d37066b1af",
+    "backend/src/processing/repository.ts": "791ccaa59e0b7151f678041af8ecbd8e5064aabae562b52c284235975c8c811e",
+    "backend/src/processing/retrieval.ts": "ef79933ab4d5c0b44deeebed8783445d7373225876312d1ffc3f159f05dbd657",
+    "backend/src/processing/service.ts": "cc033878a9a19d22cb57ef4246a60fc15ad8350565f826c2ea10a733ad7220d3",
+    "backend/src/timeline/routes.ts": "2293b91114a86f61f4a67e38bc81fafde473be18a60c5e41e2603d71636fd245",
+    "backend/src/timeline/service.ts": "bff681d21ce8aed86c7989bd80051d3297f67128ce9ba76555865735da8ce525",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "c2e894cd0ee410d2311966662e6a050e105839e5749211f94dcd4491d17facf3",
+    "docs/PRD_V2_PHASE_3_DOCUMENT_PROCESSING_TIMELINE.md": "f7194691104e40fbb81d3b280248e21e687660145f6adaece8cbda1d6c6aba59",
+    "infrastructure/identity/run.mjs": "0567679314e7b8bc6013e32732d53b67e8e159fd0849989dad3f40a54497ab84"
+  },
+  "phase4": "STOP for owner review; no automatic authorization or implementation"
+}

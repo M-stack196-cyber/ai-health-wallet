@@ -12,7 +12,7 @@ export interface ProcessingJob extends QueryResultRow {
   started_at:Date|null; finished_at:Date|null; lease_token:string|null;
   lease_expires_at:Date|null; attempt_deadline_at:Date|null; last_error_code:FailureCode|null;
 }
-export interface OriginalReference extends QueryResultRow { s3_bucket:string; s3_object_key:string; file_type:FileType; }
+export interface OriginalReference extends QueryResultRow { s3_bucket:string; s3_object_key:string; file_type:FileType; sha256:string|null; }
 export interface Claim { documentId:string; patientId:string; token:string; }
 const synchronize = (status:string) => `, synced AS (
   UPDATE public.medical_documents d SET processing_status=${status} FROM changed j
@@ -34,7 +34,7 @@ export function createProcessingRepository(database:PatientDatabase,config:Proce
   const identity=(claim:Claim)=>[claim.documentId,claim.patientId,claim.token];
   return {
     async resolveOriginal(claim:Claim):Promise<OriginalReference|undefined> {
-      return (await database.query<OriginalReference>(`SELECT d.s3_bucket,d.s3_object_key,d.file_type
+      return (await database.query<OriginalReference>(`SELECT d.s3_bucket,d.s3_object_key,d.file_type,d.sha256
         FROM public.document_processing_jobs j JOIN public.medical_documents d
           ON d.id=j.document_id AND d.patient_id=j.patient_id
         WHERE j.document_id=$1 AND j.patient_id=$2 AND j.lease_token=$3
@@ -46,6 +46,11 @@ export function createProcessingRepository(database:PatientDatabase,config:Proce
     async persistExtraction(claim:Claim,result:ValidatedExtraction):Promise<boolean> {
       return (await database.query<{saved:boolean}>(`SELECT public.persist_document_extraction($1,$2,$3,$4,$5::jsonb,$6) AS saved
         WHERE ($7::uuid IS NULL OR $2::uuid=$7)${cutoff(8,'$1::uuid','$2::uuid')}`,[...identity(claim),result.text,JSON.stringify(result.metadata),result.version,patientScope??null,...eligibility()])).rows[0]?.saved===true;
+    },
+    async persistPythonExtraction(claim:Claim,result:ValidatedExtraction,evidence:import('./python-processor.js').PythonEvidence):Promise<boolean>{
+      return (await database.query<{saved:boolean}>(`SELECT public.persist_python_document_result($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::jsonb,$10::date,$11::numeric) AS saved
+        WHERE ($12::uuid IS NULL OR $2::uuid=$12)${cutoff(13,'$1::uuid','$2::uuid')}`,
+        [...identity(claim),evidence.requestId,evidence.attempt,result.text,JSON.stringify(result.metadata),result.version,JSON.stringify(evidence.structured),evidence.suggested,evidence.confidence,patientScope??null,...eligibility()])).rows[0]?.saved===true;
     },
     async completedForClaim(claim:Claim):Promise<boolean> {
       return (await database.query(`SELECT 1 FROM public.document_processing_jobs j JOIN public.extracted_medical_text e

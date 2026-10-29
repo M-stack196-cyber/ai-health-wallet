@@ -1,3 +1,4 @@
+import {validatePythonEvidence} from "./python-processor.js";
 import {validateExtraction} from "./extraction.js";
 import type { createProcessingRepository, Claim } from "./repository.js";
 import { failureCodes, InvalidProcessingClaim, InvalidProcessingInput, ProcessingUnavailable, type FailureCode } from "./errors.js";
@@ -15,8 +16,13 @@ export function createProcessingService(repository:ReturnType<typeof createProce
       return reference;
     },
     persistExtraction(claim:Claim,input:unknown){
-      valid(claim);const result=validateExtraction(input);
-      return safe(()=>repository.persistExtraction(claim,result));
+      valid(claim);
+      const value=input as {pipeline?:unknown};
+      if(value?.pipeline){
+        const {pipeline,...base}=value;const result=validateExtraction(base),evidence=validatePythonEvidence(pipeline);
+        return safe(()=>repository.persistPythonExtraction(claim,result,evidence));
+      }
+      const result=validateExtraction(input);return safe(()=>repository.persistExtraction(claim,result));
     },
     completedForClaim(claim:Claim){valid(claim);return safe(()=>repository.completedForClaim(claim));},
     discover(limit=20){if(!Number.isSafeInteger(limit)||limit<1||limit>100)throw new InvalidProcessingInput();return safe(()=>repository.discover(limit));},

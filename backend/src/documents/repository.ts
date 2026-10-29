@@ -4,14 +4,14 @@ import type { DocumentFilters, DocumentMetadata, FileType, MetadataPatch } from 
 export interface DocumentRow extends QueryResultRow {
   id: string; original_filename: string; file_type: FileType; category: string;
   hospital_name: string | null; document_date: string | null; uploaded_at: Date;
-  content_type: string | null; size_bytes: string | null; sha256: string | null; processing_status: string; sort_date: string; sort_date_source: "document_date" | "uploaded_at";
+  content_type: string | null; size_bytes: string | null; sha256: string | null; access_state: string; suggested_document_date: string | null; suggested_date_confidence: string | null; processing_status: string; sort_date: string; sort_date_source: "document_date" | "uploaded_at";
 }
 export interface DocumentReference extends DocumentRow { s3_bucket: string; s3_object_key: string; }
 export interface NewDocument extends DocumentMetadata {
   id: string; patientId: string; bucket: string; key: string; name: string; type: FileType; mime: string; bytes: number; checksum: string;
 }
 const projection = `id, original_filename, file_type, category, hospital_name, document_date::text AS document_date,
-  uploaded_at, content_type, size_bytes, sha256, processing_status, COALESCE(document_date, (uploaded_at AT TIME ZONE 'UTC')::date)::text AS sort_date,
+  uploaded_at, content_type, size_bytes, sha256, access_state, suggested_document_date::text AS suggested_document_date, suggested_date_confidence, processing_status, COALESCE(document_date, (uploaded_at AT TIME ZONE 'UTC')::date)::text AS sort_date,
   CASE WHEN document_date IS NULL THEN 'uploaded_at' ELSE 'document_date' END AS sort_date_source`;
 export function createDocumentRepository(database: PatientDatabase) {
   return {
@@ -27,10 +27,11 @@ export function createDocumentRepository(database: PatientDatabase) {
       return (await database.query<DocumentReference>(`SELECT ${projection}, s3_bucket, s3_object_key
         FROM public.medical_documents WHERE id = $1 AND patient_id = $2`, [id, patientId])).rows[0];
     },
-    async list(patientId: string, options: DocumentFilters): Promise<{ documents: DocumentRow[]; hasMore: boolean }> {
+    async list(patientId: string, options: DocumentFilters, permittedIds?:readonly string[]): Promise<{ documents: DocumentRow[]; hasMore: boolean }> {
       const values: unknown[] = [patientId];
       const conditions = ["patient_id = $1"];
       const add = (value: unknown, expression: (position: number) => string) => { values.push(value); conditions.push(expression(values.length)); };
+      if(permittedIds!==undefined)add([...permittedIds],n=>"id = ANY($"+n+"::uuid[])");
       if (options.category) add(options.category, n => "category = $" + n);
       if (options.hospital) add(options.hospital, n => "lower(hospital_name) = lower($" + n + ")");
       if (options.uploadedFrom) add(options.uploadedFrom, n => "uploaded_at >= ($" + n + "::date::timestamp AT TIME ZONE 'UTC')");
@@ -52,6 +53,6 @@ export function createDocumentRepository(database: PatientDatabase) {
 }
 export function publicDocument(row: DocumentRow): DocumentRow {
   // Explicit allowlist also strips private references from internal read-back rows.
-  const { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, processing_status, sort_date, sort_date_source } = row;
-  return { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, processing_status, sort_date, sort_date_source };
+  const { id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, access_state, suggested_document_date, suggested_date_confidence, processing_status, sort_date, sort_date_source } = row;
+  return { category_label: category==='lab_report'?'Lab Report':category==='prescription'?'Prescription':'Other', date_confirmation_required:!!suggested_document_date&&suggested_document_date!==document_date, id, original_filename, file_type, category, hospital_name, document_date, uploaded_at, content_type, size_bytes, sha256, access_state, suggested_document_date, suggested_date_confidence, processing_status, sort_date, sort_date_source };
 }

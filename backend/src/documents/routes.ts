@@ -85,6 +85,12 @@ export function createDocumentRoutes(database: PatientDatabase, auth: Authentica
     if (!row) throw notFound();
     res.status(200).json({ success: true, document: publicDocument(row) });
   });
+  router.delete("/:id",rejectQueryParameters,rejectRequestBody,async(req,res)=>{
+    const id=documentId(req.params.id);
+    const result=await database.query<{restricted:boolean}>("SELECT public.restrict_patient_document($1,$2,$3) AS restricted",[id,patientIdentity(req),req.auth!.sessionId!]);
+    if(!result.rows[0]?.restricted)throw notFound();
+    res.json({success:true,document_id:id,access_state:"deleted",retention_status:"policy_pending",original_erased:false});
+  });
   router.patch("/:id", rejectQueryParameters, requireJson, async (req, res) => {
     const id = documentId(req.params.id);
     const changes = metadata(req.body, true) as MetadataPatch;

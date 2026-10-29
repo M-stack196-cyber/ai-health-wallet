@@ -3,6 +3,7 @@ import {InvalidExtractionResult} from "./errors.js";
 export const extractionLimits=Object.freeze({textCharacters:1000000,textBytes:4194304,metadataBytes:8192,pages:200});
 export type ExtractionMethod="pdf_text"|"ocr"|"mixed";
 export interface ExtractionResult {
+  pipeline?:import("./python-processor.js").PythonEvidence;
   text:string;
   method:ExtractionMethod;
   extractor:{name:string;version:string};

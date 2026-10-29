@@ -12,7 +12,7 @@ import type {Claim} from "./repository.js";
 import type {createProcessingService} from "./service.js";
 
 export interface OriginalInput {
-  readonly path:string; readonly type:FileType; readonly bytes:number;
+  readonly path:string; readonly sha256?:string; readonly type:FileType; readonly bytes:number;
   assertActive():Promise<void>;
 }
 // Keep the original four-field input contract; cancellation capabilities are internal.
@@ -75,7 +75,7 @@ export function createOriginalAccess(service:ReturnType<typeof createProcessingS
         clearTimeout(deadline); // Input acquisition is bounded; the existing worker bounds consumer execution.
         return await cancelled(Promise.resolve().then(()=>{
           signal.throwIfAborted();
-          const input=Object.freeze({path,type:reference.file_type,bytes:receipt.bytes,assertActive});
+          const input=Object.freeze({path,sha256:reference.sha256??undefined,type:reference.file_type,bytes:receipt.bytes,assertActive});
           scopes.set(input,{signal,waitForCleanup:(work:Promise<unknown>)=>{cleanups.push(work);}});
           return use(input);
         }),signal);

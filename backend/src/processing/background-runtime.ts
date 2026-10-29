@@ -4,7 +4,7 @@ import {S3Client} from '@aws-sdk/client-s3';
 import {getDatabaseConfig} from '../config/env.js';
 import {getDocumentConfig} from '../config/documents.js';
 import {getProcessingConfig,getRetrievalConfig,getDigitalPdfConfig,getOcrConfig} from './config.js';
-import {createOcrProcessor} from './ocr-processor.js';
+import {createPythonOcrProcessor} from './python-processor.js';
 import {createS3Storage} from '../documents/storage.js';
 import {loadPinnedProfile,awsReadFor} from '../integration/aws-preflight.js';
 import {checkEnvironment,preflight} from '../integration/guards.js';
@@ -24,6 +24,6 @@ export async function startRuntime(config:BackgroundConfig,shutdown?:AbortSignal
     requestHandler:{connectionTimeout:3000,requestTimeout:10000}});
   const storage=createS3Storage(documents.storage,{client});
   return composeBackground(config,{pool,processing,retrieval,documents,storage:{bucket:storage.bucket,prefix:storage.prefix,readOriginal:input=>storage.readOriginal(input)},
-    processor:createOcrProcessor(ocr,pdf),profileUnchanged:profile.unchanged,closeStorage:()=>client.destroy(),shutdown,
+    processor:createPythonOcrProcessor(),profileUnchanged:profile.unchanged,closeStorage:()=>client.destroy(),shutdown,
     fault:()=>{process.exitCode=1;},log:event=>{if(event==='safety-stop')process.exitCode=1;logEvent(event);}});
 }
