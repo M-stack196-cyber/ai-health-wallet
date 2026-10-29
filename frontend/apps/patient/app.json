@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Health Wallet",
+    "slug": "health-wallet-patient",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["android", "ios"],
+    "ios": {
+      "bundleIdentifier": "org.healthwallet.patient.dev",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "org.healthwallet.patient.dev",
+      "allowBackup": false
+    },
+    "plugins": ["expo-secure-store", "expo-document-picker"],
+    "updates": { "enabled": false }
+  }
+}

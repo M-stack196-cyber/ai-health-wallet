@@ -1,0 +1,35 @@
+{
+  "name": "health-wallet-frontends",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p packages/api && tsc --noEmit -p apps/doctor && tsc --noEmit -p apps/patient",
+    "build:doctor": "npm run build -w @health-wallet/doctor",
+    "build:patient": "npm run build -w @health-wallet/patient",
+    "test": "node --import tsx tests/client.test.ts",
+    "test:mobile": "npm run test -w @health-wallet/patient",
+    "test:contracts": "node ../infrastructure/identity/run.mjs --execute-isolated --phase8",
+    "test:browser": "node --import tsx --test tests/doctor.browser.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "tsx": "^4.23.15",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@playwright/test": "^1.56.0"
+  },
+  "type": "module",
+  "overrides": {
+    "@expo/cli": {
+      "zod": "4.6.6"
+    }
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

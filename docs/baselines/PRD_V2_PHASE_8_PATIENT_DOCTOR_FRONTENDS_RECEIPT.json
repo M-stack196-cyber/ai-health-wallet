@@ -1,0 +1,560 @@
+{
+  "schema_version": 1,
+  "phase": "PRD v2 Phase 8 patient and doctor frontends",
+  "created_at_utc": "2026-10-29T17:55:51.232054+00:00",
+  "baseline_commit": "3fec4f70b89e66c4297562494cd954a7c7f37b65",
+  "branch": "main",
+  "initial_git_state": "clean at 3fec4f7",
+  "final_git_state": "uncommitted scoped frontend/governance work",
+  "scope": [
+    "M11 React Native patient",
+    "M12 React + Vite doctor",
+    "minimum M14/M15/M18 traceability/security support"
+  ],
+  "excluded": [
+    "M13 Admin",
+    "M16 production deployment",
+    "M17 final system qualification",
+    "unrelated backend expansion"
+  ],
+  "baseline_sha256": {
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84"
+  },
+  "historical_integrity": {
+    "captured_files": 36,
+    "all_unchanged": true,
+    "migrations_added": 0,
+    "migrations_modified": 0,
+    "existing_backend_runtime_and_dependencies_changed": false
+  },
+  "tracker": {
+    "requirements": 232,
+    "modules": 18,
+    "first_four_columns_preserved": true,
+    "all_other_detailed_rows_preserved": true,
+    "totals": {
+      "IMPLEMENTED": 115,
+      "PARTIAL": 57,
+      "NEEDS_REVERIFICATION": 6,
+      "MISSING": 35,
+      "BLOCKED": 19
+    },
+    "module_progress": {
+      "M01": {
+        "IMPLEMENTED": 14
+      },
+      "M02": {
+        "IMPLEMENTED": 10
+      },
+      "M03": {
+        "PARTIAL": 2,
+        "NEEDS_REVERIFICATION": 2,
+        "IMPLEMENTED": 8
+      },
+      "M04": {
+        "IMPLEMENTED": 11,
+        "PARTIAL": 3
+      },
+      "M05": {
+        "IMPLEMENTED": 9,
+        "PARTIAL": 1
+      },
+      "M06": {
+        "IMPLEMENTED": 5,
+        "PARTIAL": 3
+      },
+      "M07": {
+        "PARTIAL": 5,
+        "MISSING": 2,
+        "IMPLEMENTED": 3,
+        "BLOCKED": 1
+      },
+      "M08": {
+        "PARTIAL": 5,
+        "IMPLEMENTED": 13,
+        "MISSING": 2,
+        "BLOCKED": 2
+      },
+      "M09": {
+        "IMPLEMENTED": 14,
+        "PARTIAL": 4,
+        "BLOCKED": 1
+      },
+      "M10": {
+        "IMPLEMENTED": 10,
+        "PARTIAL": 3,
+        "BLOCKED": 1
+      },
+      "M11": {
+        "IMPLEMENTED": 6,
+        "PARTIAL": 4,
+        "BLOCKED": 1
+      },
+      "M12": {
+        "PARTIAL": 1,
+        "IMPLEMENTED": 9
+      },
+      "M13": {
+        "MISSING": 21,
+        "BLOCKED": 1
+      },
+      "M14": {
+        "PARTIAL": 9,
+        "BLOCKED": 1,
+        "NEEDS_REVERIFICATION": 1
+      },
+      "M15": {
+        "MISSING": 6,
+        "PARTIAL": 4,
+        "IMPLEMENTED": 1,
+        "BLOCKED": 1
+      },
+      "M16": {
+        "BLOCKED": 3,
+        "PARTIAL": 5,
+        "NEEDS_REVERIFICATION": 1,
+        "MISSING": 1
+      },
+      "M17": {
+        "PARTIAL": 5,
+        "NEEDS_REVERIFICATION": 2,
+        "MISSING": 3,
+        "BLOCKED": 1
+      },
+      "M18": {
+        "IMPLEMENTED": 2,
+        "PARTIAL": 3,
+        "BLOCKED": 6
+      }
+    },
+    "m11_m12": {
+      "M11-001": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/patient/{App.tsx,index.ts,app.json}; React Native/Expo native entry",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Native source and Android/iOS Hermes exports present. Installed-device usability/E2E and release acceptance remain pending.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-002": {
+        "previous_status": "MISSING",
+        "status": "PARTIAL",
+        "implementation": "frontend/apps/patient/App.tsx Auth; src/platform.ts createSession; frontend/packages/api/src/client.ts PatientSession",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Local auth UI/API lifecycle qualified; actual Keychain/Keystore persistence, renewal/background/expiry and logout require Android/iOS device qualification; production email remains gated.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-003": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx ProfilePanel; shared patientApi profile/guardian lifecycle",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Local synthetic profile/guardian lifecycle qualified. Native-device and live email/privacy acceptance remain release gates.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-004": {
+        "previous_status": "MISSING",
+        "status": "PARTIAL",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx UploadPanel/RecordDetail; src/platform.ts pickedForm; shared upload/processing/retry",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Upload/metadata/status/retry source, component and real API contracts qualified; native picker URI multipart transport and real device upload/error/retry must be qualified. Live S3 remains external.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-005": {
+        "previous_status": "MISSING",
+        "status": "PARTIAL",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx RecordsPanel/RecordDetail; src/platform.ts presentOriginal/clearFiles",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Library/filter/detail/metadata/access-deletion and private bytes integrated locally; native original preview/export, FileReader/cache cleanup and device lifecycle still require native qualification. Physical erasure/retention not claimed.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-006": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx SummaryCard/HistoryPanel/TimelinePanel; shared summary/history/timeline APIs",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Local synthetic summaries/history/timeline integrated; native E2E plus clinical/provider/semantic completeness and release acceptance remain open.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-007": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx RagPanel; shared patientApi.ask and current source reads",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Local bounded patient RAG/citations/insufficiency integrated; broad semantic, hosted-sensitive-provider, native E2E and clinical acceptance remain gated.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-008": {
+        "previous_status": "MISSING",
+        "status": "PARTIAL",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx SharingPanel; backend SVG rendering; explicit Clipboard/Share actions; shared grants API",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Exact selection, backend QR/link, expiry/list/revoke and explicit copy/share implemented; native SVG/clipboard/share-sheet and lifecycle acceptance require devices. Live delivery/forwarding review remains open.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-009": {
+        "previous_status": "MISSING",
+        "status": "BLOCKED",
+        "implementation": "frontend/apps/patient/src/Workspace.tsx ProfilePanel privacy section; no account-deletion endpoint invented",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Approved account-deletion policy/API is absent (M15-001/M15-002). UI truthfully says unavailable and does not submit or claim a deletion request. Requires separately authorized M15 implementation/policy.",
+        "dependency": "M15-001/M15-002; CFG-12/18/privacy policy and approved deletion contract",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-010": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/packages/api/src/client.ts ApiError/safeMessage; native safe labels, privacy shield and session clearing",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Safe local presentation and unknown-error redaction qualified; screenshot/app-switcher and temporary-file enforcement still require native devices/security acceptance.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M11-011": {
+        "previous_status": "IMPLEMENTED",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/patient/app.json platforms=android/ios; no patient web entry or web build",
+        "evidence": "P8 native exports; frontend/apps/patient/src/workflows.test.tsx (19 component tests); frontend/tests/client.test.ts (12); frontend/tests/backend.contract.ts P8-API-01\u201306; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "No patient web app added. Retain scope restriction.",
+        "dependency": "Existing M01\u2013M10 API foundations; native platform/runtime and live/client/release gates",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-001": {
+        "previous_status": "MISSING",
+        "status": "PARTIAL",
+        "implementation": "frontend/apps/doctor/{src/App.tsx,vite.config.ts}; doctor entry/workspace only; no M13 dashboard",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor slice locally integrated/qualified. Administrative-dashboard clause belongs to explicitly excluded M13 and remains undelivered; row cannot be fully IMPLEMENTED.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-002": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx Workspace filters/summary views; shared doctorApi records/summary/history",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-003": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/package.json; vite.config.ts; src/main.tsx",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-004": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx App open/requestOtp/verify; shared doctorApi open/otp/verify",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-005": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx Workspace; backend-controlled doctorApi records/record",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-006": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx Workspace timeline/history/filters; shared doctorApi",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-007": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx Workspace original/dispose; authenticated blobs and temporary object URLs",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-008": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx scoped question/citation views; doctorApi.ask",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-009": {
+        "previous_status": "MISSING",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/packages/api/src/client.ts ApiClient epoch/abort/clear and DoctorSession expiry; doctor unmount/dispose/pagehide/focus handling",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      },
+      "M12-010": {
+        "previous_status": "IMPLEMENTED",
+        "status": "IMPLEMENTED",
+        "implementation": "frontend/apps/doctor/src/App.tsx temporary share/email-OTP session; no persistent account or storage",
+        "evidence": "frontend/tests/doctor.browser.ts P8-WEB-01\u201306 (6); frontend/tests/backend.contract.ts P8-API-04\u201306; frontend/tests/client.test.ts (12); Vite build; docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+        "remaining_gap": "Doctor local synthetic behavior qualified by source, focused browser and actual backend contracts as applicable. Live email/S3, deployed browser/TLS/privacy/security and full-system release acceptance remain open.",
+        "dependency": "M09 and M06/M07/M08; M13 excluded from Phase 8; live/client/release gates preserved",
+        "old_evidence_reuse": "YES, scoped: existing backend foundations reused; completion assessed against Phase 8 client evidence rather than old tests alone.",
+        "reverification": "YES: native/live/deployed acceptance remains external; local evidence does not close release gates."
+      }
+    }
+  },
+  "qualification": {
+    "doctor_slice_implementation_complete": true,
+    "doctor_slice_local_integration_complete": true,
+    "m12_whole_module_complete": false,
+    "m12_remaining": "M12-001 Admin clause belongs to excluded M13; release/live acceptance pending",
+    "m11_implementation_complete": false,
+    "m11_local_component_api_contracts_pass": true,
+    "native_android_ios_hermes_exports_pass": true,
+    "native_installed_device_e2e_qualified": false,
+    "account_deletion_request_implemented": false,
+    "live_or_deployed_acceptance": false
+  },
+  "tests": {
+    "total_passed": 43,
+    "shared_client_and_tooling": 12,
+    "native_components_mocked_bridges": 19,
+    "browser_synthetic_intercepted_apis": 6,
+    "actual_backend_db_contracts_including_real_browser": 6,
+    "logs": {
+      "client.log": {
+        "sha256": "78252ac3d9a1b5f19ef922398826457ede0f78f16f41899154dc682a65ea70c7",
+        "result": "PASS"
+      },
+      "mobile.log": {
+        "sha256": "1106f374b97c0eb9ecfc5e58ae547028c7481440a48c1cdb5695b0388013297e",
+        "result": "PASS"
+      },
+      "browser.log": {
+        "sha256": "be12cb50a818a448649cc94163bb89b15b0a491bbbb09bc617f22673ffa5f547",
+        "result": "PASS"
+      },
+      "api-contracts.log": {
+        "sha256": "2091f5e61fbbab1df3a1f61a15c1eccc18cb7bf1d1b229cdecef84550599a4dc",
+        "result": "PASS"
+      },
+      "typecheck.log": {
+        "sha256": "d782db32eed642cee1851c434274fb9f877da830b2f91c8e6afe83cbb8cbb7b0",
+        "result": "PASS"
+      },
+      "build-doctor.log": {
+        "sha256": "76d2e4bd8d81a857a550a1c0b282cf6f5f0bc68071b294bc21abe3986759dcb5",
+        "result": "PASS"
+      },
+      "build-patient.log": {
+        "sha256": "1ea85b038197733f0b3704914a3c925d08cc76d9f35f6ec9a8b3f70bf9b8c56c",
+        "result": "PASS"
+      }
+    },
+    "protected_evidence_directory": ".private-evidence/prd-v2-phase8-20261029",
+    "disposable_database_directory": "/tmp/hw-phase1-pg-OmDYk5",
+    "disposable_database_stopped": true,
+    "development_or_production_database_accessed": false,
+    "live_s3_qualified": false,
+    "real_patient_or_guardian_email_sent": false,
+    "hosted_llm_used": false,
+    "broad_regression_run": false
+  },
+  "dependencies": {
+    "frontend/package.json": {
+      "dependencies": {},
+      "devDependencies": {
+        "typescript": "^5.9.3",
+        "tsx": "^4.23.15",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "@playwright/test": "^1.56.0"
+      },
+      "overrides": {
+        "@expo/cli": {
+          "zod": "4.6.6"
+        }
+      }
+    },
+    "frontend/apps/doctor/package.json": {
+      "dependencies": {
+        "@health-wallet/api": "0.1.0",
+        "react": "19.2.0",
+        "react-dom": "19.2.0"
+      },
+      "devDependencies": {
+        "vite": "^8.3.5",
+        "@vitejs/plugin-react": "^6.0.0"
+      },
+      "overrides": {}
+    },
+    "frontend/apps/patient/package.json": {
+      "dependencies": {
+        "@health-wallet/api": "0.1.0",
+        "expo": "~55.0.32",
+        "expo-clipboard": "~55.0.17",
+        "expo-document-picker": "~55.0.17",
+        "expo-file-system": "~55.0.26",
+        "expo-screen-capture": "~55.0.18",
+        "expo-secure-store": "~55.0.18",
+        "expo-sharing": "~55.0.25",
+        "react": "19.2.0",
+        "react-native": "0.83.10",
+        "react-native-safe-area-context": "~5.6.2",
+        "react-native-svg": "15.15.3"
+      },
+      "devDependencies": {
+        "@testing-library/react-native": "^13.3.3",
+        "@types/jest": "^29.5.14",
+        "jest": "^29.7.0",
+        "jest-expo": "~55.0.22",
+        "react-test-renderer": "19.2.0"
+      },
+      "overrides": {}
+    }
+  },
+  "audit": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 15,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 15
+      },
+      "dependencies": {
+        "prod": 628,
+        "dev": 262,
+        "optional": 53,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 901
+      }
+    },
+    "report_sha256": "18e3ea71031be2c5891073e514a7ee5623aaf221e3514ea5057ac803d53c6345",
+    "resolved_high_chain": "Expo CLI Zod 3.25.76 -> scoped override 4.6.6; actual CLI schema parsing tested",
+    "remaining": "15 low findings through deepmerge 4.3.1 Expo/Jest configuration/tooling chains; no newer patched release available; no suppression/forced downgrade"
+  },
+  "files_changed": [
+    "frontend/README.md",
+    "frontend/apps/doctor/index.html",
+    "frontend/apps/doctor/package.json",
+    "frontend/apps/doctor/src/App.tsx",
+    "frontend/apps/doctor/src/main.tsx",
+    "frontend/apps/doctor/src/style.css",
+    "frontend/apps/doctor/tsconfig.json",
+    "frontend/apps/doctor/vite.config.ts",
+    "frontend/apps/patient/.env.example",
+    "frontend/apps/patient/App.tsx",
+    "frontend/apps/patient/app.json",
+    "frontend/apps/patient/index.ts",
+    "frontend/apps/patient/package.json",
+    "frontend/apps/patient/src/Workspace.tsx",
+    "frontend/apps/patient/src/platform.ts",
+    "frontend/apps/patient/src/ui.tsx",
+    "frontend/apps/patient/src/workflows.test.tsx",
+    "frontend/apps/patient/tsconfig.json",
+    "frontend/package-lock.json",
+    "frontend/package.json",
+    "frontend/packages/api/package.json",
+    "frontend/packages/api/src/client.ts",
+    "frontend/packages/api/src/contracts.ts",
+    "frontend/packages/api/src/index.ts",
+    "frontend/packages/api/tsconfig.json",
+    "frontend/tests/backend.contract.ts",
+    "frontend/tests/client.test.ts",
+    "frontend/tests/doctor.browser.ts",
+    "infrastructure/identity/run.mjs",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md",
+    "docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md",
+    "docs/baselines/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS_RECEIPT.json"
+  ],
+  "file_sha256": {
+    "frontend/README.md": "2d4a7b67c06f878a9dfee37f422d8178eb6d28f3b166858240ca304efd9d2854",
+    "frontend/apps/doctor/index.html": "f4a9dc77bdf833958327636895b39a43014dbbf930b29c9a0f0d9792df5134c6",
+    "frontend/apps/doctor/package.json": "5046a016b2ceda89da56a6eadd1ced2613b8a6a085abdf6e66afd091615451cd",
+    "frontend/apps/doctor/src/App.tsx": "f0af9d9e2015a93e367837d5749bb7cce621af6ca71ad51cd90de76d5f63da00",
+    "frontend/apps/doctor/src/main.tsx": "898ca24fdb6db07e5f3b1e33586903a631596f1e4e1b21c2c2c9acb9d7a33be9",
+    "frontend/apps/doctor/src/style.css": "aa1fab8414827a8ba17a368a2e70527dfda332af68bc17632962d19f8ee483b1",
+    "frontend/apps/doctor/tsconfig.json": "b103d650698d6a7030d1786c2b09f7e0d6af0da90d94a3729222187e96630309",
+    "frontend/apps/doctor/vite.config.ts": "e01df6d111fba5c94bc84a8a803917941c7a8eb14ca7de2fc698ba83721690c3",
+    "frontend/apps/patient/.env.example": "40d2eeded2b64ac166e813e81edecaa17489258d3bd66184cefd2b50aee66b2e",
+    "frontend/apps/patient/App.tsx": "cf8babf3eea5766f2c83a96185c9589f404c038c1a90594852ab203cd1cca045",
+    "frontend/apps/patient/app.json": "d5ec4c3e514429bf63f110fe42344c07873baa35b5c2fc9969ee4762b8418b8c",
+    "frontend/apps/patient/index.ts": "bd5900c3419fa39727c350ce6192b2ea699a37078d2432094cc84665d5069f06",
+    "frontend/apps/patient/package.json": "54a2a975dc2dbb4b7fd13c1ee9432b055ff9af6f676e3c7e9301b0b8c933761d",
+    "frontend/apps/patient/src/Workspace.tsx": "a73f446b807b8ce01284b3375bf97bd19189c74adaed67155dd7f2b1f166d45c",
+    "frontend/apps/patient/src/platform.ts": "ff6d48748407b7cf4e985194a37825446151bf6e47f4c33bb710b094ef51b3ad",
+    "frontend/apps/patient/src/ui.tsx": "01292dd5f2cb60f4aa774259db9c8019ddb647e08641041284831239ea8c0e1b",
+    "frontend/apps/patient/src/workflows.test.tsx": "ddaa2315bb33a7a92915a6477d485b5ab6d77a82f344523bf80a7aeb84bc8938",
+    "frontend/apps/patient/tsconfig.json": "b103d650698d6a7030d1786c2b09f7e0d6af0da90d94a3729222187e96630309",
+    "frontend/package-lock.json": "51b922cd4832f88caae823fd1256997530ea439fa5e7cfc8118e299be6320d4c",
+    "frontend/package.json": "7bb5fe0627b025782d0d4402d010b217c302420cde6d0e844d703894d3c535ac",
+    "frontend/packages/api/package.json": "bca8a8e9fc018473948b5065968b02deecbd4bb6881b17381132ef13db54dbce",
+    "frontend/packages/api/src/client.ts": "f573004fb6bca6478756cb4d224487f7fd7402db3fd199a1a59a26481b8ad0c1",
+    "frontend/packages/api/src/contracts.ts": "206f6c293e4fb96df786ba2ca8a84e2d1ac70dce5f5bfa6cba33733e4159e26a",
+    "frontend/packages/api/src/index.ts": "002bbba478de43d2788650295bce3f479e34cab8d9030929a1ce202148f8782d",
+    "frontend/packages/api/tsconfig.json": "b103d650698d6a7030d1786c2b09f7e0d6af0da90d94a3729222187e96630309",
+    "frontend/tests/backend.contract.ts": "dcba5877ab526cdb992f0570ad846c347e75743221fdf419a74d2e986bd6ba26",
+    "frontend/tests/client.test.ts": "ef3b2af3e896413a7b8702ccdf86e10977975782accd91da3a800d5696fed089",
+    "frontend/tests/doctor.browser.ts": "ea0de2e272b72ec23ae91a6a9440dc05bbbe5dc1f4d360c1556eccf1a782f9ee",
+    "infrastructure/identity/run.mjs": "cfecf4a4f69692025f6c0a44a8e2d3a9f0e51ff62ebd24a46b037dffb5e3b61c",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "08d77ce95c5902889b9d6ddc6e4106a8311dfac539cdd4736297469ed0b67a9b",
+    "docs/PRD_V2_PHASE_8_PATIENT_DOCTOR_FRONTENDS.md": "692d93fb68d35af1146fe0e9a2a0abb002bad28e2bb3939f4d5d7cd705478c03"
+  },
+  "release_gates": [
+    "installed Android/iOS SecureStore/session/picker/multipart/original-file/QR/clipboard/share/background/screenshot qualification",
+    "approved M15 account-deletion API and privacy/retention contract",
+    "existing unresolved CFG approvals retained",
+    "live private S3 and production email",
+    "clinical/serious-rule and hosted sensitive AI approval",
+    "deployed TLS/security/privacy/usability/full-system release acceptance",
+    "remaining low tooling advisories"
+  ],
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "m13_started": false,
+  "m13_authorized_by_this_phase": false,
+  "stop": "Owner review; no further module work"
+}
