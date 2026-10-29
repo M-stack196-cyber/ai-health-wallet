@@ -55,7 +55,8 @@
     "documents:closure:test": "node ../infrastructure/identity/run.mjs --execute-isolated --m03-only",
     "phase3:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase3",
     "phase4:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase4",
-    "phase5:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase5"
+    "phase5:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase5",
+    "phase6:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase6"
   },
   "keywords": [],
   "author": "",
@@ -74,6 +75,7 @@
     "jose": "^6.2.13",
     "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
@@ -82,6 +84,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

@@ -54,7 +54,7 @@ export function createSecurityEmailDelivery(db:PatientDatabase,config:SecurityEm
   const source=(await c.query<{patient_id:string}>(`SELECT c.patient_id FROM public.patient_auth_challenges c JOIN public.patients p ON p.id=c.patient_id
    WHERE c.id=$1 AND c.purpose=$2 AND c.token_hash=$3 AND (CASE WHEN c.purpose='guardian_invitation' THEN EXISTS(SELECT 1 FROM public.guardian_relationships g
     WHERE g.invitation_id=c.id AND g.patient_id=c.patient_id AND g.status='PENDING' AND g.email=$4)
-    ELSE p.email=$4 END) AND c.security_version=p.security_version
+    WHEN c.purpose='doctor_share_otp' THEN EXISTS(SELECT 1 FROM public.doctor_otp_challenges d JOIN public.doctor_sharing_grants g ON g.id=d.grant_id WHERE d.auth_challenge_id=c.id AND d.patient_id=c.patient_id AND d.doctor_email=$4 AND d.verified_at IS NULL AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp() AND g.patient_security_version=p.security_version) ELSE p.email=$4 END) AND c.security_version=p.security_version
    AND c.consumed_at IS NULL AND c.expires_at>clock_timestamp()`,[challengeId,message.purpose,secretHash(message.purpose,message.token),message.to])).rows[0];
   if(!source)throw Error('Invalid security email challenge.');
   const id=randomUUID();const row=(await c.query<{id:string}>(`INSERT INTO public.patient_security_email_deliveries(id,challenge_id,patient_id,purpose)
@@ -74,11 +74,14 @@ export function createSecurityEmailDelivery(db:PatientDatabase,config:SecurityEm
    ORDER BY next_attempt_at,id LIMIT 1 FOR UPDATE SKIP LOCKED`,[])).rows[0];
   if(!d)return null;
   const source=(await c.query<{live:boolean;expired:boolean;email:string;expires_at:Date}>(`SELECT
-   (c.consumed_at IS NULL AND c.security_version=p.security_version AND
-     ((c.purpose='verify_email' AND p.account_status='unverified') OR (c.purpose='reset_password' AND p.account_status='active' AND p.email_verified_at IS NOT NULL) OR
-      (c.purpose='guardian_invitation' AND p.account_status='active' AND p.email_verified_at IS NOT NULL AND EXISTS(
-       SELECT 1 FROM public.guardian_relationships g WHERE g.invitation_id=c.id AND g.patient_id=c.patient_id AND g.status='PENDING')))) AS live,
-   (c.expires_at<=clock_timestamp()) AS expired,CASE WHEN c.purpose='guardian_invitation' THEN (SELECT g.email FROM public.guardian_relationships g WHERE g.invitation_id=c.id) ELSE p.email END AS email,c.expires_at FROM public.patient_auth_challenges c JOIN public.patients p ON p.id=c.patient_id
+   (c.consumed_at IS NULL AND c.security_version=p.security_version AND (
+    (c.purpose='verify_email' AND p.account_status='unverified') OR
+    (c.purpose='reset_password' AND p.account_status='active' AND p.email_verified_at IS NOT NULL) OR
+    (c.purpose='guardian_invitation' AND p.account_status='active' AND p.email_verified_at IS NOT NULL AND EXISTS(
+     SELECT 1 FROM public.guardian_relationships g WHERE g.invitation_id=c.id AND g.patient_id=c.patient_id AND g.status='PENDING')) OR
+    (c.purpose='doctor_share_otp' AND p.account_status='active' AND p.email_verified_at IS NOT NULL AND EXISTS(
+     SELECT 1 FROM public.doctor_otp_challenges d JOIN public.doctor_sharing_grants g ON g.id=d.grant_id WHERE d.auth_challenge_id=c.id AND d.patient_id=c.patient_id AND d.verified_at IS NULL AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp() AND g.patient_security_version=p.security_version)))) AS live,
+   (c.expires_at<=clock_timestamp()) AS expired,CASE WHEN c.purpose='guardian_invitation' THEN (SELECT g.email FROM public.guardian_relationships g WHERE g.invitation_id=c.id) WHEN c.purpose='doctor_share_otp' THEN (SELECT d.doctor_email FROM public.doctor_otp_challenges d WHERE d.auth_challenge_id=c.id) ELSE p.email END AS email,c.expires_at FROM public.patient_auth_challenges c JOIN public.patients p ON p.id=c.patient_id
    WHERE c.id=$1 AND c.patient_id=$2 AND c.purpose=$3`,[d.challenge_id,d.patient_id,d.purpose])).rows[0];
   if(!source||!source.live){await terminal(c,d,'superseded','superseded');return {skipped:true as const};}
   if(source.expired){await terminal(c,d,'expired','expired');return {skipped:true as const};}
@@ -105,8 +108,8 @@ export function createSecurityEmailDelivery(db:PatientDatabase,config:SecurityEm
    const {d,claimId,message,expiresAt}=claimed,controller=new AbortController();let timeout:ReturnType<typeof setTimeout>|undefined;
    const deadline=new Promise<never>((_,reject)=>{timeout=setTimeout(()=>{controller.abort();reject(new EmailDeliveryFailure('timeout',true));},Math.min(config.timeoutMs,Math.max(1,expiresAt.getTime()-Date.now())));});
    let receipt:{messageReference?:string}|undefined,failure:EmailDeliveryFailure|undefined;
-   const kind=message.purpose==='guardian_invitation'?'Accept your AI Health Wallet guardian invitation':message.purpose==='verify_email'?'Verify your AI Health Wallet email':'Reset your AI Health Wallet password';
-   const body=`${kind}.\n\n${message.purpose==='guardian_invitation'?'Guardian acceptance':message.purpose==='verify_email'?'Verification':'Password reset'} code: ${message.token}\n\nExpires at ${expiresAt.toISOString()}. This code is single-use. If you did not request this, ignore this email.`;
+   const kind=message.purpose==='doctor_share_otp'?'Verify your AI Health Wallet sharing access':message.purpose==='guardian_invitation'?'Accept your AI Health Wallet guardian invitation':message.purpose==='verify_email'?'Verify your AI Health Wallet email':'Reset your AI Health Wallet password';
+   const body=`${kind}.\n\n${message.purpose==='doctor_share_otp'?'Doctor sharing OTP':message.purpose==='guardian_invitation'?'Guardian acceptance':message.purpose==='verify_email'?'Verification':'Password reset'} code: ${message.token}\n\nExpires at ${expiresAt.toISOString()}. This code is single-use. If you did not request this, ignore this email.`;
    try {receipt=await Promise.race([provider.send({idempotencyKey:d.id,from:config.from,to:message.to,subject:kind,text:body},controller.signal),deadline]);}
    catch(error){failure=error instanceof EmailDeliveryFailure?error:new EmailDeliveryFailure('transport',true);}
    finally{clearTimeout(timeout);}

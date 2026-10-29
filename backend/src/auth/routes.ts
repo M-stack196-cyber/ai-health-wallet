@@ -13,7 +13,7 @@ import {getSecurityPolicy,type SecurityPolicy} from './security-policy.js';
 
 /** Transport receives secrets only in memory. It must not log payloads or persist plaintext.
  * No real email provider or live sends are enabled by default. */
-export interface SecurityMailMessage {to:string;purpose:ChallengePurpose|'guardian_invitation';token:string;expiresIn:number;}
+export interface SecurityMailMessage {to:string;purpose:ChallengePurpose|'guardian_invitation'|'doctor_share_otp';token:string;expiresIn:number;}
 export interface SecurityMailer {
  send(message:SecurityMailMessage):Promise<void>;
  enqueue?(message:SecurityMailMessage,client:PatientConnection):Promise<void>;

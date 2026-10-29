@@ -1,3 +1,5 @@
+import {createSharingRoutes,type SharingOptions} from './sharing/routes.js';
+import {sharingConfig} from './sharing/config.js';
 import {createRagRoutes,type RagOptions} from './rag/routes.js';
 import type {RagDatabase} from './rag/repository.js';
 import {createGuardianRoutes} from "./guardians/routes.js";
@@ -19,7 +21,7 @@ import {createProcessingRoutes,type ProcessingApiOptions} from "./processing/api
 import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.js";
 
 export function createApp(options: { auth?: AuthenticationConfig; database?: PatientDatabase; identity?: IdentityOptions;
-  documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; rag?:RagOptions; processingApi?: ProcessingApiOptions } = {}) {
+  documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; rag?:RagOptions; sharing?:SharingOptions; processingApi?: ProcessingApiOptions } = {}) {
   const app = express();
   const auth = options.auth ?? getAuthenticationConfig();
   const identity = options.identity ?? {mailer:configuredSecurityEmail(options.database ?? pool)?.mailer};
@@ -50,6 +52,7 @@ export function createApp(options: { auth?: AuthenticationConfig; database?: Pat
   const noStore: express.RequestHandler = (_req, res, next) => { res.set("Cache-Control", "no-store"); next(); };
   app.use("/api/v1/auth", noStore, routes.auth);
   app.use("/api/v1/patients", noStore, routes.profile);
+  app.use("/api/v1",createSharingRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,documentConfig,storage,options.sharing??{config:sharingConfig(process.env),mailer:identity.mailer,ragClient:options.rag?.client}));
   app.use("/api/v1",createRagRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,options.rag));
   app.use("/api/v1", createSummaryRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.summaries));
   app.use("/api/v1", createProcessingRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.processingApi));

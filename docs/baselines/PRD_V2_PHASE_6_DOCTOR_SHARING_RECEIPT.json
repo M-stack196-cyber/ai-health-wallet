@@ -1,0 +1,371 @@
+{
+  "phase": "PRD_V2_PHASE_6_DOCTOR_SHARING",
+  "recorded_at_utc": "2026-10-29T16:16:41.463841+00:00",
+  "baseline": {
+    "git_entry_and_current_head": "9eb1603d34119ed8a6dd095f342867ceae5be645",
+    "tracked_worktree_clean_at_entry": true,
+    "authoritative_document_sha256": {
+      "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+      "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+    },
+    "requirements": "SRS v4.0 + PRD v2.0; tracker/reconciliation/Phase 5 report"
+  },
+  "scope": [
+    "M09 doctor selected-record sharing backend",
+    "minimum existing email/current-auth/private-file/timeline/summary/RAG support",
+    "M14/M15/M18 security/deletion/traceability support only"
+  ],
+  "not_performed": [
+    "commit",
+    "push",
+    "production migration",
+    "deployment",
+    "frontend",
+    "M10 or later module implementation",
+    "live provider/S3 access",
+    "full regression",
+    "Python source changes"
+  ],
+  "changed_files": [
+    "backend/.env.example",
+    "backend/migrations/0011_doctor_sharing.sql",
+    "backend/package-lock.json",
+    "backend/package.json",
+    "backend/src/app.ts",
+    "backend/src/auth/identity-security.test.ts",
+    "backend/src/auth/routes.ts",
+    "backend/src/auth/security-email.ts",
+    "backend/src/documents/closure.test.ts",
+    "backend/src/documents/file-access.ts",
+    "backend/src/guardians/phase2.test.ts",
+    "backend/src/phase3/phase3.test.ts",
+    "backend/src/phase4/phase4.test.ts",
+    "backend/src/phase5/phase5.test.ts",
+    "backend/src/phase6/phase6.test.ts",
+    "backend/src/rag/repository.ts",
+    "backend/src/rag/service.ts",
+    "backend/src/sharing/config.ts",
+    "backend/src/sharing/repository.ts",
+    "backend/src/sharing/routes.ts",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md",
+    "docs/PRD_V2_PHASE_6_DOCTOR_SHARING.md",
+    "docs/baselines/PRD_V2_PHASE_6_DOCTOR_SHARING_RECEIPT.json",
+    "infrastructure/identity/run.mjs"
+  ],
+  "changed_artifact_sha256": {
+    "backend/.env.example": "96e8d2803dbcd3857ab9cb988b69b672e4215e083e852f21e55fb7aa04aff904",
+    "backend/migrations/0011_doctor_sharing.sql": "ee66877d66293dc5e820243ae7a55f80fc6365c46959b29933c014cd4564d95b",
+    "backend/package-lock.json": "0b2547f052d2e00f92f000d32e64219740f4107b1e1530bd7f5ad010a0e6c83b",
+    "backend/package.json": "7738f337872504c4036ee5518b907d3ccef6a6c9d3eb521ecec596ac83cd5901",
+    "backend/src/app.ts": "1982b447f118ae1fb4452c7a5c1cfe9f9543e79b08029ff9581c8ef9275e4c86",
+    "backend/src/auth/identity-security.test.ts": "c7ab7f6ee8b4dc3848cdefac1bba901c9dc3311d602ff09499c0ed798e0cc749",
+    "backend/src/auth/routes.ts": "007d532296597a01368f595a4f54537cd1590dd2e4fd956b1dcf49530e35c602",
+    "backend/src/auth/security-email.ts": "db0a11f51402466f44e1282a5ca45f46ece07e5ca19b62f77b3b04991046f7fd",
+    "backend/src/documents/closure.test.ts": "10fcf7165035cc11a9e4da12bb017b0eb95aa253fae288b919ac9b93fa1bb2fb",
+    "backend/src/documents/file-access.ts": "65f1430841c66f957a8fcc5c275eb50ca46f373cc7766ee780c44081b15dc808",
+    "backend/src/guardians/phase2.test.ts": "3fde143f98f1d5e19dff0e22a3a9eb61ae762b552129ec98cc88a1373de18aee",
+    "backend/src/phase3/phase3.test.ts": "ef369ddb3adf6392fb8d50d6fb7b9df5ab0a10c31e398bdc4f4e85891f2b3825",
+    "backend/src/phase4/phase4.test.ts": "b116807aef118e8fcb2c3a7009e59cde9002988208059a2308140bfac44792f2",
+    "backend/src/phase5/phase5.test.ts": "be0d4c51a4869da20c82d86316f625009fa90a112975b6020269a24fcd7f93dc",
+    "backend/src/phase6/phase6.test.ts": "7bfdefc8db91876997ade869d18b6424546e72a7b19bf8dbeb4f79857de26341",
+    "backend/src/rag/repository.ts": "d58ed742eb45ee47633ed0d2864c0a85ef4202fdd2f67b90f05ac23db0220e42",
+    "backend/src/rag/service.ts": "d360002ababbd8d9438affa58491b03125f5253ab02aab238dfb5878051666dd",
+    "backend/src/sharing/config.ts": "195009ef125341b8724d84285b7e5054cc2c52e584b0aefb3e695c935464a23f",
+    "backend/src/sharing/repository.ts": "d1c8b60b0a6d3aabbdd4f67e8afc82459b4d63fde0629a9ef7a4758efa014cda",
+    "backend/src/sharing/routes.ts": "59b8dc6ae26efce3448ccfd7ace2cf1294c3bf75258c6f5a94098d015378df3d",
+    "docs/PRD_V2_MODULE_DELIVERY_TRACKER.md": "cb813896e643c3e0123b27a0535e1f49f09c36c3e22ebae2602a23aa18f9a137",
+    "docs/PRD_V2_PHASE_6_DOCTOR_SHARING.md": "9286d6577b075101245cdfca67668c2b6e88471530adc4d91f258fa6650d95f5",
+    "infrastructure/identity/run.mjs": "ca43cc164447a14459726a0cd41a372269f9f2f2f26f22a46cb46cffe1e356a2"
+  },
+  "protected_entry_hashes_verified": {
+    "backend/migrations/0001_initial_schema.sql": "88f46310e04975486d5e36808f781510555846b3c8579e119714cafea9cd6eb1",
+    "backend/migrations/0002_document_processing_lifecycle.sql": "346328f27cbd719e15b96f79b62a250d9a2643f77e82936ee8654bfe1de822c7",
+    "backend/migrations/0003_lease_fenced_extraction.sql": "18045407bf8180e9eeaf1f0c6a89a7be8f92fbaa4b96342240d30991bac461b3",
+    "backend/migrations/0004_medical_summary_jobs.sql": "f335364603f378c67e3f6466a98f92928280bab361e0922f3dc124a475ec493b",
+    "backend/migrations/0005_patient_identity_security.sql": "55c4d71da3bafbcd9441fbb8a4f12b875d0c081c938644aff4be2b8f45bb0d32",
+    "backend/migrations/0006_security_email_delivery.sql": "5a57e2aa049e17f200bc89c1810e0e7788f74c7a1c14b9637e783084f96ba18f",
+    "backend/migrations/0007_guardian_documents.sql": "15dc8294da358ca94cc5a1e73aae2b7731f54f8fd0a4a8e2ced46affe4cd5c23",
+    "backend/migrations/0008_document_access_processing_timeline.sql": "0c55c0f7bfdc75c215c5bb922b474711ab08fbc4178bf9eb76d3caa199f3d8e5",
+    "backend/migrations/0009_summary_history.sql": "37872698dcec9fde301a69c4c63a56120e3a0398bfa390a9272b11cf91d8e350",
+    "backend/migrations/0010_patient_rag.sql": "4a7ff7c6d5b5fcb22e3985a2158cf20183b254cc3fb8497167116ea36cc4d27c",
+    "docs/baselines/B01_SOURCE_MANIFEST.json": "fcfb0dc6cc07df2dbc289e582452decf0801ca923d22add841b97ce0d3c26afa",
+    "docs/baselines/B01_VALIDATION_RECEIPT.json": "10bcc0e51fa70f933d441e30504b891935418b72ea121b2186737a80edef76e0",
+    "docs/baselines/B02_VALIDATION_RECEIPT.json": "c6809e5fcc421efa0f498b7be650320406f6a4590f6fa0721e5f4f6c6fb50285",
+    "docs/baselines/B03_1_QUALIFICATION_20261023_vo18r4sc.json": "06694eb005847a8fe090ca3afd8b3f41f9183ee9aa8ea49cc5c513c0d56e14a3",
+    "docs/baselines/B03_2_DIAGNOSTIC_QUALIFICATION_20261023_akm0ts7.json": "b63a31e463f3ee5af38c26c82ba94efe3d0f40dacd5dae017fc31963b80b74ce",
+    "docs/baselines/B03_3_REGRESSION_QUALIFICATION_20261023_w6uzcegf.json": "488760cb16e5adbffebe6f7b6ee35b3c45071e5a94ecb0066b7ef6e943f5e47b",
+    "docs/baselines/B03_4_OPERATIONAL_QUALIFICATION_20261023_w_f16tm8.json": "81ca67e5be0f36dd8b03d1123de403cc6a1f7f78c773bf9b90e1a8d4aae6858b",
+    "docs/baselines/B03_5_OFFLINE_QUALIFICATION_20261024_yUoBzOMA.json": "c45666b5e5ff0e2a24cb49bfb4ba3e435ce5625f832421c98a602e623ba013a6",
+    "docs/baselines/B03_6_OFFLINE_QUALIFICATION_20261024_Ea1lzg2d.json": "d2f841f8fe09e66d8d9f1a2d55f149cc5c70551eb3dc06b1be6305459aa02d20",
+    "docs/baselines/B03_7_OFFLINE_QUALIFICATION_20261024_5uWELmBA.json": "e2fc856c55ea0fcf6a1cdb73b6834ece04eb5e65cd94dede7e29ce1055ee07f1",
+    "docs/baselines/B03_VALIDATION_RECEIPT.json": "bf9ffdce882f706194a302bca27708b944d69cecd69b57a9cf4d833455413141",
+    "docs/baselines/MODULE_01_QUALIFICATION_20261024.json": "f1e129ea41f86a42d8b45e95916c8694de80ef547510ec0c52458c764aaba6bc",
+    "docs/baselines/PRD_MODULE_DELIVERY.json": "27c7155ece62cfc1f1d6532885fdcc227b6aec97aac5d679b3980bdc04ccf98e",
+    "docs/baselines/PRD_V2_PHASE_1B_SECURITY_EMAIL_QUALIFICATION_RECEIPT.json": "0f5b96956c333124dae58aee68b0c76d583f74933c9d80c149b33a12fc733f19",
+    "docs/baselines/PRD_V2_PHASE_1_IDENTITY_SECURITY_RECEIPT.json": "3ef19984baefa332d0e6a4e452c703c3248683927f909a3f321c4b4a479c4574",
+    "docs/baselines/PRD_V2_PHASE_2B_M03_DOCUMENT_CLOSURE_RECEIPT.json": "bcd8a6c874a7bb8affff660264fa9bd853c9c6dc4d610714bddd005ef4143b49",
+    "docs/baselines/PRD_V2_PHASE_2_GUARDIAN_DOCUMENTS_RECEIPT.json": "e7d983e5824b09fb16a3582602f3d489d08318a9952a590b297f31b5f1ec323a",
+    "docs/baselines/PRD_V2_PHASE_3_DOCUMENT_PROCESSING_TIMELINE_RECEIPT.json": "d0f3d7eab4c64521be8344256ae712449bd6e039d4e08a4098c6352ae7bbae27",
+    "docs/baselines/PRD_V2_PHASE_4_MEDICAL_SUMMARIES_RECEIPT.json": "76f244147131b9320a968d9c8a3dcb4273c609576d9b6b0b0c9213aa91f58e38",
+    "docs/baselines/PRD_V2_PHASE_5_RAG_LANGCHAIN_LANGGRAPH_RECEIPT.json": "a3c3e4a43bb547fa3ae41c87c069d0345c74fd8dc802537e532f35db8893f45a",
+    "docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx": "454a6a2a6c53cbb325cca0e9125da1b1f274506dc0557a8161d1e81fc8339c84",
+    "docs/AI_Health_Wallet_Revised_SRS_v4_0.docx": "6b4f629fe18dcd3ecb02a61abea2de20e18a380f0dea34f5942e9603d72b2b55"
+  },
+  "protected_files_verified_count": 32,
+  "migration": {
+    "added": "backend/migrations/0011_doctor_sharing.sql",
+    "0001_through_0010_unchanged": true,
+    "disposable_apply_under_migrator": "PASS",
+    "transactional_rollback_and_legacy_sentinel": "PASS",
+    "normal_or_production_database_accessed": false
+  },
+  "tests": {
+    "node": {
+      "command": "PHASE3_PYTHON=/tmp/hw-phase3-python/bin/python node infrastructure/identity/run.mjs --execute-isolated --phase6",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 123418.97257,
+      "evidence": ".private-evidence/prd-v2-phase6-20261029/node-final.tap",
+      "sha256": "c4ed227ba41dc46a164dfd78cc14b0981dd3b57268c201dc7f32d660963dea15",
+      "final_cluster": "/tmp/hw-phase1-pg-JPxvhF",
+      "cluster_stopped": true
+    },
+    "typecheck": {
+      "command": "npm --prefix backend run typecheck",
+      "result": "PASS"
+    },
+    "build": {
+      "command": "npm --prefix backend run build",
+      "result": "PASS"
+    },
+    "git_diff_check": "PASS",
+    "python": "No Python source changed; unchanged loopback LangChain/LangGraph service exercised by Node integration. No additional Python unit suite run.",
+    "broad_regression_run": false,
+    "fixture_limits": "Synthetic documents inserted through qualified repository; synthetic private object adapter and encrypted queue with injected provider. No live email/storage/browser acceptance.",
+    "earlier_attempts": "Interrupted runner sessions/readiness/upload fixture timeouts; deletion shape, timing and random hash test assumptions corrected before final 11/11 run."
+  },
+  "configuration": {
+    "CFG-04": {
+      "technical": "PASS: purpose/grant/email-bound hashed expiring single-use OTP, attempts, resend and hashed rate limits; existing encrypted queue",
+      "release": "OPEN: formal security review/policy and actual approved provider/inbox/operations qualification"
+    },
+    "CFG-05": {
+      "technical": "PASS: configured QR 3600s/link 86400s/OTP 600s/doctor session 3600s capped by grant, runtime revoke/expiry checks",
+      "release": "OPEN: deployed configuration/client/session handling and live operational qualification"
+    }
+  },
+  "M09_statuses": {
+    "M09-001": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-02/05/06/07"
+    },
+    "M09-002": {
+      "status": "PARTIAL",
+      "remaining_gap": "Backend returns an actual QR SVG and opaque reference; patient QR display and scanning acceptance remain M11/M12 work.",
+      "evidence": "Reference P6; P6-02"
+    },
+    "M09-003": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-02/03/06"
+    },
+    "M09-004": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-03/04/06/09/10"
+    },
+    "M09-005": {
+      "status": "PARTIAL",
+      "remaining_gap": "Selected-record metadata/filter APIs qualified; doctor React web interface/search/filter acceptance remains M12.",
+      "evidence": "Reference P6; P6-05"
+    },
+    "M09-006": {
+      "status": "PARTIAL",
+      "remaining_gap": "Explicit patient-authenticated selected-record initiation API qualified; patient UI acceptance remains M11.",
+      "evidence": "Reference P6; P6-02"
+    },
+    "M09-007": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-05/06/07/08/11"
+    },
+    "M09-008": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-02/05"
+    },
+    "M09-009": {
+      "status": "PARTIAL",
+      "remaining_gap": "Both backend QR/link paths qualified; physical consultation display/scan and online client flows await M11/M12.",
+      "evidence": "Reference P6; P6-02/06"
+    },
+    "M09-010": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-02/03/06"
+    },
+    "M09-011": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-02"
+    },
+    "M09-012": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-03/04/09"
+    },
+    "M09-013": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-03/04/09/10"
+    },
+    "M09-014": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-01/02/03/06"
+    },
+    "M09-015": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-05/06/07/08/11"
+    },
+    "M09-016": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-05/08/11"
+    },
+    "M09-017": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-05/06/08"
+    },
+    "M09-018": {
+      "status": "IMPLEMENTED",
+      "remaining_gap": "No remaining gap in the explicitly qualified backend slice. Client/live email/private S3/provider/clinical/deployed acceptance is separate and remains OPEN.",
+      "evidence": "Reference P6; P6-03/09"
+    },
+    "M09-019": {
+      "status": "BLOCKED",
+      "remaining_gap": "Retry/resend/hourly limits and existing encrypted email queue implemented/tested. CFG-04 formal security review and actual approved provider/inbox qualification remain external; no provider approval invented.",
+      "evidence": "Reference P6; P6-01/03/04/09/10"
+    }
+  },
+  "tracker_totals": {
+    "IMPLEMENTED": 92,
+    "PARTIAL": 51,
+    "NEEDS_REVERIFICATION": 6,
+    "MISSING": 64,
+    "BLOCKED": 19
+  },
+  "modules": {
+    "M01": {
+      "IMPLEMENTED": 14
+    },
+    "M02": {
+      "IMPLEMENTED": 10
+    },
+    "M03": {
+      "PARTIAL": 2,
+      "NEEDS_REVERIFICATION": 2,
+      "IMPLEMENTED": 8
+    },
+    "M04": {
+      "IMPLEMENTED": 11,
+      "PARTIAL": 3
+    },
+    "M05": {
+      "IMPLEMENTED": 9,
+      "PARTIAL": 1
+    },
+    "M06": {
+      "IMPLEMENTED": 5,
+      "PARTIAL": 3
+    },
+    "M07": {
+      "PARTIAL": 5,
+      "MISSING": 2,
+      "IMPLEMENTED": 3,
+      "BLOCKED": 1
+    },
+    "M08": {
+      "PARTIAL": 5,
+      "IMPLEMENTED": 13,
+      "MISSING": 2,
+      "BLOCKED": 2
+    },
+    "M09": {
+      "IMPLEMENTED": 14,
+      "PARTIAL": 4,
+      "BLOCKED": 1
+    },
+    "M10": {
+      "MISSING": 10,
+      "PARTIAL": 2,
+      "BLOCKED": 2
+    },
+    "M11": {
+      "MISSING": 10,
+      "IMPLEMENTED": 1
+    },
+    "M12": {
+      "MISSING": 9,
+      "IMPLEMENTED": 1
+    },
+    "M13": {
+      "MISSING": 21,
+      "BLOCKED": 1
+    },
+    "M14": {
+      "PARTIAL": 9,
+      "BLOCKED": 1,
+      "NEEDS_REVERIFICATION": 1
+    },
+    "M15": {
+      "MISSING": 6,
+      "PARTIAL": 4,
+      "IMPLEMENTED": 1,
+      "BLOCKED": 1
+    },
+    "M16": {
+      "BLOCKED": 3,
+      "PARTIAL": 5,
+      "NEEDS_REVERIFICATION": 1,
+      "MISSING": 1
+    },
+    "M17": {
+      "PARTIAL": 5,
+      "NEEDS_REVERIFICATION": 2,
+      "MISSING": 3,
+      "BLOCKED": 1
+    },
+    "M18": {
+      "IMPLEMENTED": 2,
+      "PARTIAL": 3,
+      "BLOCKED": 6
+    }
+  },
+  "inventory": {
+    "requirements": 232,
+    "modules": 18,
+    "source_columns_preserved": true,
+    "non_M09_requirement_rows_unchanged": true
+  },
+  "implementation_complete": "Approved bounded backend slice only; full M09 incomplete",
+  "release_blockers": [
+    "M11/M12 patient/doctor UI and actual QR/browser acceptance",
+    "CFG-04 security/policy/provider approval and live inbox delivery",
+    "CFG-05 deployed settings and operations",
+    "live private S3/cloud qualification",
+    "pre-existing high body-parser 2.3.0 GHSA-27r3-jxmh-p828 advisory",
+    "inherited model/clinical/privacy/retention/deployment gates remain open"
+  ],
+  "dependency_audit": {
+    "evidence": ".private-evidence/prd-v2-phase6-20261029/npm-audit.json",
+    "high": 1,
+    "pre_existing": true,
+    "introduced_by_qrcode": false
+  },
+  "phase7": "Not started. Owner review and separate authorization required; only planning/synthetic development can be considered with M10 CFG-06/07/11/15 real-patient gates retained."
+}

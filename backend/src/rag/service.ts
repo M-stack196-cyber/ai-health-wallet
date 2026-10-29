@@ -2,14 +2,14 @@ import {createHash,randomUUID} from 'node:crypto';
 import {sourceCatalogue} from '../summaries/catalogue.js';
 import {canonicalSummaryJson} from '../summaries/validation.js';
 import type {SummarySnapshot} from '../summaries/jobs.js';
-import {createRagRepository,type RagDatabase,type Chunk} from './repository.js';
+import {createRagRepository,type RagDatabase,type Chunk,type DoctorRagScope} from './repository.js';
 import {createRagClient,chunkerVersion,validateVector,insufficient,ragUnavailable} from './client.js';
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 // Identical fail-closed policy to the Python workflow; no document text is used
 // to choose authorization, tools or instructions.
 export function recordTopic(q:string){if(/\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b/i.test(q))return null;if(/\bglucose\b/i.test(q))return 'glucose';if(/\b(hemoglobin|haemoglobin|hgb|hb)\b/i.test(q))return 'hemoglobin';return null;}
-export function createRagService(db:RagDatabase,patient:string,client:ReturnType<typeof createRagClient>,authorize:()=>Promise<void>){
- const repo=createRagRepository(db,patient);
+export function createRagService(db:RagDatabase,patient:string,client:ReturnType<typeof createRagClient>,authorize:()=>Promise<void>,doctor?:DoctorRagScope){
+ const repo=createRagRepository(db,patient,doctor);
  return {
  async index(id:string,signal?:AbortSignal){
   await authorize();const s=await repo.snapshot(id),pages=await repo.pages(s);

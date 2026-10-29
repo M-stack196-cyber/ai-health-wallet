@@ -14,11 +14,12 @@ import {notFound, storageUnavailable} from './service.js';
 import {assertCurrentPatient} from '../auth/middleware.js';
 import type {PatientDatabase} from '../patients/repository.js';
 
-// Patient requests only: no URL signing, OCR, processing claims or sharing grants.
-// Future doctor delivery must supply its own current-grant authorization policy.
-export function createPatientFileAccess(repository:ReturnType<typeof createDocumentRepository>, storage:DocumentStorage|null, config:DocumentConfig, database?:PatientDatabase) {
+// Private byte delivery; patient sessions or an explicitly supplied current-grant
+// policy are checked before acquisition and again before response bytes.
+export function createPatientFileAccess(repository:ReturnType<typeof createDocumentRepository>, storage:DocumentStorage|null, config:DocumentConfig, database?:PatientDatabase,policy?:{authorize:(req:Request,id:string)=>Promise<void>;disposition:'inline'|'attachment'}) {
   let active=0;
   return async (id:string, patientId:string, req:Request, res:Response):Promise<void> => {
+    if(policy)await policy.authorize(req,id);
     const row=await repository.reference(id,patientId);
     if(!row)throw notFound();
     if(!storage?.readOriginal || !validStorageReference(storage,row.s3_bucket,row.s3_object_key)
@@ -61,11 +62,11 @@ export function createPatientFileAccess(repository:ReturnType<typeof createDocum
         || current.file_type!==row.file_type || current.sha256!==row.sha256 || current.size_bytes!==row.size_bytes)throw storageUnavailable();
       controller.signal.throwIfAborted();
       if(!database)throw storageUnavailable();
-      await assertCurrentPatient(req,database);
+      if(policy)await policy.authorize(req,id);else await assertCurrentPatient(req,database);
       const mime=row.file_type==='pdf'?'application/pdf':row.file_type==='png'?'image/png':'image/jpeg';
       const encoded=encodeURIComponent(row.original_filename).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
       res.status(200).set({'Content-Type':mime,'Content-Length':String(info.size),'Cache-Control':'private, no-store',
-        'X-Content-Type-Options':'nosniff','Content-Disposition':`attachment; filename="document.${row.file_type}"; filename*=UTF-8''${encoded}`});
+        'X-Content-Type-Options':'nosniff','Content-Disposition':`${policy?.disposition??'attachment'}; filename="document.${row.file_type}"; filename*=UTF-8''${encoded}`});
       await pipeline(file.createReadStream({autoClose:false,start:0}),res,{signal:controller.signal});
     } catch(error) {
       if(res.headersSent || res.destroyed){res.destroy();return;}
