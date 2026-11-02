@@ -39,7 +39,7 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_admin_phase9');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,14);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,15);
  for(const f of files.filter(name=>!/^001[0-2]_/.test(name))){
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await owner.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
@@ -76,6 +76,7 @@ async function forge(key:Uint8Array,audience:string,sub:string,sid:string|undefi
  return new SignJWT(sid?{sid}:{}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(sub).setIssuer(adjust.iss??adminConfig.jwtIssuer).setAudience(audience)
   .setIssuedAt(adjust.iat??now).setExpirationTime(adjust.exp??now+600).sign(key);
 }
+const allPermissions=['admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.profile.read'];
 const sqlState=(code:string)=>(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===code;
 
 test('P9-01 admin configuration is disabled by default and cannot share patient secrets or audience',()=>{
@@ -90,7 +91,7 @@ test('P9-01 admin configuration is disabled by default and cannot share patient 
 
 test('P9-02 roles, permissions and privileges: the API role cannot create or alter admin identity',async()=>{
  assert.deepEqual((await owner.query('SELECT name FROM public.admin_roles ORDER BY name')).rows.map(r=>r.name),['config_admin','operations_admin','support_admin']);
- assert.deepEqual((await owner.query("SELECT DISTINCT permission FROM public.admin_role_permissions")).rows.map(r=>r.permission),['admin.profile.read']);
+ assert.deepEqual((await owner.query("SELECT DISTINCT permission FROM public.admin_role_permissions ORDER BY permission")).rows.map(r=>r.permission),allPermissions);
  const a=await newAdmin();
  for(const sql of ["INSERT INTO public.admin_accounts(email,password_hash,full_name,role_name) VALUES('x@example.invalid','$argon2id$x','X','support_admin')",
   "UPDATE public.admin_accounts SET role_name='config_admin'","DELETE FROM public.admin_accounts","INSERT INTO public.admin_roles(name) VALUES('root')",
@@ -145,7 +146,7 @@ test('P9-04 admin login issues an admin-audience session token and audits succes
 test('P9-05 GET /admin/me returns only the caller profile and stores an audit event first',async()=>{
  const a=await newAdmin('operations_admin'),token=await adminToken(a.email),before=await auditCount();
  const r=await call('/api/v1/admin/me',{token});
- assert.equal(r.status,200);assert.deepEqual(r.data,{success:true,admin:{id:a.id,email:a.email,full_name:'Synthetic Admin',role:'operations_admin',permissions:['admin.profile.read']}});
+ assert.equal(r.status,200);assert.deepEqual(r.data,{success:true,admin:{id:a.id,email:a.email,full_name:'Synthetic Admin',role:'operations_admin',permissions:allPermissions}});
  assert.equal(await auditCount(),before+1);
  const [event]=await audit("action='admin.profile.read' AND actor_admin_id=$1",[a.id]);
  assert.equal(event.outcome,'success');assert.equal(event.actor_role,'operations_admin');assert.equal(event.target_type,'admin_account');assert.equal(event.target_id,a.id);assert.match(event.request_id,/^[0-9a-f-]{36}$/);assert.match(event.event_hash,/^[a-f0-9]{64}$/);
@@ -260,4 +261,186 @@ test('P9-12 admin tokens verify only through the admin service and cannot be reu
  await assert.rejects(createAdminTokenService({...adminConfig,jwtAudience:patientConfig.jwtAudience}).verifySession(token));
  const secrets=JSON.stringify((await owner.query('SELECT * FROM public.admin_sessions')).rows)+JSON.stringify((await owner.query('SELECT * FROM public.admin_audit_events')).rows);
  assert.ok(!secrets.includes(token)&&!secrets.includes(adminPassword)&&!secrets.includes('argon2'));
+});
+
+// ---- Phase 2: patient account management (M13-002, M13-012, M13-013) ----
+const accountKeys=['account_status','created_at','email','email_verified','email_verified_at','full_name','id','updated_at'];
+let seedHash:string|undefined;
+async function seedPatient(name:string,email:string,status:string,verified:boolean,createdAt?:string){
+ seedHash??=await passwords.hash(patientPassword);
+ const r=await owner.query(`INSERT INTO public.patients(email,password_hash,full_name,account_status,email_verified_at,created_at,date_of_birth,phone_number)
+  VALUES($1,$2,$3,$4,$5,COALESCE($6::timestamptz,clock_timestamp()),'1990-01-01','+10000000000') RETURNING id`,[email,seedHash,name,status,verified?new Date():null,createdAt??null]);
+ return r.rows[0].id as string;
+}
+async function livePatient(){
+ const email='live-'+randomUUID()+'@example.invalid';
+ const r=await call('/api/v1/auth/register',{body:{email,password:patientPassword,full_name:'Synthetic Live Patient',phone_number:'+10000000001'}});assert.equal(r.status,201);
+ const challenge=mail.find(m=>m.to===email&&m.purpose==='verify_email')!;assert.equal((await call('/api/v1/auth/verify-email',{body:{token:challenge.token}})).status,200);
+ const login=await call('/api/v1/auth/login',{body:{email,password:patientPassword}});assert.equal(login.status,200);
+ return {id:r.data.patient.id as string,email,access:login.data.access_token as string,refresh:login.data.refresh_token as string};
+}
+const patientRow=async(id:string)=>(await owner.query('SELECT * FROM public.patients WHERE id=$1',[id])).rows[0];
+async function medicalSnapshot(patientId:string){
+ const tables=(await owner.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name ~ '^(medical_|extracted_|ai_|rag_|summary_)' AND table_type='BASE TABLE' ORDER BY 1")).rows.map(r=>r.table_name as string);
+ assert.ok(tables.includes('medical_documents'));
+ const parts:string[]=[];
+ for(const table of tables)parts.push(table+':'+(await owner.query(`SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY to_jsonb(t)::text),'')) AS h, count(*)::int AS n FROM public.${table} t`)).rows.map(r=>r.h+'/'+r.n).join(''));
+ return parts.join('\n');
+}
+
+test('P9-13 the three roles hold the new patient-account permissions and nothing reaches medical content',async()=>{
+ for(const role of ['support_admin','operations_admin','config_admin'])
+  assert.deepEqual((await owner.query('SELECT permission FROM public.admin_role_permissions WHERE role_name=$1 ORDER BY permission',[role])).rows.map(r=>r.permission),allPermissions,role);
+ assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients)\.[a-z]+$/.test(permission)));
+});
+
+test('P9-14 account list searches, filters and pages by keyset and shows only identity and status fields',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ const tag='Zq'+randomBytes(4).toString('hex').replace(/[0-9]/g,c=>'ghijklmnop'[Number(c)]),stamp='2031-05-0';
+ const seeded=[['active',true],['active',true],['active',true],['unverified',false],['unverified',false],['suspended',true],['deletion_pending',true]] as const;
+ const ids:string[]=[];
+ for(const [i,[status,verified]] of seeded.entries())ids.push(await seedPatient(tag+' Person'+i,tag.toLowerCase()+'-'+i+'@example.invalid',status,verified,stamp+(i<2?'1':String(i+1))+'T10:00:00Z'));
+ const list=async(query:string)=>call('/api/v1/admin/patients'+query,{token});
+ const all=await list('?q='+tag);assert.equal(all.status,200);assert.equal(all.data.patients.length,7);assert.equal(all.data.next_cursor,null);
+ for(const patient of all.data.patients)assert.deepEqual(Object.keys(patient).sort(),accountKeys);
+ const text=JSON.stringify(all.data);for(const forbidden of ['date_of_birth','phone_number','sex_gender','pending_guardian','password','1990-01-01','+1000000'])assert.ok(!text.includes(forbidden),forbidden);
+ assert.deepEqual(all.data.patients.map((p:any)=>p.id).sort(),[...ids].sort());
+ const byEmail=await list('?q='+encodeURIComponent(tag.toLowerCase()+'-3@'));assert.deepEqual(byEmail.data.patients.map((p:any)=>p.id),[ids[3]]);
+ assert.equal((await list('?q='+encodeURIComponent(tag.toUpperCase()+' person5'))).data.patients[0].id,ids[5]);
+ const seen:string[]=[];let cursor:string|null=null,pages=0;
+ do{const page:any=await list('?q='+tag+'&limit=3'+(cursor?'&cursor='+cursor:''));assert.equal(page.status,200);assert.ok(page.data.patients.length<=3);seen.push(...page.data.patients.map((p:any)=>p.id));cursor=page.data.next_cursor;pages++;}while(cursor&&pages<10);
+ assert.equal(pages,3);assert.deepEqual(seen,all.data.patients.map((p:any)=>p.id),'paging returns every row once in the same newest-first order, including equal timestamps');
+ assert.equal(new Set(seen).size,7);
+ assert.deepEqual((await list('?q='+tag+'&status=unverified')).data.patients.map((p:any)=>p.id).sort(),[ids[3],ids[4]].sort());
+ assert.equal((await list('?q='+tag+'&status=suspended')).data.patients.length,1);
+ assert.equal((await list('?q='+tag+'&verified=false')).data.patients.length,2);
+ assert.equal((await list('?q='+tag+'&verified=true')).data.patients.length,5);
+ assert.equal((await list('?q='+tag+'&verified=true&status=active')).data.patients.length,3);
+ assert.equal((await list('?q='+tag+'&status=active&limit=2')).data.patients.length,2);
+ assert.equal((await list('?q='+encodeURIComponent('%%'))).data.patients.length,0,'wildcards typed by the admin are literal');
+ assert.equal((await list('?q='+encodeURIComponent(tag+'_'))).data.patients.length,0,'an underscore is not a one-character wildcard');
+ for(const bad of ['?q=a','?q='+'x'.repeat(101),'?status=root','?verified=yes','?limit=0','?limit=51','?limit=x','?cursor=garbage','?cursor='+Buffer.from('{"c":"1","i":"2"}').toString('base64url'),'?patient_id='+ids[0],
+  '?status=active&status=suspended','?q=ab&q=cd','?q[a]=1','?limit=1.5','?q=%00ab'])
+  assert.equal((await list(bad)).status,400,bad);
+ const rows=await audit("action='admin.patients.read' AND actor_admin_id=$1 AND target_id IS NULL",[a.id]);
+ assert.ok(rows.length>=10);assert.ok(rows.every(row=>row.outcome==='success'&&row.target_type==='patient_account'));
+ const serialized=JSON.stringify(rows);assert.ok(!serialized.includes(tag)&&!serialized.includes(tag.toLowerCase())&&!serialized.includes('example.invalid'),'search text never enters the audit log');
+ assert.deepEqual(rows.find(row=>row.scope.query_length===tag.length&&row.scope.status==='unverified')?.scope,{status:'unverified',verified:null,query_length:tag.length,limit:25,returned:2});
+});
+
+test('P9-15 account detail shows status and verification, audits the read, and rejects bad identifiers',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email);
+ const id=await seedPatient('Detail Person','detail-'+randomUUID()+'@example.invalid','unverified',false);
+ const r=await call('/api/v1/admin/patients/'+id,{token});assert.equal(r.status,200);assert.deepEqual(Object.keys(r.data.patient).sort(),accountKeys);
+ assert.equal(r.data.patient.account_status,'unverified');assert.equal(r.data.patient.email_verified,false);assert.equal(r.data.patient.email_verified_at,null);
+ const [event]=await audit("action='admin.patients.read' AND target_id=$1 AND actor_admin_id=$2",[id,a.id]);assert.equal(event.outcome,'success');
+ const missing=randomUUID(),gone=await call('/api/v1/admin/patients/'+missing,{token});assert.equal(gone.status,404);
+ assert.equal((await audit("action='admin.patients.read' AND target_id=$1",[missing]))[0].outcome,'failure');
+ for(const path of ['/api/v1/admin/patients/not-a-uuid','/api/v1/admin/patients/'+id+'?full_name=x'])assert.equal((await call(path,{token})).status,400,path);
+});
+
+test('P9-16 suspend revokes sessions and audits in one transaction; reactivate restores access only through a new login',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),p=await livePatient();
+ const second=await call('/api/v1/auth/login',{body:{email:p.email,password:patientPassword}});assert.equal(second.status,200);
+ await owner.query(`INSERT INTO public.medical_documents(id,patient_id,s3_bucket,s3_object_key,original_filename,file_type,category,hospital_name,processing_status,content_type,size_bytes,sha256)
+  VALUES($1,$2,'synthetic-private-bucket',$3,'synthetic.pdf','pdf','lab_report','Synthetic Hospital','failed','application/pdf',24,'02be06dafdca1e35e82ce33d549485f29627c07274b644fafb0e54befbe732de')`,[randomUUID(),p.id,'medical-documents/'+randomUUID()+'.pdf']);
+ assert.equal((await call('/api/v1/patients/me',{token:p.access})).status,200);
+ const beforeRow=await patientRow(p.id),beforeMedical=await medicalSnapshot(p.id),beforeAudit=await auditCount();
+ const suspended=await call('/api/v1/admin/patients/'+p.id+'/suspend',{method:'POST',token});
+ assert.equal(suspended.status,200);assert.equal(suspended.data.patient.account_status,'suspended');assert.deepEqual(Object.keys(suspended.data.patient).sort(),accountKeys);
+ assert.equal(await auditCount(),beforeAudit+1,'exactly one audit row');
+ const [event]=await audit("action='admin.patients.suspend' AND target_id=$1",[p.id]);
+ assert.equal(event.outcome,'success');assert.equal(event.actor_admin_id,a.id);assert.equal(event.target_type,'patient_account');assert.deepEqual(event.scope,{from:'active',to:'suspended',sessions_revoked:2});
+ const sessions=(await owner.query('SELECT revoked_at FROM public.patient_auth_sessions WHERE patient_id=$1',[p.id])).rows;assert.equal(sessions.length,2);assert.ok(sessions.every(row=>row.revoked_at));
+ assert.equal((await owner.query("SELECT count(*)::int AS n FROM public.patient_security_events WHERE patient_id=$1 AND event='session_revoked'",[p.id])).rows[0].n,2);
+ assert.equal((await call('/api/v1/patients/me',{token:p.access})).status,401);assert.equal((await call('/api/v1/patients/me',{token:second.data.access_token})).status,401);
+ assert.equal((await call('/api/v1/auth/refresh',{body:{refresh_token:p.refresh}})).status,401);
+ assert.equal((await call('/api/v1/auth/login',{body:{email:p.email,password:patientPassword}})).status,401);
+ const afterRow=await patientRow(p.id);
+ for(const key of Object.keys(beforeRow).filter(k=>!['account_status','security_version','updated_at'].includes(k)))assert.deepEqual(afterRow[key],beforeRow[key],'patient column '+key+' is unchanged');
+ assert.equal(afterRow.account_status,'suspended');assert.equal(await medicalSnapshot(p.id),beforeMedical,'no medical table changed');
+ const again=await call('/api/v1/admin/patients/'+p.id+'/suspend',{method:'POST',token});assert.equal(again.status,409);assert.equal(again.data.error.code,'ACCOUNT_STATE_CONFLICT');
+ const failure=(await audit("action='admin.patients.suspend' AND target_id=$1 AND outcome='failure'",[p.id]));assert.equal(failure.length,1);assert.equal(failure[0].scope.reason,'state_conflict');
+ const reactivated=await call('/api/v1/admin/patients/'+p.id+'/reactivate',{method:'POST',token});assert.equal(reactivated.status,200);assert.equal(reactivated.data.patient.account_status,'active');
+ assert.deepEqual((await audit("action='admin.patients.reactivate' AND target_id=$1",[p.id]))[0].scope,{from:'suspended',to:'active',sessions_revoked:0});
+ assert.equal((await call('/api/v1/patients/me',{token:p.access})).status,401,'reactivation does not resurrect old tokens');
+ assert.equal((await call('/api/v1/auth/refresh',{body:{refresh_token:p.refresh}})).status,401);
+ const fresh=await call('/api/v1/auth/login',{body:{email:p.email,password:patientPassword}});assert.equal(fresh.status,200);assert.equal((await call('/api/v1/patients/me',{token:fresh.data.access_token})).status,200);
+ assert.equal(await medicalSnapshot(p.id),beforeMedical);
+ assert.equal((await call('/api/v1/admin/patients/'+p.id+'/reactivate',{method:'POST',token})).status,409);
+ const chain=(await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0];assert.equal(chain.first_invalid,null);
+});
+
+test('P9-17 only valid transitions run: unknown, unverified, deleted and unverifiable accounts are refused with an audit row',async()=>{
+ const a=await newAdmin(),token=await adminToken(a.email),post=(id:string,action:string)=>call('/api/v1/admin/patients/'+id+'/'+action,{method:'POST',token});
+ const missing=randomUUID();assert.equal((await post(missing,'suspend')).status,404);assert.equal((await audit("action='admin.patients.suspend' AND target_id=$1",[missing]))[0].outcome,'failure');
+ const cases:Array<[string,boolean,string,number]>=[['unverified',false,'suspend',409],['deletion_pending',true,'suspend',409],['deleted',true,'suspend',409],['revoked',true,'suspend',409],['deletion_restricted',true,'suspend',409],
+  ['active',true,'reactivate',409],['unverified',false,'reactivate',409],['suspended',false,'reactivate',409],['deleted',true,'reactivate',409]];
+ for(const [status,verified,action,expected] of cases){
+  const id=await seedPatient('State Case','state-'+randomUUID()+'@example.invalid',status,verified);
+  const r=await post(id,action);assert.equal(r.status,expected,status+'/'+verified+'/'+action);assert.equal((await patientRow(id)).account_status,status,'status is unchanged');
+ }
+ assert.equal((await post('not-a-uuid','suspend')).status,400);
+});
+
+test('P9-18 a failed audit write rolls the whole status change back',async()=>{
+ const a=await newAdmin(),token=await adminToken(a.email),p=await livePatient(),before=await patientRow(p.id);
+ await owner.query("ALTER TABLE public.admin_audit_events ADD CONSTRAINT p9_block_suspend CHECK(action<>'admin.patients.suspend') NOT VALID");
+ try{
+  assert.equal((await call('/api/v1/admin/patients/'+p.id+'/suspend',{method:'POST',token})).status,500);
+ }finally{await owner.query('ALTER TABLE public.admin_audit_events DROP CONSTRAINT p9_block_suspend');}
+ const after=await patientRow(p.id);assert.equal(after.account_status,'active');assert.equal(after.security_version,before.security_version);
+ assert.equal((await owner.query('SELECT count(*)::int AS n FROM public.patient_auth_sessions WHERE patient_id=$1 AND revoked_at IS NOT NULL',[p.id])).rows[0].n,0);
+ assert.equal((await owner.query("SELECT count(*)::int AS n FROM public.patient_security_events WHERE patient_id=$1 AND event='session_revoked'",[p.id])).rows[0].n,0);
+ assert.equal((await call('/api/v1/patients/me',{token:p.access})).status,200,'the patient session survives a rolled-back suspension');
+ assert.equal((await call('/api/v1/admin/patients/'+p.id+'/suspend',{method:'POST',token})).status,200,'the same action works once auditing works');
+});
+
+test('P9-19 patient, doctor and unauthenticated callers are rejected, and each permission is enforced separately',async()=>{
+ const patient=await livePatient(),id=await seedPatient('Perm Person','perm-'+randomUUID()+'@example.invalid','active',true);
+ const doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex'),before=await auditCount();
+ const routes:Array<[string,string]>=[['GET','/api/v1/admin/patients'],['GET','/api/v1/admin/patients/'+id],['POST','/api/v1/admin/patients/'+id+'/suspend'],['POST','/api/v1/admin/patients/'+id+'/reactivate']];
+ for(const [method,path] of routes)for(const token of [undefined,patient.access,doctor,'not-a-token'])assert.equal((await call(path,{method,token})).status,401,method+' '+path);
+ assert.equal((await patientRow(id)).account_status,'active');assert.equal(await auditCount(),before,'rejected callers leave no audit rows');
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ for(const permission of ['admin.patients.read','admin.patients.suspend','admin.patients.reactivate']){
+  await owner.query("DELETE FROM public.admin_role_permissions WHERE role_name='support_admin' AND permission=$1",[permission]);
+  try{
+   const target=permission.endsWith('read')?['GET','/api/v1/admin/patients']:['POST','/api/v1/admin/patients/'+id+'/'+permission.split('.')[2]];
+   const denied=await call(target[1],{method:target[0],token});assert.equal(denied.status,403,permission);assert.equal(denied.data.error.code,'FORBIDDEN');
+   assert.equal((await audit("action=$1 AND outcome='denied' AND actor_admin_id=$2",[permission,a.id])).length,1,permission);
+   assert.equal((await patientRow(id)).account_status,'active','a denied admin changed nothing');
+  }finally{await owner.query("INSERT INTO public.admin_role_permissions(role_name,permission) VALUES('support_admin',$1)",[permission]);}
+ }
+ assert.equal((await call('/api/v1/admin/patients/'+id+'/suspend',{method:'POST',token})).status,200);
+});
+
+test('P9-20 two admins suspending the same account at once produce one change and one refusal',async()=>{
+ const one=await adminToken((await newAdmin('support_admin')).email),two=await adminToken((await newAdmin('operations_admin')).email),p=await livePatient();
+ const results=await Promise.all([one,two].map(token=>call('/api/v1/admin/patients/'+p.id+'/suspend',{method:'POST',token})));
+ assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+ const events=await audit("action='admin.patients.suspend' AND target_id=$1",[p.id]);assert.deepEqual(events.map(e=>e.outcome).sort(),['failure','success']);
+ assert.equal((await owner.query("SELECT count(*)::int AS n FROM public.patient_security_events WHERE patient_id=$1 AND event='session_revoked'",[p.id])).rows[0].n,1);
+});
+
+test('P9-21 admins have no way to edit medical facts: no edit routes, no extra fields, and the code touches only status',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),p=await livePatient();
+ const row=await patientRow(p.id),medical=await medicalSnapshot(p.id),base='/api/v1/admin/patients/'+p.id;
+ for(const [method,path,body] of [['PATCH',base,{full_name:'Edited'}],['PUT',base,{full_name:'Edited'}],['DELETE',base,undefined],['POST','/api/v1/admin/patients',{email:'new@example.invalid'}],['POST',base,{full_name:'Edited'}],
+  ['PATCH','/api/v1/admin/patients/me',{full_name:'Edited'}],['GET',base+'/documents',undefined],['GET',base+'/summaries',undefined],['GET',base+'/profile',undefined]] as const)
+  assert.equal((await call(path,{method,token,body})).status,404,method+' '+path);
+ for(const action of ['suspend','reactivate']){
+  assert.equal((await call(base+'/'+action,{method:'POST',token,body:{full_name:'Edited',date_of_birth:'1999-09-09',account_status:'active'}})).status,400);
+  assert.equal((await call(base+'/'+action+'?full_name=Edited',{method:'POST',token})).status,400);
+ }
+ assert.deepEqual(await patientRow(p.id),row,'the patient row is byte-for-byte unchanged');assert.equal(await medicalSnapshot(p.id),medical);
+ const files=await readdir(new URL('../admin/',import.meta.url)),sources=await Promise.all(files.filter(f=>f.endsWith('.ts')).map(async f=>({f,text:await readFile(new URL('../admin/'+f,import.meta.url),'utf8')})));
+ const content=(await owner.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name ~ '^(medical_|extracted_|ai_|rag_|summary_)'")).rows.map(r=>r.table_name as string);
+ assert.ok(content.length>=5);
+ for(const {f,text} of sources)for(const table of content)assert.ok(!new RegExp('\\b'+table+'\\b').test(text.replace(/\/\/.*$/gm,'')),f+' must not reference '+table);
+ const code=sources.map(s=>s.text).join('\n');
+ const updated=[...code.matchAll(/UPDATE\s+public\.(\w+)\s+SET\s+([^"`]*)/g)].map(m=>m[1]+':'+m[2].trim().split(/\s+WHERE|\s+RETURNING/)[0].replace(/\s+/g,' '));
+ assert.deepEqual(updated.sort(),['patient_auth_sessions:revoked_at=clock_timestamp()','patients:account_status=$2'],'the only table writes on patient data are account_status and session revocation');
+ assert.deepEqual([...code.matchAll(/INSERT\s+INTO\s+public\.(\w+)/g)].map(m=>m[1]).filter(t=>!t.startsWith('admin_')).sort(),['patient_security_events']);
+ assert.ok(!/DELETE\s+FROM/i.test(code.replace(/\/\/.*$/gm,'')),'no admin code deletes rows');
 });
