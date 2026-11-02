@@ -1,3 +1,5 @@
+import {createAdminRoutes} from './admin/routes.js';
+import {getAdminAuthenticationConfig,type AdminAuthenticationConfig} from './admin/config.js';
 import {createGuardianNotificationRoutes} from './guardian-notifications/routes.js';
 import {createSharingRoutes,type SharingOptions} from './sharing/routes.js';
 import {sharingConfig} from './sharing/config.js';
@@ -21,7 +23,7 @@ import { createS3Storage, type DocumentStorage } from "./documents/storage.js";
 import {createProcessingRoutes,type ProcessingApiOptions} from "./processing/api.js";
 import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.js";
 
-export function createApp(options: { auth?: AuthenticationConfig; database?: PatientDatabase; identity?: IdentityOptions;
+export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminAuthenticationConfig | null; database?: PatientDatabase; identity?: IdentityOptions;
   documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; rag?:RagOptions; sharing?:SharingOptions; processingApi?: ProcessingApiOptions } = {}) {
   const app = express();
   const auth = options.auth ?? getAuthenticationConfig();
@@ -53,6 +55,8 @@ export function createApp(options: { auth?: AuthenticationConfig; database?: Pat
   const noStore: express.RequestHandler = (_req, res, next) => { res.set("Cache-Control", "no-store"); next(); };
   app.use("/api/v1/auth", noStore, routes.auth);
   app.use("/api/v1/patients", noStore, routes.profile);
+  const admin = options.admin === undefined ? getAdminAuthenticationConfig() : options.admin ?? undefined;
+  if (admin) app.use("/api/v1/admin", noStore, createAdminRoutes(options.database ?? pool, auth, admin));
   app.use("/api/v1",createGuardianNotificationRoutes(options.documentDatabase ?? options.database ?? pool,auth,documentConfig,storage));
   app.use("/api/v1",createSharingRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,documentConfig,storage,options.sharing??{config:sharingConfig(process.env),mailer:identity.mailer,ragClient:options.rag?.client}));
   app.use("/api/v1",createRagRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,options.rag));

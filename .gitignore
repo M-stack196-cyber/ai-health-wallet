@@ -44,3 +44,6 @@ playwright-report/
 *.local
 *.secret
 *.secrets
+
+# Local cloud credentials; never commit.
+/.aws/
