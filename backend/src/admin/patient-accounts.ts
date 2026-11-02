@@ -1,7 +1,7 @@
 import type { PatientDatabase } from "../patients/repository.js";
-import { ApiError } from "../http/errors.js";
 import { transaction } from "../auth/security-repository.js";
 import { writeAdminAudit, type AdminContext } from "./repository.js";
+import { cursorTime, decodeCursor, encodeCursor, invalid, parseLimit, uuid } from "./paging.js";
 
 export const patientStatuses = ["unverified", "active", "suspended", "deletion_pending", "deletion_restricted", "deleted", "revoked"] as const;
 export type PatientStatus = (typeof patientStatuses)[number];
@@ -14,9 +14,7 @@ export interface AdminPatientAccount {
 }
 export interface PatientListQuery { q?: string; status?: PatientStatus; verified?: boolean; limit: number; cursor?: { createdAt: string; id: string }; }
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const columns = `id,email,full_name,account_status,email_verified_at IS NOT NULL AS email_verified,email_verified_at,created_at,updated_at`;
-const invalid = () => new ApiError(400, "INVALID_INPUT", "Request fields are missing, invalid or not permitted.");
 
 export function patientIdParameter(value: unknown): string {
   if (typeof value !== "string" || !uuid.test(value)) throw invalid();
@@ -41,23 +39,11 @@ export function validatePatientListQuery(query: Record<string, unknown>): Patien
     result.verified = query.verified === "true";
   }
   if (query.limit !== undefined) {
-    const limit = Number(query.limit);
-    if (!/^\d{1,2}$/.test(query.limit as string) || limit < 1 || limit > 50) throw invalid();
-    result.limit = limit;
+    result.limit = parseLimit(query.limit as string);
   }
   if (query.cursor !== undefined) result.cursor = decodeCursor(query.cursor as string);
   return result;
 }
-const encodeCursor = (row: { cursor_at: string; id: string }) => Buffer.from(JSON.stringify({ c: row.cursor_at, i: row.id })).toString("base64url");
-function decodeCursor(value: string): { createdAt: string; id: string } {
-  try {
-    if (!/^[A-Za-z0-9_-]{1,200}$/.test(value)) throw invalid();
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { c?: unknown; i?: unknown };
-    if (typeof parsed.c !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(parsed.c) || typeof parsed.i !== "string" || !uuid.test(parsed.i)) throw invalid();
-    return { createdAt: parsed.c, id: parsed.i };
-  } catch { throw invalid(); }
-}
-
 const transitions: Record<StatusAction, { from: PatientStatus; to: PatientStatus }> = {
   suspend: { from: "active", to: "suspended" },
   reactivate: { from: "suspended", to: "active" },
@@ -78,10 +64,10 @@ export function createAdminPatientAccounts(db: PatientDatabase) {
       if (query.verified !== undefined) where.push(query.verified ? "email_verified_at IS NOT NULL" : "email_verified_at IS NULL");
       if (query.cursor) where.push(`(created_at,id)<(${add(query.cursor.createdAt)}::timestamptz,${add(query.cursor.id)}::uuid)`);
       const rows = (await db.query<AdminPatientAccount & { cursor_at: string }>(
-        `SELECT ${columns},to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at
+        `SELECT ${columns},${cursorTime("created_at")} AS cursor_at
          FROM public.patients ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY created_at DESC,id DESC LIMIT ${add(query.limit + 1)}`, values)).rows;
       const page = rows.slice(0, query.limit);
-      return { patients: page.map(({ cursor_at: _unused, ...patient }) => patient), nextCursor: rows.length > query.limit ? encodeCursor(page[page.length - 1]) : null };
+      return { patients: page.map(({ cursor_at: _unused, ...patient }) => patient), nextCursor: rows.length > query.limit ? encodeCursor(page[page.length - 1].cursor_at, page[page.length - 1].id) : null };
     },
     async get(id: string): Promise<AdminPatientAccount | undefined> {
       return (await db.query<AdminPatientAccount>(`SELECT ${columns} FROM public.patients WHERE id=$1`, [id])).rows[0];

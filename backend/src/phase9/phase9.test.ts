@@ -39,7 +39,7 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_admin_phase9');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,15);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,16);
  for(const f of files.filter(name=>!/^001[0-2]_/.test(name))){
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await owner.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
@@ -76,7 +76,7 @@ async function forge(key:Uint8Array,audience:string,sub:string,sid:string|undefi
  return new SignJWT(sid?{sid}:{}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(sub).setIssuer(adjust.iss??adminConfig.jwtIssuer).setAudience(audience)
   .setIssuedAt(adjust.iat??now).setExpirationTime(adjust.exp??now+600).sign(key);
 }
-const allPermissions=['admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.profile.read'];
+const allPermissions=['admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read'];
 const sqlState=(code:string)=>(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===code;
 
 test('P9-01 admin configuration is disabled by default and cannot share patient secrets or audience',()=>{
@@ -291,7 +291,7 @@ async function medicalSnapshot(patientId:string){
 test('P9-13 the three roles hold the new patient-account permissions and nothing reaches medical content',async()=>{
  for(const role of ['support_admin','operations_admin','config_admin'])
   assert.deepEqual((await owner.query('SELECT permission FROM public.admin_role_permissions WHERE role_name=$1 ORDER BY permission',[role])).rows.map(r=>r.permission),allPermissions,role);
- assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients)\.[a-z]+$/.test(permission)));
+ assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing)\.[a-z]+$/.test(permission)));
 });
 
 test('P9-14 account list searches, filters and pages by keyset and shows only identity and status fields',async()=>{
@@ -443,4 +443,173 @@ test('P9-21 admins have no way to edit medical facts: no edit routes, no extra f
  assert.deepEqual(updated.sort(),['patient_auth_sessions:revoked_at=clock_timestamp()','patients:account_status=$2'],'the only table writes on patient data are account_status and session revocation');
  assert.deepEqual([...code.matchAll(/INSERT\s+INTO\s+public\.(\w+)/g)].map(m=>m[1]).filter(t=>!t.startsWith('admin_')).sort(),['patient_security_events']);
  assert.ok(!/DELETE\s+FROM/i.test(code.replace(/\/\/.*$/gm,'')),'no admin code deletes rows');
+});
+
+// ---- Phase 3: processing visibility and safe retry (M13-003, M13-014) ----
+const jobKeys=['attempt_count','created_at','document_id','finished_at','last_error_code','lease_active','lease_expired','max_attempts','next_attempt_at','patient_id','started_at','state','updated_at'];
+const SENTINEL='LEAKSENTINEL';
+interface JobSpec{state?:'pending'|'running'|'retry_wait'|'failed'|'completed';attempts?:number;max?:number;code?:string|null;lease?:'live'|'expired';integrity?:boolean;docStatus?:string;sentinel?:boolean}
+async function jobFixture(patient:string,spec:JobSpec={}){
+ const {state='failed',attempts=1,max=3,code='PROCESSOR_FAILED',integrity=true,sentinel=false}=spec,id=randomUUID();
+ const docStatus=spec.docStatus??(state==='failed'?'failed':state==='completed'?'completed':'processing'),tag=sentinel?SENTINEL:'plain';
+ // Fixture only: row triggers (enqueue, extraction fence) are switched off so any job state can be staged; table CHECK constraints still apply.
+ const c=await owner.connect();
+ try{
+  await c.query('BEGIN');await c.query('SET LOCAL session_replication_role=replica');
+  await c.query(`INSERT INTO public.medical_documents(id,patient_id,s3_bucket,s3_object_key,original_filename,file_type,category,hospital_name,processing_status,content_type,size_bytes,sha256)
+   VALUES($1,$2,'synthetic-private-bucket',$3,$4,'pdf','lab_report',$5,$6,$7,$8,$9)`,[id,patient,'medical-documents/'+tag+'-'+id+'.pdf',tag+'-report.pdf',tag+' Hospital',docStatus,
+   integrity?'application/pdf':null,integrity?24:null,integrity?'02be06dafdca1e35e82ce33d549485f29627c07274b644fafb0e54befbe732de':null]);
+  const lease=spec.lease==='expired'?"-interval '10 seconds'":"+interval '5 minutes'";
+  if(state==='pending')await c.query("INSERT INTO public.document_processing_jobs(document_id,patient_id,state,attempt_count,max_attempts) VALUES($1,$2,'pending',0,$3)",[id,patient,max]);
+  else if(state==='running')await c.query(`INSERT INTO public.document_processing_jobs(document_id,patient_id,state,attempt_count,max_attempts,started_at,lease_token,lease_expires_at,attempt_deadline_at)
+   VALUES($1,$2,'running',$3,$4,clock_timestamp()-interval '1 minute',gen_random_uuid(),clock_timestamp()${lease},clock_timestamp()+interval '10 minutes')`,[id,patient,attempts,max]);
+  else await c.query(`INSERT INTO public.document_processing_jobs(document_id,patient_id,state,attempt_count,max_attempts,started_at,finished_at,last_error_code)
+   VALUES($1,$2,$3,$4,$5,clock_timestamp(),clock_timestamp(),$6)`,[id,patient,state,state==='completed'?1:attempts,max,state==='completed'?null:code]);
+  if(sentinel){
+   await c.query("INSERT INTO public.extracted_medical_text(document_id,patient_id,extracted_text,processing_status,source_metadata) VALUES($1,$2,$3,'failed','{\"note\":\"LEAKSENTINEL metadata\"}')",[id,patient,SENTINEL+' extracted OCR text']);
+   await c.query("INSERT INTO public.ai_report_summaries(document_id,patient_id,summary_text,processing_status) VALUES($1,$2,$3,'failed')",[id,patient,SENTINEL+' summary text']);
+  }
+  await c.query('COMMIT');
+ }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
+ return id;
+}
+const jobRow=async(id:string)=>(await owner.query('SELECT to_jsonb(j) AS j FROM public.document_processing_jobs j WHERE document_id=$1',[id])).rows[0].j;
+const documentRow=async(id:string)=>(await owner.query('SELECT to_jsonb(d) AS d FROM public.medical_documents d WHERE id=$1',[id])).rows[0].d;
+const jobsHash=async()=>(await owner.query("SELECT md5(COALESCE(string_agg(to_jsonb(j)::text,'|' ORDER BY document_id),'')) AS h FROM public.document_processing_jobs j")).rows[0].h as string;
+const retry=(id:string,token:string,extra:{body?:unknown;query?:string}={})=>call('/api/v1/admin/processing/jobs/'+id+'/retry'+(extra.query??''),{method:'POST',token,body:extra.body});
+
+test('P9-22 the job list filters by state, reason and owner, pages newest first, and exposes only job metadata',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),patient=await seedPatient('Job Owner','jobs-'+randomUUID()+'@example.invalid','active',true);
+ const ids:Record<string,string>={};
+ ids.pending=await jobFixture(patient,{state:'pending',attempts:0,code:null});ids.live=await jobFixture(patient,{state:'running',lease:'live'});ids.expired=await jobFixture(patient,{state:'running',lease:'expired'});
+ ids.wait=await jobFixture(patient,{state:'retry_wait',code:'PROCESSOR_TIMEOUT'});ids.retryable=await jobFixture(patient);ids.exhausted=await jobFixture(patient,{attempts:3});
+ ids.invalid=await jobFixture(patient,{code:'INVALID_INPUT'});ids.done=await jobFixture(patient,{state:'completed'});
+ const list=(query:string)=>call('/api/v1/admin/processing/jobs'+query,{token});
+ const all=await list('?patient_id='+patient);assert.equal(all.status,200);assert.equal(all.data.jobs.length,8);assert.equal(all.data.next_cursor,null);
+ for(const job of all.data.jobs){assert.deepEqual(Object.keys(job).sort(),jobKeys);assert.equal(job.patient_id,patient);}
+ assert.deepEqual(all.data.jobs.map((j:any)=>j.document_id),(await owner.query('SELECT document_id FROM public.document_processing_jobs WHERE patient_id=$1 ORDER BY updated_at DESC,document_id DESC',[patient])).rows.map(r=>r.document_id));
+ const seen:string[]=[];let cursor:string|null=null,pages=0;
+ do{const page:any=await list('?patient_id='+patient+'&limit=3'+(cursor?'&cursor='+cursor:''));assert.equal(page.status,200);seen.push(...page.data.jobs.map((j:any)=>j.document_id));cursor=page.data.next_cursor;pages++;}while(cursor&&pages<10);
+ assert.equal(pages,3);assert.deepEqual(seen,all.data.jobs.map((j:any)=>j.document_id));
+ const only=async(q:string)=>(await list('?patient_id='+patient+q)).data.jobs.map((j:any)=>j.document_id).sort();
+ assert.deepEqual(await only('&state=failed'),[ids.retryable,ids.exhausted,ids.invalid].sort());
+ assert.deepEqual(await only('&error_code=PROCESSOR_FAILED'),[ids.retryable,ids.exhausted].sort());
+ assert.deepEqual(await only('&state=retry_wait&error_code=PROCESSOR_TIMEOUT'),[ids.wait]);
+ assert.deepEqual(await only('&state=running'),[ids.live,ids.expired].sort());assert.deepEqual(await only('&state=pending'),[ids.pending]);assert.deepEqual(await only('&state=completed'),[ids.done]);
+ const flags=Object.fromEntries(all.data.jobs.map((j:any)=>[j.document_id,[j.lease_active,j.lease_expired]]));
+ assert.deepEqual(flags[ids.live],[true,false]);assert.deepEqual(flags[ids.expired],[false,true]);for(const id of [ids.pending,ids.wait,ids.retryable,ids.done])assert.deepEqual(flags[id],[false,false]);
+ assert.equal((await list('?patient_id='+patient+'&state=cancelled')).data.jobs.length,0);
+ for(const bad of ['?state=bogus','?error_code=x','?patient_id=x','?limit=0','?limit=51','?cursor=garbage','?document_id='+ids.pending,'?state=failed&state=pending','?x[y]=1'])assert.equal((await list(bad)).status,400,bad);
+ const summary=await call('/api/v1/admin/processing/summary',{token});assert.equal(summary.status,200);
+ const expected=(await owner.query('SELECT state,count(*)::int AS n FROM public.document_processing_jobs GROUP BY 1')).rows;
+ for(const row of expected)assert.equal(summary.data.summary.by_state[row.state],row.n,row.state);
+ assert.equal(summary.data.summary.total,expected.reduce((n,row)=>n+row.n,0));
+ assert.deepEqual(Object.keys(summary.data.summary).sort(),['by_state','failures_by_error_code','running_with_expired_lease','total']);
+ assert.equal(summary.data.summary.failures_by_error_code.PROCESSOR_TIMEOUT,Number((await owner.query("SELECT count(*) FROM public.document_processing_jobs WHERE last_error_code='PROCESSOR_TIMEOUT' AND state IN ('failed','retry_wait')")).rows[0].count));
+ assert.equal(summary.data.summary.running_with_expired_lease,Number((await owner.query("SELECT count(*) FROM public.document_processing_jobs WHERE state='running' AND lease_expires_at<=clock_timestamp()")).rows[0].count));
+ const detail=await call('/api/v1/admin/processing/jobs/'+ids.retryable,{token});assert.equal(detail.status,200);assert.deepEqual(Object.keys(detail.data.job).sort(),jobKeys);assert.equal(detail.data.job.last_error_code,'PROCESSOR_FAILED');
+ const missing=randomUUID();assert.equal((await call('/api/v1/admin/processing/jobs/'+missing,{token})).status,404);assert.equal((await audit("action='admin.processing.read' AND target_id=$1",[missing]))[0].outcome,'failure');
+ for(const path of ['/api/v1/admin/processing/jobs/not-a-uuid','/api/v1/admin/processing/jobs/'+ids.pending+'?state=failed','/api/v1/admin/processing/summary?x=1'])assert.equal((await call(path,{token})).status,400,path);
+ const reads=await audit("action='admin.processing.read' AND actor_admin_id=$1",[a.id]);assert.equal(reads.length,14);assert.ok(reads.every(r=>r.target_type==='processing_job'));
+ assert.ok(!JSON.stringify(reads).includes(patient),'the owner id used as a filter is not copied into the audit log');
+ assert.deepEqual(reads.find(r=>r.scope.view==='list'&&r.scope.state==='failed')?.scope,{view:'list',state:'failed',error_code:null,patient_filter:true,limit:25,returned:3});
+});
+
+test('P9-23 no medical field can leak: names, hospitals, storage keys, OCR text, summaries and lease tokens never appear',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),patient=await seedPatient('Leak Owner '+SENTINEL,'leak-'+randomUUID()+'@example.invalid','active',true);
+ const retryable=await jobFixture(patient,{sentinel:true}),running=await jobFixture(patient,{state:'running',sentinel:true}),exhausted=await jobFixture(patient,{attempts:3,sentinel:true});
+ assert.equal(Number((await owner.query("SELECT count(*) FROM public.extracted_medical_text WHERE extracted_text LIKE '%LEAKSENTINEL%'")).rows[0].count)>=3,true,'the sentinel really is stored as OCR text');
+ const leaseToken=(await owner.query('SELECT lease_token FROM public.document_processing_jobs WHERE document_id=$1',[running])).rows[0].lease_token as string;
+ const responses=[await call('/api/v1/admin/processing/summary',{token}),await call('/api/v1/admin/processing/jobs?limit=50',{token}),await call('/api/v1/admin/processing/jobs?patient_id='+patient,{token}),
+  await call('/api/v1/admin/processing/jobs/'+retryable,{token}),await call('/api/v1/admin/processing/jobs/'+running,{token}),await retry(retryable,token),await retry(exhausted,token),await retry(running,token)];
+ assert.deepEqual(responses.map(r=>r.status),[200,200,200,200,200,200,409,409]);
+ const forbidden=[SENTINEL,SENTINEL.toLowerCase(),'extracted OCR text','summary text','Hospital','report.pdf','medical-documents/','synthetic-private-bucket','lab_report','application/pdf','02be06dafdca','Leak Owner',leaseToken,'s3_','sha256','extracted_text','summary_text','source_metadata','original_filename','hospital_name','lease_token'];
+ const wire=JSON.stringify(responses.map(r=>r.data));for(const word of forbidden)assert.ok(!wire.includes(word),'response leaks '+word);
+ const rows=JSON.stringify(await audit('true'));for(const word of forbidden)assert.ok(!rows.includes(word),'audit log leaks '+word);
+ for(const r of responses)for(const job of [r.data.job,...(r.data.jobs??[])].filter(Boolean))assert.deepEqual(Object.keys(job).sort(),jobKeys);
+ const source=await readFile(new URL('../admin/processing-jobs.ts',import.meta.url),'utf8').then(text=>text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,''));
+ for(const word of ['medical_documents','extracted_medical_text','ai_report_summaries','original_filename','hospital_name','s3_object_key','lease_token','extracted_text','summary_text','JOIN'])assert.ok(!source.includes(word),'processing-jobs.ts must not mention '+word);
+});
+
+test('P9-24 retry moves a failed job to retry_wait through the existing owner path, audits it, and changes nothing else',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),patient=await seedPatient('Retry Owner','retry-'+randomUUID()+'@example.invalid','active',true);
+ const id=await jobFixture(patient,{sentinel:true,attempts:2,max:3,code:'PROCESSOR_TIMEOUT'});
+ const before=await jobRow(id),docBefore=await documentRow(id),extractionBefore=(await owner.query('SELECT to_jsonb(e) AS e FROM public.extracted_medical_text e WHERE document_id=$1',[id])).rows[0].e;
+ const summaryBefore=(await owner.query('SELECT to_jsonb(s) AS s FROM public.ai_report_summaries s WHERE document_id=$1',[id])).rows[0].s,jobCount=Number((await owner.query('SELECT count(*) FROM public.document_processing_jobs')).rows[0].count);
+ const auditBefore=await auditCount(),r=await retry(id,token);
+ assert.equal(r.status,200);assert.equal(r.data.job.state,'retry_wait');assert.equal(r.data.job.attempt_count,2,'attempts are not reset');assert.equal(r.data.job.max_attempts,3);assert.equal(r.data.job.last_error_code,'PROCESSOR_TIMEOUT');
+ const after=await jobRow(id);
+ for(const key of Object.keys(before).filter(k=>!['state','next_attempt_at','updated_at'].includes(k)))assert.deepEqual(after[key],before[key],'job column '+key+' is unchanged');
+ assert.equal(after.lease_token,null);assert.equal(after.lease_expires_at,null);assert.ok(new Date(after.next_attempt_at)<=new Date(),'eligible for the worker immediately');
+ const docAfter=await documentRow(id);for(const key of Object.keys(docBefore).filter(k=>!['processing_status','updated_at'].includes(k)))assert.deepEqual(docAfter[key],docBefore[key],'document column '+key+' is unchanged');
+ assert.equal(docAfter.processing_status,'processing');
+ assert.deepEqual((await owner.query('SELECT to_jsonb(e) AS e FROM public.extracted_medical_text e WHERE document_id=$1',[id])).rows[0].e,extractionBefore,'extraction is untouched');
+ assert.deepEqual((await owner.query('SELECT to_jsonb(s) AS s FROM public.ai_report_summaries s WHERE document_id=$1',[id])).rows[0].s,summaryBefore,'summary is untouched');
+ assert.equal(Number((await owner.query('SELECT count(*) FROM public.document_processing_jobs')).rows[0].count),jobCount,'no second job is created');
+ assert.equal(await auditCount(),auditBefore+1);
+ const [event]=await audit("action='admin.processing.retry' AND target_id=$1",[id]);
+ assert.equal(event.outcome,'success');assert.equal(event.actor_admin_id,a.id);assert.equal(event.target_type,'processing_job');assert.deepEqual(event.scope,{from:'failed',to:'retry_wait',error_code:'PROCESSOR_TIMEOUT',attempts:2,max_attempts:3});
+ const again=await retry(id,token);assert.equal(again.status,409);assert.equal(again.data.error.code,'JOB_NOT_RETRYABLE');
+ assert.equal((await audit("action='admin.processing.retry' AND target_id=$1 AND outcome='failure'",[id]))[0].scope.state,'retry_wait');
+ const source=await readFile(new URL('../admin/processing-jobs.ts',import.meta.url),'utf8');
+ assert.ok(source.includes('createPatientProcessingRepository')&&!/UPDATE\s+public\.(document_processing_jobs|medical_documents)/.test(source),'the retry reuses the existing path and has no second UPDATE');
+ assert.equal((await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0].first_invalid,null);
+});
+
+test('P9-25 retry is refused and audited for every wrong state, and the job, lease and document stay byte-for-byte unchanged',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),patient=await seedPatient('Refuse Owner','refuse-'+randomUUID()+'@example.invalid','active',true);
+ const suspended=await seedPatient('Suspended Owner','refuse2-'+randomUUID()+'@example.invalid','suspended',true);
+ const cases:Array<[string,string,JobSpec]>=[['pending','pending',{state:'pending',attempts:0,code:null}],['running with a live lease','running',{state:'running',lease:'live'}],['running with an expired lease','running',{state:'running',lease:'expired'}],
+  ['already waiting for retry','retry_wait',{state:'retry_wait'}],['completed','completed',{state:'completed'}],['attempts exhausted','failed',{attempts:3}],['error code that is not retryable','failed',{code:'INVALID_INPUT'}],
+  ['document missing its integrity metadata','failed',{integrity:false}],['document not marked failed','failed',{docStatus:'processing'}]];
+ for(const [name,state,spec] of cases){
+  const id=await jobFixture(patient,spec),jobBefore=await jobRow(id),docBefore=await documentRow(id),auditBefore=await auditCount(),r=await retry(id,token);
+  assert.equal(r.status,409,name);assert.equal(r.data.error.code,'JOB_NOT_RETRYABLE',name);assert.deepEqual(await jobRow(id),jobBefore,name+': job unchanged');assert.deepEqual(await documentRow(id),docBefore,name+': document unchanged');
+  assert.equal(await auditCount(),auditBefore+1,name);
+  const [event]=await audit("action='admin.processing.retry' AND target_id=$1",[id]);assert.equal(event.outcome,'failure',name);assert.equal(event.scope.reason,'not_retryable');assert.equal(event.scope.state,state,name);
+ }
+ const owned=await jobFixture(suspended),ownedBefore=await jobRow(owned),ownedDoc=await documentRow(owned);
+ // Existing row-level security hides jobs of non-active accounts from the API role, so an admin can neither list nor retry them.
+ assert.equal((await retry(owned,token)).status,404);assert.equal((await call('/api/v1/admin/processing/jobs?patient_id='+suspended,{token})).data.jobs.length,0);
+ assert.equal((await audit("action='admin.processing.retry' AND target_id=$1",[owned]))[0].scope.reason,'not_found');
+ assert.deepEqual(await jobRow(owned),ownedBefore);assert.deepEqual(await documentRow(owned),ownedDoc);
+ const missing=randomUUID();assert.equal((await retry(missing,token)).status,404);assert.equal((await audit("action='admin.processing.retry' AND target_id=$1",[missing]))[0].scope.reason,'not_found');
+ assert.equal((await retry('not-a-uuid',token)).status,400);
+ const live=await jobFixture(patient,{state:'running',lease:'live'}),lease=(await jobRow(live)).lease_token;await retry(live,token);assert.equal((await jobRow(live)).lease_token,lease,'a live lease is never cleared by an admin');
+});
+
+test('P9-26 a failed audit write rolls the retry back, and two admins retrying together produce one change',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),patient=await seedPatient('Atomic Owner','atomic-'+randomUUID()+'@example.invalid','active',true);
+ const id=await jobFixture(patient),jobBefore=await jobRow(id),docBefore=await documentRow(id);
+ await owner.query("ALTER TABLE public.admin_audit_events ADD CONSTRAINT p9_block_retry CHECK(action<>'admin.processing.retry') NOT VALID");
+ try{assert.equal((await retry(id,token)).status,500);}finally{await owner.query('ALTER TABLE public.admin_audit_events DROP CONSTRAINT p9_block_retry');}
+ assert.deepEqual(await jobRow(id),jobBefore,'the job state change was rolled back');assert.deepEqual(await documentRow(id),docBefore);
+ assert.equal((await retry(id,token)).status,200,'the same retry works once auditing works');
+ const other=await adminToken((await newAdmin('operations_admin')).email),race=await jobFixture(patient);
+ const results=await Promise.all([token,other].map(t=>retry(race,t)));assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+ assert.deepEqual((await audit("action='admin.processing.retry' AND target_id=$1",[race])).map(e=>e.outcome).sort(),['failure','success']);
+ assert.equal((await jobRow(race)).attempt_count,1);
+});
+
+test('P9-27 only authorised admins can view or retry, each permission is separate, and viewing never changes data',async()=>{
+ const patient=await livePatient(),owned=await seedPatient('Perm Owner','permjob-'+randomUUID()+'@example.invalid','active',true),id=await jobFixture(owned),doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex');
+ const routes:Array<[string,string]>=[['GET','/api/v1/admin/processing/summary'],['GET','/api/v1/admin/processing/jobs'],['GET','/api/v1/admin/processing/jobs/'+id],['POST','/api/v1/admin/processing/jobs/'+id+'/retry']];
+ const auditBefore=await auditCount(),jobBefore=await jobRow(id);
+ for(const [method,path] of routes)for(const token of [undefined,patient.access,doctor,'not-a-token'])assert.equal((await call(path,{method,token})).status,401,method+' '+path);
+ assert.equal(await auditCount(),auditBefore);assert.deepEqual(await jobRow(id),jobBefore);
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ for(const permission of ['admin.processing.read','admin.processing.retry']){
+  await owner.query("DELETE FROM public.admin_role_permissions WHERE role_name='support_admin' AND permission=$1",[permission]);
+  try{
+   const reading=permission.endsWith('read'),denied=await call(reading?'/api/v1/admin/processing/jobs':'/api/v1/admin/processing/jobs/'+id+'/retry',{method:reading?'GET':'POST',token});
+   assert.equal(denied.status,403,permission);assert.equal((await audit("action=$1 AND outcome='denied' AND actor_admin_id=$2",[permission,a.id])).length,1,permission);assert.deepEqual(await jobRow(id),jobBefore,'a denied admin changed nothing');
+  }finally{await owner.query("INSERT INTO public.admin_role_permissions(role_name,permission) VALUES('support_admin',$1)",[permission]);}
+ }
+ const hash=await jobsHash();
+ for(const [method,path] of routes.slice(0,3))assert.equal((await call(path,{method,token})).status,200);
+ assert.equal(await jobsHash(),hash,'read-only views do not change any job row');
+ for(const [method,path] of [['PATCH','/api/v1/admin/processing/jobs/'+id],['PUT','/api/v1/admin/processing/jobs/'+id],['DELETE','/api/v1/admin/processing/jobs/'+id],['POST','/api/v1/admin/processing/jobs'],['POST','/api/v1/admin/processing/jobs/'+id+'/reset'],['POST','/api/v1/admin/processing/jobs/'+id+'/cancel']] as const)
+  assert.equal((await call(path,{method,token,body:{state:'completed',attempt_count:0}})).status,404,method+' '+path);
+ assert.equal((await retry(id,token,{body:{attempt_count:0,state:'pending'}})).status,400);assert.equal((await retry(id,token,{query:'?force=true'})).status,400);assert.deepEqual(await jobRow(id),jobBefore);
+ assert.equal((await retry(id,token)).status,200);
 });
