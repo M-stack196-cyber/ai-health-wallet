@@ -13,6 +13,8 @@ import { createAdminTokenService } from "./tokens.js";
 import { createAdminRepository } from "./repository.js";
 import { adminIdentity, requireAdmin } from "./middleware.js";
 import { mountConfigRoutes } from "./config-routes.js";
+import { mountOpsRoutes } from "./ops-routes.js";
+import type { HealthOptions } from "./health.js";
 import { createAdminStatusViews, deliveryQuery, guardianQuery, shareQuery, statusIdParameter } from "./status-views.js";
 import { createAdminProcessingJobs, jobIdParameter, validateJobListQuery } from "./processing-jobs.js";
 import { createAdminPatientAccounts, patientIdParameter, validatePatientListQuery, type StatusAction } from "./patient-accounts.js";
@@ -20,7 +22,8 @@ import { createAdminPatientAccounts, patientIdParameter, validatePatientListQuer
 const denied = () => new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials or authorization.");
 
 /** `auth` supplies only the Argon2id cost settings; admin tokens use the separate admin configuration. */
-export function createAdminRoutes(database: PatientDatabase, auth: AuthenticationConfig, config: AdminAuthenticationConfig) {
+export interface AdminRouteOptions { health?: HealthOptions; }
+export function createAdminRoutes(database: PatientDatabase, auth: AuthenticationConfig, config: AdminAuthenticationConfig, options: AdminRouteOptions = {}) {
   const router = Router(), repository = createAdminRepository(database), tokens = createAdminTokenService(config);
   const passwords = createPasswordService(auth), accounts = createAdminPatientAccounts(database), jobs = createAdminProcessingJobs(database), status = createAdminStatusViews(database);
   const limiter = rateLimit({ windowMs: config.rateWindowSeconds * 1000, limit: config.rateLimitMax * 4, standardHeaders: "draft-8",
@@ -146,5 +149,6 @@ export function createAdminRoutes(database: PatientDatabase, auth: Authenticatio
     res.status(200).json({ success: true, deliveries: result.rows, next_cursor: result.nextCursor });
   });
   mountConfigRoutes(router, { database, tokens, repository });
+  mountOpsRoutes(router, { database, tokens, repository, health: options.health });
   return router;
 }

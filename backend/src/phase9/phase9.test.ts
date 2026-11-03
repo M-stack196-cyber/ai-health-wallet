@@ -18,6 +18,10 @@ import {createAdminTokenService} from '../admin/tokens.js';
 import {AdminBootstrapError,createAdminAccount} from '../admin/bootstrap.js';
 import {writeAdminAudit} from '../admin/repository.js';
 import {settingRegistry} from '../admin/settings.js';
+import {aiServicesFromEnv,type HealthOptions,type ServiceProbe} from '../admin/health.js';
+import {safeScope} from '../admin/audit-viewer.js';
+import {createServer,type Server,type IncomingMessage} from 'node:http';
+import {createHash} from 'node:crypto';
 import {getDocumentConfig} from '../config/documents.js';
 import {getAuthenticationConfig} from '../config/auth.js';
 import {getSecurityPolicy as runtimeSecurityPolicy} from '../auth/security-policy.js';
@@ -33,40 +37,41 @@ const db=new pg.Pool({...conn,user:'health_wallet_app',max:14});
 const patientConfig:AuthenticationConfig={jwtKey:randomBytes(32),jwtAlgorithm:'HS256',jwtLifetimeSeconds:900,jwtIssuer:'phase9-patient-issuer',jwtAudience:'phase9-patient',
  argonMemoryKiB:19456,argonTimeCost:2,argonParallelism:1,maxHashConcurrency:8,rateLimitWindowMs:900000,rateLimitMax:1000};
 const adminConfig:AdminAuthenticationConfig={jwtKey:new Uint8Array(randomBytes(32)),jwtAlgorithm:'HS256',jwtLifetimeSeconds:900,jwtIssuer:'phase9-admin-issuer',
- jwtAudience:'phase9-admin',rateLimitMax:50,rateWindowSeconds:900};
+ jwtAudience:'phase9-admin',rateLimitMax:500,rateWindowSeconds:900};
 // A separate key gives this server its own rate-limit buckets, so other tests sharing 127.0.0.1 cannot exhaust them.
 const strictConfig:AdminAuthenticationConfig={...adminConfig,jwtKey:new Uint8Array(randomBytes(32)),rateLimitMax:3};
 const passwords=createPasswordService(patientConfig),tokens=createAdminTokenService(adminConfig);
 const adminPassword='Synthetic admin passphrase 731!',patientPassword='Synthetic secure passphrase 310!';
 const mail:SecurityMailMessage[]=[];
+let mountApp:(config:AdminAuthenticationConfig,health?:HealthOptions)=>express.Express;
 let server:ReturnType<ReturnType<typeof express>['listen']>,base:string,strictServer:ReturnType<ReturnType<typeof express>['listen']>,strictBase:string;
 
 before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_admin_phase9');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,18);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,19);
  for(const f of files){
   if(f.startsWith('0010'))await owner.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await owner.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
  }
- const mount=(config:AdminAuthenticationConfig)=>{
+ mountApp=(config:AdminAuthenticationConfig,health?:HealthOptions)=>{
   const app=express();app.use(express.json());app.use((_req,res,next)=>{res.set('Cache-Control','no-store');next();});
   const patients=createPatientRoutes(db,patientConfig,{mailer:{async send(m){mail.push(m);}},policy:{...getSecurityPolicy(),challengeRateMax:10000}});
-  app.use('/api/v1/auth',patients.auth);app.use('/api/v1/patients',patients.profile);app.use('/api/v1/admin',createAdminRoutes(db,patientConfig,config));app.use(errorHandler);return app;
+  app.use('/api/v1/auth',patients.auth);app.use('/api/v1/patients',patients.profile);app.use('/api/v1/admin',createAdminRoutes(db,patientConfig,config,{health}));app.use(errorHandler);return app;
  };
- server=mount(adminConfig).listen(0,'127.0.0.1');await once(server,'listening');
- strictServer=mount(strictConfig).listen(0,'127.0.0.1');await once(strictServer,'listening');
+ server=mountApp(adminConfig,{services:[]}).listen(0,'127.0.0.1');await once(server,'listening');
+ strictServer=mountApp(strictConfig,{services:[]}).listen(0,'127.0.0.1');await once(strictServer,'listening');
  for(const [s,set] of [[server,(b:string)=>{base=b;}],[strictServer,(b:string)=>{strictBase=b;}]] as const){const a=s.address();assert.ok(a&&typeof a==='object');set('http://127.0.0.1:'+a.port);}
 });
 after(async()=>{for(const s of [server,strictServer])if(s){s.closeAllConnections();await new Promise<void>(resolve=>s.close(()=>resolve()));}await db.end();await owner.end();});
 
-async function call(path:string,opts:{method?:string;body?:unknown;token?:string;headers?:Record<string,string>;root?:string}={}){
+async function call(path:string,opts:{method?:string;body?:unknown;token?:string;headers?:Record<string,string>;root?:string;keyNames?:boolean}={}){
  const r=await fetch((opts.root??base)+path,{method:opts.method??(opts.body===undefined?'GET':'POST'),headers:{...(opts.body===undefined?{}:{'Content-Type':'application/json'}),
   ...(opts.token?{Authorization:'Bearer '+opts.token}:{}),...opts.headers},body:opts.body===undefined?undefined:JSON.stringify(opts.body),signal:AbortSignal.timeout(15000)});
  const text=await r.text();assert.ok(r.headers.get('cache-control')?.includes('no-store'));
- assert.ok(!text.includes('password_hash')&&!text.includes('$argon2')&&!text.includes(adminPassword)&&!text.includes(patientPassword),'response contains a sensitive value');
+ assert.ok((opts.keyNames||path.startsWith('/api/v1/admin/audit')||!text.includes('password_hash'))&&!text.includes('$argon2')&&!text.includes(adminPassword)&&!text.includes(patientPassword),'response contains a sensitive value');
  return {status:r.status,data:(r.headers.get('content-type')?.includes('application/json')?JSON.parse(text):text) as any};
 }
 async function newAdmin(role='support_admin'){
@@ -83,7 +88,7 @@ async function forge(key:Uint8Array,audience:string,sub:string,sid:string|undefi
  return new SignJWT(sid?{sid}:{}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(sub).setIssuer(adjust.iss??adminConfig.jwtIssuer).setAudience(audience)
   .setIssuedAt(adjust.iat??now).setExpirationTime(adjust.exp??now+600).sign(key);
 }
-const allPermissions=['admin.deliveries.read','admin.guardians.read','admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read','admin.rules.create','admin.rules.read','admin.settings.approve','admin.settings.change','admin.settings.read','admin.shares.read'];
+const allPermissions=['admin.audit.read','admin.deliveries.read','admin.guardians.read','admin.health.read','admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read','admin.rules.create','admin.rules.read','admin.settings.approve','admin.settings.change','admin.settings.read','admin.shares.read'];
 const sqlState=(code:string)=>(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===code;
 
 test('P9-01 admin configuration is disabled by default and cannot share patient secrets or audience',()=>{
@@ -298,7 +303,7 @@ async function medicalSnapshot(patientId:string){
 test('P9-13 the three roles hold the new patient-account permissions and nothing reaches medical content',async()=>{
  for(const role of ['support_admin','operations_admin','config_admin'])
   assert.deepEqual((await owner.query('SELECT permission FROM public.admin_role_permissions WHERE role_name=$1 ORDER BY permission',[role])).rows.map(r=>r.permission),allPermissions,role);
- assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing|guardians|shares|deliveries|settings|rules)\.[a-z]+$/.test(permission)));
+ assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing|guardians|shares|deliveries|settings|rules|health|audit)\.[a-z]+$/.test(permission)));
 });
 
 test('P9-14 account list searches, filters and pages by keyset and shows only identity and status fields',async()=>{
@@ -1027,4 +1032,201 @@ test('P9-39 configuration endpoints reject non-admin callers, enforce each permi
  const code=(await Promise.all(['settings.ts','rules.ts','config-routes.ts'].map(f=>readFile(new URL('../admin/'+f,import.meta.url),'utf8')))).join('\n').replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
  for(const word of ['process.env','JWT_SECRET','DB_PASSWORD','password_hash','guardian_serious_rules','approval_status','approval_metadata'])assert.ok(!code.includes(word),'configuration code must not mention '+word);
  assert.ok(!/(?<!not_)clinically_approved/.test(code),'configuration code never writes a clinical approval value');
+});
+
+// ---- Phase 6: system health and audit review (M13-007, M13-018, audit parts of M13-008 and M13-019) ----
+const healthUrl='/api/v1/admin/health',auditUrl=(query='')=>'/api/v1/admin/audit'+query;
+const SERVICE_TOKEN='SERVICE-TOKEN-SENTINEL-4471',HEX64=/\b[a-f0-9]{64}\b/;
+async function stubService(handler:(req:IncomingMessage)=>Promise<number>|number){
+ const received:Array<{url:string;authorization?:string}>=[];
+ const server:Server=createServer(async(req,res)=>{received.push({url:req.url??'',authorization:req.headers.authorization});const code=await handler(req);res.writeHead(code,{'Content-Type':'application/json'});res.end('{"detail":"LEAKSENTINEL service body"}');});
+ server.listen(0,'127.0.0.1');await once(server,'listening');const address=server.address();assert.ok(address&&typeof address==='object');
+ return {server,received,port:address.port,origin:'http://127.0.0.1:'+address.port,close:()=>new Promise<void>(resolve=>{server.closeAllConnections();server.close(()=>resolve());})};
+}
+async function expectedLedger(){
+ const dir=new URL('../../migrations/',import.meta.url),names=(await readdir(dir)).filter(f=>/^\d{4}_[a-z0-9_]+\.sql$/.test(f)).sort();
+ return Promise.all(names.map(async name=>({version:name.slice(0,4),name,checksum:createHash('sha256').update(await readFile(new URL(name,dir),'utf8')).digest('hex')})));
+}
+async function installLedger(rows:Array<{version:string;name:string;checksum:string}>){
+ await owner.query('DROP TABLE IF EXISTS public.schema_migrations');
+ await owner.query(`CREATE TABLE public.schema_migrations(version TEXT PRIMARY KEY CHECK(version ~ '^[0-9]{4}$'),name TEXT NOT NULL UNIQUE,checksum TEXT NOT NULL CHECK(checksum ~ '^[0-9a-f]{64}$'),applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+ for(const row of rows)await owner.query('INSERT INTO public.schema_migrations(version,name,checksum) VALUES($1,$2,$3)',[row.version,row.name,row.checksum]);
+}
+async function resetQueues(){
+ await staged(async c=>{for(const table of ['document_processing_jobs','patient_security_email_payloads','patient_security_email_deliveries','guardian_medical_events','guardian_medical_items','guardian_rule_results','guardian_routine_sources','guardian_medical_jobs'])await c.query('DELETE FROM public.'+table);});
+}
+const component=(r:{data:any},name:string)=>r.data.health.components.find((c:any)=>c.name===name);
+async function queueRows(patient:string,spec:{job?:'expired'|'stale'|'failed';mail?:'overdue'|'claim'|'failed';notify?:'overdue'|'failed'}){
+ if(spec.job==='expired')await jobFixture(patient,{state:'running',lease:'expired',sentinel:true});
+ if(spec.job==='failed')await jobFixture(patient,{sentinel:true});
+ if(spec.job==='stale'){const id=await jobFixture(patient,{state:'pending',attempts:0,code:null,sentinel:true});await staged(async c=>{await c.query("UPDATE public.document_processing_jobs SET next_attempt_at=clock_timestamp()-interval '20 minutes' WHERE document_id=$1",[id]);});}
+ await staged(async c=>{
+  if(spec.mail){const id=randomUUID(),state=spec.mail==='overdue'?'pending':spec.mail==='claim'?'sending':'permanent_failed';
+   await c.query(`INSERT INTO public.patient_security_email_deliveries(id,challenge_id,patient_id,purpose,state,attempts,claim_id,claim_expires_at,next_attempt_at,failure_category)
+    VALUES($1,$2,$3,'verify_email',$4,1,$5,$6,clock_timestamp()${spec.mail==='overdue'?"-interval '1 hour'":''},$7)`,[id,randomUUID(),patient,state,spec.mail==='claim'?randomUUID():null,spec.mail==='claim'?new Date(Date.now()-60000):null,spec.mail==='failed'?'rejected':null]);}
+  if(spec.notify){const id=randomUUID();
+   await c.query(`INSERT INTO public.guardian_medical_jobs(id,patient_id,relationship_id,recipient_hash,patient_security_version,kind,policy_sha256,not_before,state,attempts,max_attempts,next_attempt_at,failure_code)
+    VALUES($1,$2,$3,$4,1,'serious_alert',$5,clock_timestamp()-interval '2 hours',$6,1,3,clock_timestamp()${spec.notify==='overdue'?"-interval '1 hour'":''},$7)`,[id,patient,randomUUID(),SECRETS.recipient,SECRETS.policy,spec.notify==='overdue'?'retry_wait':'permanent_failed',spec.notify==='failed'?'transport':null]);}
+ });
+}
+
+test('P9-40 health reports each failed or degraded component correctly and every report is free of secrets, addresses and patient content',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),patient=await seedPatient('Health Owner '+SENTINEL,'health-'+randomUUID()+'@example.invalid','active',true);
+ const ok=await stubService(()=>200),unready=await stubService(()=>503),slow=await stubService(async()=>{await new Promise(r=>setTimeout(r,600));return 200;}),gone=await stubService(()=>200),goneOrigin=gone.origin;await gone.close();
+ const services:ServiceProbe[]=[],healthServer=mountApp(adminConfig,{services,slowServiceMs:300,serviceTimeoutMs:1500,staleQueueSeconds:600}).listen(0,'127.0.0.1');await once(healthServer,'listening');
+ const addr=healthServer.address();assert.ok(addr&&typeof addr==='object');const root='http://127.0.0.1:'+addr.port,wire:string[]=[];
+ const get=async()=>{const r=await call(healthUrl,{token,root});assert.equal(r.status,200);wire.push(JSON.stringify(r.data));return r;};
+ try{
+  await resetQueues();const ledger=await expectedLedger();await installLedger(ledger);services.push({name:'ai_ocr',origin:ok.origin,token:SERVICE_TOKEN});
+  const base=await get();assert.equal(base.data.health.status,'ok');assert.deepEqual(base.data.health.components.map((c:any)=>c.name),['database','migrations','processing_queue','email_queue','ai_ocr']);
+  assert.equal(component(base,'database').status,'ok');assert.deepEqual([component(base,'migrations').expected,component(base,'migrations').applied,component(base,'migrations').pending,component(base,'migrations').latest_applied],[ledger.length,ledger.length,0,ledger[ledger.length-1].version]);
+  assert.deepEqual(['pending','running','retry_wait','failed_last_24h','expired_leases','oldest_ready_age_seconds'].map(k=>component(base,'processing_queue')[k]),[0,0,0,0,0,null]);
+  assert.equal(component(base,'ai_ocr').status,'ok');assert.ok(ok.received.length>=1&&ok.received.every(r=>r.url==='/health'&&r.authorization==='Bearer '+SERVICE_TOKEN),'only /health is requested, and the configured token goes only to the configured service');
+  // processing queue
+  await queueRows(patient,{job:'expired'});let r=await get();assert.equal(r.data.health.status,'degraded');assert.deepEqual([component(r,'processing_queue').status,component(r,'processing_queue').reason,component(r,'processing_queue').expired_leases,component(r,'processing_queue').running],['degraded','expired_leases',1,1]);
+  assert.equal(component(r,'email_queue').status,'ok');await resetQueues();
+  await queueRows(patient,{job:'stale'});r=await get();assert.deepEqual([component(r,'processing_queue').status,component(r,'processing_queue').reason,component(r,'processing_queue').pending],['degraded','stale_ready_jobs',1]);assert.ok(component(r,'processing_queue').oldest_ready_age_seconds>=1200);await resetQueues();
+  await queueRows(patient,{job:'failed'});r=await get();assert.equal(r.data.health.status,'ok','failed jobs are counted but do not by themselves make the queue stuck');assert.equal(component(r,'processing_queue').failed_last_24h,1);await resetQueues();
+  // email and notification queues
+  await queueRows(patient,{mail:'overdue'});r=await get();assert.deepEqual([component(r,'email_queue').status,component(r,'email_queue').reason,component(r,'email_queue').email_overdue],['degraded','stuck_deliveries',1]);await resetQueues();
+  await queueRows(patient,{mail:'claim'});r=await get();assert.deepEqual([component(r,'email_queue').status,component(r,'email_queue').email_expired_claims],['degraded',1]);await resetQueues();
+  await queueRows(patient,{notify:'overdue'});r=await get();assert.deepEqual([component(r,'email_queue').status,component(r,'email_queue').notification_overdue],['degraded',1]);await resetQueues();
+  await queueRows(patient,{mail:'failed',notify:'failed'});r=await get();assert.equal(r.data.health.status,'ok');assert.deepEqual([component(r,'email_queue').email_failed_last_24h,component(r,'email_queue').notification_failed_last_24h],[1,1]);await resetQueues();
+  // migrations
+  await owner.query('DELETE FROM public.schema_migrations WHERE version=$1',[ledger[ledger.length-1].version]);r=await get();assert.deepEqual([component(r,'migrations').status,component(r,'migrations').reason,component(r,'migrations').pending,r.data.health.status],['degraded','pending_migrations',1,'degraded']);
+  await installLedger(ledger);await owner.query("UPDATE public.schema_migrations SET checksum=$1 WHERE version='0003'",['a'.repeat(64)]);r=await get();assert.deepEqual([component(r,'migrations').status,component(r,'migrations').reason,r.data.health.status],['down','history_mismatch','down']);
+  await owner.query('DROP TABLE public.schema_migrations');r=await get();assert.deepEqual([component(r,'migrations').status,component(r,'migrations').reason],['unknown','ledger_not_found']);assert.equal(r.data.health.status,'degraded');
+  await installLedger(ledger);assert.equal((await get()).data.health.status,'ok');
+  // AI services: reachable, answering but not ready, slow, unreachable, unconfigured, misconfigured; credentials in the configured address never travel or appear
+  services.splice(0,services.length,
+   {name:'ai_ocr',origin:new URL('http://user:pw-sentinel@127.0.0.1:'+ok.port+'/internal/v1/path?token=url-token-sentinel').origin,token:SERVICE_TOKEN},{name:'ai_summary',origin:unready.origin},{name:'ai_rag',origin:slow.origin});
+  r=await get();assert.deepEqual([component(r,'ai_ocr').status,component(r,'ai_summary').status,component(r,'ai_summary').reason,component(r,'ai_rag').status,component(r,'ai_rag').reason],['ok','degraded','unexpected_status','degraded','slow_response']);assert.equal(r.data.health.status,'degraded');
+  services.splice(0,services.length,{name:'ai_ocr',origin:goneOrigin},{name:'ai_summary'},{name:'ai_rag',misconfigured:true});
+  r=await get();assert.deepEqual([component(r,'ai_ocr').status,component(r,'ai_ocr').reason,component(r,'ai_summary').status,component(r,'ai_rag').status,component(r,'ai_rag').reason,r.data.health.status],['down','connection_failed','not_configured','unknown','misconfigured','down']);
+  const denied=await stubService(()=>401),noRoute=await stubService(()=>404);services.splice(0,services.length,{name:'ai_ocr',origin:denied.origin,token:'wrong-token-sentinel'},{name:'ai_summary',origin:noRoute.origin});
+  r=await get();assert.deepEqual([component(r,'ai_ocr').status,component(r,'ai_ocr').reason,component(r,'ai_summary').status,component(r,'ai_summary').reason,r.data.health.status],['degraded','unauthorized','ok','no_health_route','degraded'],'a service that rejects our token is degraded; one without a /health route is reachable');
+  assert.ok(denied.received.every(x=>x.authorization==='Bearer wrong-token-sentinel')&&!JSON.stringify(r.data).includes('wrong-token-sentinel'));await Promise.all([denied.close(),noRoute.close()]);
+  const hung=await stubService(()=>new Promise<number>(()=>{}));services.splice(0,services.length,{name:'ai_rag',origin:hung.origin});r=await get();assert.deepEqual([component(r,'ai_rag').status,component(r,'ai_rag').reason],['down','timeout']);await hung.close();
+  services.splice(0,services.length,{name:'ai_ocr',origin:ok.origin});
+ } finally{
+  healthServer.closeAllConnections();await new Promise<void>(resolve=>healthServer.close(()=>resolve()));await Promise.all([ok.close(),unready.close(),slow.close()]);
+ }
+ // database unreachable or slow (a stub handle is used only for the health probe; the admin session still uses the real database)
+ const downServer=mountApp(adminConfig,{services:[],database:{async query(){throw Error('connect ECONNREFUSED postgres://app:db-password-sentinel@10.0.0.9:5432/ai_health_wallet');}} as never}).listen(0,'127.0.0.1');await once(downServer,'listening');
+ const slowServer=mountApp(adminConfig,{services:[],slowDatabaseMs:20,database:{async query(){await new Promise(r=>setTimeout(r,80));return {rows:[{ok:1,h:{present:true,rows:[]}}]};}} as never}).listen(0,'127.0.0.1');await once(slowServer,'listening');
+ try{
+  const down=await call(healthUrl,{token,root:'http://127.0.0.1:'+(downServer.address() as {port:number}).port});wire.push(JSON.stringify(down.data));
+  assert.deepEqual([down.status,down.data.health.status,component(down,'database').status,component(down,'database').reason],[200,'down','down','query_failed']);
+  for(const name of ['migrations','processing_queue','email_queue'])assert.deepEqual([component(down,name).status,component(down,name).reason],['unknown','database_unavailable'],name);
+  const slowResult=await call(healthUrl,{token,root:'http://127.0.0.1:'+(slowServer.address() as {port:number}).port});wire.push(JSON.stringify(slowResult.data));
+  assert.deepEqual([component(slowResult,'database').status,component(slowResult,'database').reason],['degraded','slow_response']);assert.ok(component(slowResult,'database').latency_ms>=20);
+ }finally{for(const s of [downServer,slowServer]){s.closeAllConnections();await new Promise<void>(resolve=>s.close(()=>resolve()));}}
+ // nothing sensitive in any report or in the audit rows the reports created
+ const text=wire.join('\n'),rows=JSON.stringify(await audit("action='admin.health.read'"));
+ const secrets=[SERVICE_TOKEN,'pw-sentinel','url-token-sentinel','db-password-sentinel','ECONNREFUSED','postgres://','/internal/v1/path','127.0.0.1','10.0.0.9','/tmp/hw-phase1-pg',SENTINEL,SENTINEL.toLowerCase(),'example.invalid','service body',patient,process.env.JWT_SECRET,process.env.DB_PASSWORD,process.env.ADMIN_JWT_SECRET,Buffer.from(adminConfig.jwtKey).toString('hex'),token,'Bearer','password','original_filename','s3_','"detail"'].filter((v):v is string=>!!v&&v.length>=3);
+ for(const secret of secrets){assert.ok(!text.includes(secret),'a health report contains '+secret);assert.ok(!rows.includes(secret),'a health audit row contains '+secret);}
+ assert.ok(!/https?:\/\//.test(text)&&!/localhost/i.test(text),'no address of any kind appears');
+ const allowed=new Set(['success','health','status','checked_at','components','name','reason','latency_ms','expected','applied','pending','latest_applied','running','retry_wait','failed_last_24h','expired_leases','oldest_ready_age_seconds','email_overdue','email_expired_claims','email_failed_last_24h','notification_overdue','notification_expired_leases','notification_failed_last_24h']);
+ const keys=new Set<string>();(function walk(value:unknown){if(Array.isArray(value))value.forEach(walk);else if(value&&typeof value==='object')for(const [k,v] of Object.entries(value)){keys.add(k);walk(v);}})(wire.map(w=>JSON.parse(w)));
+ for(const key of keys)assert.ok(allowed.has(key),'unexpected health field '+key);
+ const reads=await audit("action='admin.health.read'");assert.ok(reads.length>=15&&reads.every(r=>r.target_type==='system_health'&&r.outcome==='success'));assert.deepEqual(Object.keys(reads[0].scope).sort(),['problems','status']);
+ await installLedger(await expectedLedger());
+});
+
+test('P9-41 the health probe only ever uses the origin of a configured address, and only http(s) addresses',()=>{
+ const probes=aiServicesFromEnv({OCR_SERVICE_URL:'http://user:pass@127.0.0.1:8011/v1/extractions?x=1',OCR_SERVICE_TOKEN:'t1',SUMMARY_SERVICE_URL:'file:///etc/passwd',RAG_SERVICE_URL:'not a url'});
+ assert.deepEqual(probes,[{name:'ai_ocr',origin:'http://127.0.0.1:8011',token:'t1'},{name:'ai_summary',misconfigured:true},{name:'ai_rag',misconfigured:true}]);
+ assert.deepEqual(aiServicesFromEnv({}),[{name:'ai_ocr'},{name:'ai_summary'},{name:'ai_rag'}]);
+ assert.deepEqual(aiServicesFromEnv({RAG_SERVICE_URL:'https://rag.example.invalid/internal/v1/rag/',RAG_SERVICE_TOKEN:''}),[{name:'ai_ocr'},{name:'ai_summary'},{name:'ai_rag',origin:'https://rag.example.invalid',token:undefined}]);
+});
+
+test('P9-42 audit search filters, pages newest first, runs the chain check and records only the shape of each search',async()=>{
+ const a=await newAdmin('support_admin'),other=await newAdmin('config_admin'),token=await adminToken(a.email),otherToken=await adminToken(other.email);
+ await call('/api/v1/admin/me',{token:otherToken});await propose('documents.max_pdf_pages',otherToken,{value:77});await propose('auth.jwt_secret',otherToken,{value:1});
+ const first=await call(auditUrl('?limit=10'),{token});assert.equal(first.status,200);assert.equal(first.data.events.length,10);
+ for(const e of first.data.events)assert.deepEqual(Object.keys(e).sort(),['action','actor_admin_id','actor_role','event_hash','id','occurred_at','outcome','request_id','scope','seq','target_id','target_type']);
+ assert.deepEqual(first.data.events.map((e:any)=>e.seq),[...first.data.events.map((e:any)=>e.seq)].sort((x:number,y:number)=>y-x),'newest first');
+ assert.equal(first.data.chain.status,'intact');assert.equal(first.data.chain.first_invalid_seq,null);assert.ok(first.data.chain.events_checked>=first.data.events[0].seq-1);assert.ok(first.data.next_cursor);
+ const second=await call(auditUrl('?limit=10&cursor='+first.data.next_cursor),{token});assert.equal(second.status,200);assert.equal(second.data.chain,null,'the whole-log check runs on the first page only');assert.ok(second.data.events[0].seq<first.data.events[9].seq);
+ const everything:any[]=[];let cursor:string|null=null,pages=0;do{const r:any=await call(auditUrl('?limit=40'+(cursor?'&cursor='+cursor:'')),{token});assert.equal(r.status,200);everything.push(...r.data.events);cursor=r.data.next_cursor;pages++;}while(cursor&&pages<200);
+ assert.equal(new Set(everything.map(e=>e.seq)).size,everything.length,'no event twice');assert.ok(everything.length>200);
+ assert.equal(everything.at(-1).seq,1,'paging reaches the very first event');assert.ok(everything.every((e,i)=>i===0||e.seq<everything[i-1].seq),'strictly newest first across all pages');
+ const ids=(r:any)=>r.data.events.map((e:any)=>e.id);
+ const byActor=await call(auditUrl('?actor_admin_id='+other.id+'&limit=50'),{token});assert.ok(byActor.data.events.length>=4&&byActor.data.events.every((e:any)=>e.actor_admin_id===other.id));
+ const byAction=await call(auditUrl('?action=admin.settings.change&limit=50'),{token});assert.ok(byAction.data.events.length>=2&&byAction.data.events.every((e:any)=>e.action==='admin.settings.change'));
+ const byTarget=await call(auditUrl('?target_type=setting&outcome=denied&limit=50'),{token});assert.ok(byTarget.data.events.some((e:any)=>e.target_id==='auth.jwt_secret'));assert.ok(byTarget.data.events.every((e:any)=>e.target_type==='setting'&&e.outcome==='denied'));
+ for(const outcome of ['success','denied','failure']){const r=await call(auditUrl('?outcome='+outcome+'&limit=50'),{token});assert.ok(r.data.events.length>0&&r.data.events.every((e:any)=>e.outcome===outcome),outcome);}
+ const combined=await call(auditUrl('?actor_admin_id='+other.id+'&action=admin.settings.change&outcome=success'),{token});assert.deepEqual(combined.data.events.map((e:any)=>e.scope.value),[77]);
+ const mid=first.data.events[5].occurred_at as string,before=await call(auditUrl('?to='+mid+'&limit=50'),{token}),after=await call(auditUrl('?from='+mid+'&limit=50'),{token});
+ assert.ok(before.data.events.every((e:any)=>e.occurred_at<=mid)&&after.data.events.every((e:any)=>e.occurred_at>=mid));assert.ok(ids(before).includes(first.data.events[5].id)&&ids(after).includes(first.data.events[5].id));
+ const none=await call(auditUrl('?from=2099-01-01T00:00:00Z'),{token});assert.deepEqual(none.data.events,[]);assert.equal(none.data.next_cursor,null);
+ for(const bad of ['?actor_admin_id=x','?action=Admin.Read','?action=admin','?target_type=Setting','?outcome=ok','?from=2031-01-01','?from=2031-13-45T00:00:00Z','?to=yesterday','?from=2031-02-01T00:00:00Z&to=2031-01-01T00:00:00Z','?limit=0','?limit=51','?cursor=garbage','?cursor='+Buffer.from('{"s":"1"}').toString('base64url'),'?q=password','?search=x','?actor_admin_id='+a.id+'&actor_admin_id='+other.id,'?action[]=x'])
+  assert.equal((await call(auditUrl(bad),{token})).status,400,bad);
+ const mine=await audit("action='admin.audit.read' AND actor_admin_id=$1",[a.id]);assert.ok(mine.length>=10&&mine.every(r=>r.target_type==='audit_log'&&r.outcome==='success'&&r.target_id===null));
+ const text=JSON.stringify(mine.map(r=>[r.scope,r.target_id]));for(const value of [other.id,'admin.settings.change','denied','success','failure','2099','documents.max_pdf_pages','2031'])assert.ok(!text.includes(value),'the search values are not stored: '+value);
+ const shaped=mine.find(r=>r.scope.filters.length===3)!;assert.deepEqual(Object.keys(shaped.scope).sort(),['chain','filters','limit','paged','returned']);assert.deepEqual(shaped.scope.filters,['action','actor_admin_id','outcome']);assert.equal(shaped.scope.chain,'intact');
+ assert.equal(mine.find(r=>r.scope.paged===true)!.scope.chain,null);
+});
+
+test('P9-43 audit responses redact anything that looks like a secret and never carry medical content',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),jwt=await forge(adminConfig.jwtKey,adminConfig.jwtAudience,a.id,randomUUID());
+ await writeAdminAudit(db,{actorAdminId:a.id,actorRole:'operations_admin',action:'admin.profile.read',targetType:'admin_account',targetId:a.id,outcome:'success',requestId:randomUUID(),
+  scope:{note:jwt,long:'x'.repeat(200),bearer:'Bearer abcdef',hex:'ab'.repeat(32),mail:'person@example.invalid',hash:'$argon2id$v=19$m=19456,t=2,p=1$abc',doctor:'ds1.'+randomUUID(),password:'hunter2',nested:{api_key:'k',deep:{deeper:{deepest:'v'}}},list:['ok',jwt,'person@example.invalid',3,true,null],plain:'fine',count:3}});
+ const [row]=await audit("scope ? 'plain'");assert.ok(row);
+ const r=await call(auditUrl('?action=admin.profile.read&limit=50'),{token}),shown=r.data.events.find((e:any)=>e.scope.plain==='fine');assert.ok(shown);
+ assert.deepEqual(shown.scope,{note:'[redacted]',long:'[redacted]',bearer:'[redacted]',hex:'[redacted]',mail:'[redacted]',hash:'[redacted]',doctor:'[redacted]',password:'[redacted]',nested:{api_key:'[redacted]',deep:{deeper:'[redacted]'}},list:['ok','[redacted]','[redacted]',3,true,null],plain:'fine',count:3});
+ assert.deepEqual(safeScope({a:{b:{c:{d:1}}}}),{a:{b:{c:'[redacted]'}}});assert.equal(safeScope(undefined),'[redacted]');
+ const everything:any[]=[];let cursor:string|null=null,pages=0;do{const p:any=await call(auditUrl('?limit=50'+(cursor?'&cursor='+cursor:'')),{token});everything.push(...p.data.events);cursor=p.data.next_cursor;pages++;}while(cursor&&pages<300);
+ const stripped=JSON.stringify(everything.map(({event_hash:_h,...event})=>event));
+ const secrets=[process.env.JWT_SECRET,process.env.ADMIN_JWT_SECRET,process.env.DB_PASSWORD,process.env.MIGRATION_DB_PASSWORD,process.env.AWS_SECRET_ACCESS_KEY,Buffer.from(adminConfig.jwtKey).toString('hex'),Buffer.from(patientConfig.jwtKey).toString('hex'),adminPassword,patientPassword,token,jwt,'hunter2','person@example.invalid','$argon2'].filter((v):v is string=>!!v&&v.length>=6);
+ for(const secret of secrets)assert.ok(!stripped.includes(secret),'the audit review exposes a secret');
+ assert.ok(!/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/.test(stripped)&&!HEX64.test(stripped)&&!/Bearer\s/.test(stripped)&&!/@[a-z]+\.[a-z]+/.test(stripped),'no token, long hex string or address appears');
+ for(const medical of [SENTINEL,SENTINEL.toLowerCase(),'extracted OCR','summary text','Hospital','report.pdf','medical-documents/','482913','serious finding','Status active','Person'])assert.ok(!stripped.includes(medical),'medical content appears: '+medical);
+ assert.ok(everything.every(e=>/^[a-f0-9]{64}$/.test(e.event_hash)),'the only hashes returned are the events\' own integrity hashes');
+});
+
+test('P9-44 a tampered audit chain is reported by the audit search, and the report clears once the record is restored',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email);
+ for(let i=0;i<3;i++)await call('/api/v1/admin/me',{token});
+ const target=(await owner.query("SELECT seq,outcome,scope FROM public.admin_audit_events WHERE action='admin.profile.read' ORDER BY seq DESC OFFSET 1 LIMIT 1")).rows[0],seq=Number(target.seq);
+ const intact=await call(auditUrl('?limit=5'),{token});assert.equal(intact.data.chain.status,'intact');
+ try{
+  const client=await owner.connect();
+  try{await client.query('ALTER TABLE public.admin_audit_events DISABLE TRIGGER admin_audit_no_change');await client.query("UPDATE public.admin_audit_events SET outcome='failure' WHERE seq=$1",[seq]);await client.query('ALTER TABLE public.admin_audit_events ENABLE TRIGGER admin_audit_no_change');}finally{client.release();}
+  const broken=await call(auditUrl('?limit=5'),{token});assert.equal(broken.status,200);assert.equal(broken.data.chain.status,'broken');assert.equal(broken.data.chain.first_invalid_seq,seq);assert.equal(broken.data.chain.events_checked,seq-1);
+  assert.equal((await call(auditUrl('?limit=5&cursor='+broken.data.next_cursor),{token})).data.chain,null);
+  const shown=(await call(auditUrl('?limit=50&actor_admin_id='+a.id),{token})).data.events.find((e:any)=>e.seq===seq);assert.equal(shown.outcome,'failure','the viewer shows the stored (tampered) data and the chain result says it is untrustworthy');
+  const recorded=await audit("action='admin.audit.read' AND actor_admin_id=$1",[a.id]);assert.equal(recorded.filter(r=>r.scope.chain==='broken').length,2,'both first-page searches while tampered recorded the broken result');assert.equal(recorded.filter(r=>r.scope.paged&&r.scope.chain===null).length,1);
+ }finally{
+  const client=await owner.connect();
+  try{await client.query('ALTER TABLE public.admin_audit_events DISABLE TRIGGER admin_audit_no_change');await client.query('UPDATE public.admin_audit_events SET outcome=$2 WHERE seq=$1',[seq,target.outcome]);await client.query('ALTER TABLE public.admin_audit_events ENABLE TRIGGER admin_audit_no_change');}finally{client.release();}
+ }
+ const healed=await call(auditUrl('?limit=5'),{token});assert.equal(healed.data.chain.status,'intact');assert.equal(healed.data.chain.first_invalid_seq,null);
+ await assert.rejects(owner.query("UPDATE public.admin_audit_events SET outcome='failure' WHERE seq=$1",[seq]),sqlState('42501'),'the trigger is back in force');
+});
+
+test('P9-45 health and audit review reject non-admin and forged callers, enforce their own permissions, and change nothing',async()=>{
+ const patient=await livePatient(),doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex'),routes=[healthUrl,auditUrl(),auditUrl('?limit=5&outcome=denied')];
+ const now=Math.floor(Date.now()/1000),expired=await forge(adminConfig.jwtKey,adminConfig.jwtAudience,randomUUID(),randomUUID(),{iat:now-2000,exp:now-1000}),forged=await forge(patientConfig.jwtKey,adminConfig.jwtAudience,randomUUID(),randomUUID()),wrongAudience=await forge(adminConfig.jwtKey,patientConfig.jwtAudience,randomUUID(),randomUUID());
+ const auditBefore=await auditCount();
+ for(const path of routes)for(const token of [undefined,patient.access,patient.refresh,doctor,forged,wrongAudience,expired,'not-a-token'])assert.equal((await call(path,{token})).status,401,path);
+ assert.equal(await auditCount(),auditBefore,'rejected callers leave no audit rows');
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ for(const permission of ['admin.health.read','admin.audit.read']){
+  await owner.query("DELETE FROM public.admin_role_permissions WHERE role_name='support_admin' AND permission=$1",[permission]);
+  try{
+   const path=permission==='admin.health.read'?healthUrl:auditUrl();assert.equal((await call(path,{token})).status,403,permission);
+   assert.equal((await audit("action=$1 AND outcome='denied' AND actor_admin_id=$2",[permission,a.id])).length,1,permission);
+   assert.equal((await call(permission==='admin.health.read'?auditUrl():healthUrl,{token})).status,200,'the other permission is unaffected');
+  }finally{await owner.query("INSERT INTO public.admin_role_permissions(role_name,permission) VALUES('support_admin',$1)",[permission]);}
+ }
+ for(const method of ['POST','PUT','PATCH','DELETE'])for(const path of [healthUrl,auditUrl()])assert.equal((await call(path,{method,token,body:{outcome:'success'}})).status,404,method+' '+path);
+ assert.equal((await call(healthUrl+'?x=1',{token})).status,400);
+ const rows=async()=>(await owner.query(`SELECT (SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY seq),'')) FROM (SELECT * FROM public.admin_audit_events WHERE action NOT IN ('admin.health.read','admin.audit.read')) t) AS a,
+  (SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.admin_setting_versions t) AS s,(SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.patients t) AS p`)).rows[0];
+ const state=await rows();for(const path of routes)assert.equal((await call(path,{token})).status,200);assert.deepEqual(await rows(),state,'health and audit review changed no other record');
+ const code=(await Promise.all(['health.ts','audit-viewer.ts','ops-routes.ts'].map(f=>readFile(new URL('../admin/'+f,import.meta.url),'utf8')))).join('\n').replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
+ assert.ok(!/(INSERT|UPDATE|DELETE)\s/i.test(code.replace(/readdir|\.update\(/g,'')),'health and audit review code contains no write statements');
+ for(const word of ['medical_documents','extracted_medical_text','ai_report_summaries','public.patients','password_hash','DB_PASSWORD','JWT_SECRET','connectionString','DATABASE_URL'])assert.ok(!code.includes(word),'must not mention '+word);
+ assert.equal((await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0].first_invalid,null);
 });

@@ -52,7 +52,7 @@ before(async()=>{
  assert.equal((await stat(socket!)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();try{await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_phase7');}finally{await bootstrap.end();}
  await admin.query('CREATE EXTENSION vector');await admin.query('GRANT USAGE,CREATE ON SCHEMA public TO health_wallet_migrator');fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 598!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,18);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,19);
  const sentinel=randomUUID();
  for(const file of files){if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const sql=await readFile(new URL('../../migrations/'+file,import.meta.url),'utf8');

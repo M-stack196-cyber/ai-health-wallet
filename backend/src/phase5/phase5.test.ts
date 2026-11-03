@@ -70,7 +70,7 @@ before(async()=>{
  await admin.query('GRANT USAGE,CREATE ON SCHEMA public TO health_wallet_migrator');
  await admin.query('CREATE EXTENSION vector');
  fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 498!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,18);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,19);
  for(const file of files){
   if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   if(file.startsWith('0007')){
