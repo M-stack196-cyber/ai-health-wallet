@@ -12,6 +12,7 @@ import type { AdminAuthenticationConfig } from "./config.js";
 import { createAdminTokenService } from "./tokens.js";
 import { createAdminRepository } from "./repository.js";
 import { adminIdentity, requireAdmin } from "./middleware.js";
+import { createAdminStatusViews, deliveryQuery, guardianQuery, shareQuery, statusIdParameter } from "./status-views.js";
 import { createAdminProcessingJobs, jobIdParameter, validateJobListQuery } from "./processing-jobs.js";
 import { createAdminPatientAccounts, patientIdParameter, validatePatientListQuery, type StatusAction } from "./patient-accounts.js";
 
@@ -20,7 +21,7 @@ const denied = () => new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentia
 /** `auth` supplies only the Argon2id cost settings; admin tokens use the separate admin configuration. */
 export function createAdminRoutes(database: PatientDatabase, auth: AuthenticationConfig, config: AdminAuthenticationConfig) {
   const router = Router(), repository = createAdminRepository(database), tokens = createAdminTokenService(config);
-  const passwords = createPasswordService(auth), accounts = createAdminPatientAccounts(database), jobs = createAdminProcessingJobs(database);
+  const passwords = createPasswordService(auth), accounts = createAdminPatientAccounts(database), jobs = createAdminProcessingJobs(database), status = createAdminStatusViews(database);
   const limiter = rateLimit({ windowMs: config.rateWindowSeconds * 1000, limit: config.rateLimitMax * 4, standardHeaders: "draft-8",
     legacyHeaders: false, validate: { xForwardedForHeader: false },
     message: { success: false, error: { code: "RATE_LIMITED", message: "Too many authentication attempts. Try again later." } } });
@@ -103,6 +104,45 @@ export function createAdminRoutes(database: PatientDatabase, auth: Authenticatio
     if (result.outcome === "not_found") throw new ApiError(404, "NOT_FOUND", "Processing job not found.");
     if (result.outcome === "not_retryable") throw new ApiError(409, "JOB_NOT_RETRYABLE", "This job cannot be retried under the current processing rules.");
     res.status(200).json({ success: true, job: await jobs.get(id) });
+  });
+  // Phase 4: read-only, metadata-only status views. Every read is audited with the filter shape, never the values searched for.
+  const statusRoutes = [
+    { name: "guardians", permission: "admin.guardians.read", target: "guardian_relationship", parse: guardianQuery, view: status.guardians, key: "guardians" },
+    { name: "shares", permission: "admin.shares.read", target: "share_grant", parse: shareQuery, view: status.shares, key: "shares" },
+  ] as const;
+  const statusAudit = (admin: ReturnType<typeof adminIdentity>, permission: string, target: string, scope: Record<string, unknown>, targetId?: string, outcome: "success" | "failure" = "success") =>
+    repository.audit({ actorAdminId: admin.adminId, actorRole: admin.role, action: permission, targetType: target, targetId, scope, outcome, requestId: admin.requestId });
+  const shape = (parsed: { filters: Record<string, string | undefined>; limit: number }, returned: number) =>
+    ({ view: "list", filters: Object.keys(parsed.filters).filter(key => parsed.filters[key] !== undefined).sort(), limit: parsed.limit, returned });
+  for (const route of statusRoutes) {
+    const guard = requireAdmin(tokens, repository, route.permission), base = "/status/" + route.name;
+    router.get(base + "/summary", rejectQueryParameters, rejectRequestBody, guard, async (req, res) => {
+      const admin = adminIdentity(req), summary = await route.view.summary();
+      await statusAudit(admin, route.permission, route.target, { view: "summary", total: summary.total });
+      res.status(200).json({ success: true, summary });
+    });
+    router.get(base, guard, async (req, res) => {
+      const admin = adminIdentity(req), parsed = route.parse(req.query), result = await route.view.list(parsed);
+      await statusAudit(admin, route.permission, route.target, shape(parsed, result.rows.length));
+      res.status(200).json({ success: true, [route.key]: result.rows, next_cursor: result.nextCursor });
+    });
+    router.get(base + "/:id", rejectQueryParameters, rejectRequestBody, guard, async (req, res) => {
+      const admin = adminIdentity(req), id = statusIdParameter(req.params.id), item = await route.view.get(id);
+      await statusAudit(admin, route.permission, route.target, item ? { view: "detail" } : { view: "detail", reason: "not_found" }, id, item ? "success" : "failure");
+      if (!item) throw new ApiError(404, "NOT_FOUND", "Record not found.");
+      res.status(200).json({ success: true, [route.key.slice(0, -1)]: item });
+    });
+  }
+  const readDeliveries = requireAdmin(tokens, repository, "admin.deliveries.read");
+  router.get("/status/deliveries/summary", rejectQueryParameters, rejectRequestBody, readDeliveries, async (req, res) => {
+    const admin = adminIdentity(req), summary = await status.deliveries.summary();
+    await statusAudit(admin, "admin.deliveries.read", "delivery", { view: "summary", total: summary.total });
+    res.status(200).json({ success: true, summary });
+  });
+  router.get("/status/deliveries", readDeliveries, async (req, res) => {
+    const admin = adminIdentity(req), parsed = deliveryQuery(req.query), result = await status.deliveries.list(parsed);
+    await statusAudit(admin, "admin.deliveries.read", "delivery", shape(parsed, result.rows.length));
+    res.status(200).json({ success: true, deliveries: result.rows, next_cursor: result.nextCursor });
   });
   return router;
 }

@@ -19,3 +19,13 @@ export function decodeCursor(value: string): { createdAt: string; id: string } {
     return { createdAt: parsed.c, id: parsed.i };
   } catch { throw invalid(); }
 }
+
+/** Allowlisted list query: only the named filters plus limit and cursor; repeated or non-string values are rejected. */
+export function parseListQuery<K extends string>(query: Record<string, unknown>, filters: Record<K, (value: string) => string>) {
+  if (Object.keys(query).some(key => key !== "limit" && key !== "cursor" && !(key in filters) || typeof query[key] !== "string")) throw invalid();
+  const values: Partial<Record<K, string>> = {};
+  for (const key of Object.keys(filters) as K[]) if (query[key] !== undefined) values[key] = filters[key](query[key] as string);
+  return { filters: values, limit: query.limit === undefined ? 25 : parseLimit(query.limit as string), cursor: query.cursor === undefined ? undefined : decodeCursor(query.cursor as string) };
+}
+export const oneOf = (allowed: readonly string[]) => (value: string): string => { if (!allowed.includes(value)) throw invalid(); return value; };
+export const uuidValue = (value: string): string => { if (!uuid.test(value)) throw invalid(); return value.toLowerCase(); };

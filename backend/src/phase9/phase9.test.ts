@@ -39,8 +39,9 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_admin_phase9');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,16);
- for(const f of files.filter(name=>!/^001[0-2]_/.test(name))){
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,17);
+ for(const f of files){
+  if(f.startsWith('0010'))await owner.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await owner.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+f,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
  }
@@ -76,7 +77,7 @@ async function forge(key:Uint8Array,audience:string,sub:string,sid:string|undefi
  return new SignJWT(sid?{sid}:{}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(sub).setIssuer(adjust.iss??adminConfig.jwtIssuer).setAudience(audience)
   .setIssuedAt(adjust.iat??now).setExpirationTime(adjust.exp??now+600).sign(key);
 }
-const allPermissions=['admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read'];
+const allPermissions=['admin.deliveries.read','admin.guardians.read','admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read','admin.shares.read'];
 const sqlState=(code:string)=>(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===code;
 
 test('P9-01 admin configuration is disabled by default and cannot share patient secrets or audience',()=>{
@@ -291,7 +292,7 @@ async function medicalSnapshot(patientId:string){
 test('P9-13 the three roles hold the new patient-account permissions and nothing reaches medical content',async()=>{
  for(const role of ['support_admin','operations_admin','config_admin'])
   assert.deepEqual((await owner.query('SELECT permission FROM public.admin_role_permissions WHERE role_name=$1 ORDER BY permission',[role])).rows.map(r=>r.permission),allPermissions,role);
- assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing)\.[a-z]+$/.test(permission)));
+ assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing|guardians|shares|deliveries)\.[a-z]+$/.test(permission)));
 });
 
 test('P9-14 account list searches, filters and pages by keyset and shows only identity and status fields',async()=>{
@@ -612,4 +613,190 @@ test('P9-27 only authorised admins can view or retry, each permission is separat
   assert.equal((await call(path,{method,token,body:{state:'completed',attempt_count:0}})).status,404,method+' '+path);
  assert.equal((await retry(id,token,{body:{attempt_count:0,state:'pending'}})).status,400);assert.equal((await retry(id,token,{query:'?force=true'})).status,400);assert.deepEqual(await jobRow(id),jobBefore);
  assert.equal((await retry(id,token)).status,200);
+});
+
+// ---- Phase 4: guardian, share-grant and delivery status views (M13-004, M13-015) ----
+const guardianKeys=['accepted_at','created_at','id','patient_id','revoked_at','status','updated_at'];
+const shareKeys=['active_session_count','created_at','expires_at','id','patient_id','recipient_bound','revoked_at','sharing_method','status'];
+const deliveryKeys=['attempts','channel','created_at','delivered_at','failure_reason','id','max_attempts','next_attempt_at','patient_id','purpose','state'];
+const hex=(pair:string)=>pair.repeat(32);
+const SECRETS={recipient:hex('a1'),content:hex('b2'),provider:hex('c3'),policy:hex('d4'),session:'e5'.repeat(31),digest:'f6'.repeat(31),policyKey:hex('17')};
+let sessionCounter=0,digestCounter=0;
+const GUARDIAN_EMAIL_TAG='guardian-secret-',DOCTOR_EMAIL_TAG='doctor-secret-',DOCTOR_NAME='Dr LEAKSENTINEL Doctor';
+async function staged(work:(c:pg.PoolClient)=>Promise<void>){
+ // Fixture only: row triggers and foreign keys are switched off so any status can be staged; table CHECK constraints still apply.
+ const c=await owner.connect();
+ try{await c.query('BEGIN');await c.query('SET LOCAL session_replication_role=replica');await work(c);await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
+}
+interface StatusWorld{patients:Record<string,string>;guardians:Record<string,string>;grants:Record<string,string>;deliveries:Record<string,string>;jobs:Record<string,string>}
+let world:Promise<StatusWorld>|undefined;
+function buildWorld():Promise<StatusWorld>{return world??=(async()=>{
+ const patients:Record<string,string>={};
+ for(const name of ['pending','active','revoked','expired','shares','mail','notify'])patients[name]=await seedPatient('Status '+name,'status-'+name+'-'+randomUUID()+'@example.invalid','active',true);
+ const guardians:Record<string,string>={},grants:Record<string,string>={},deliveries:Record<string,string>={},jobs:Record<string,string>={};
+ await staged(async c=>{
+  const guardian=async(key:string,patient:string,status:string,events:string[])=>{
+   const id=randomUUID();guardians[key]=id;
+   await c.query(`INSERT INTO public.guardian_relationships(id,patient_id,email,status,invitation_id,accepted_at,revoked_at) VALUES($1,$2,$3,$4,$5,$6,$7)`,
+    [id,patient,GUARDIAN_EMAIL_TAG+key+'@example.invalid',status,status==='ACTIVE'||status==='REVOKED'?randomUUID():null,status==='ACTIVE'||status==='REVOKED'?new Date():null,status==='REVOKED'?new Date():null]);
+   for(const event of events)await c.query('INSERT INTO public.guardian_lifecycle_events(patient_id,relationship_id,event) VALUES($1,$2,$3)',[patient,id,event]);
+  };
+  await guardian('pending',patients.pending,'PENDING',['nominated','resent']);await guardian('active',patients.active,'ACTIVE',['nominated','accepted']);
+  await guardian('revoked',patients.revoked,'REVOKED',['nominated','accepted','revoked']);await guardian('expired',patients.expired,'EXPIRED',['nominated','expired']);
+  await guardian('revoked2',patients.revoked,'REVOKED',['nominated','revoked']);
+  const grant=async(key:string,method:string,created:string,expires:string,revoked:boolean,sessions:Array<'live'|'revoked'|'expired'>,events:string[])=>{
+   const id=randomUUID();grants[key]=id;
+   await c.query(`INSERT INTO public.doctor_sharing_grants(id,patient_id,doctor_email,sharing_method,token_digest,created_at,expires_at,revoked_at,recipient_bound)
+    VALUES($1,$2,$3,$4,$5,now()+$6::interval,now()+$7::interval,CASE WHEN $8::boolean THEN now()+$6::interval+interval '1 minute' END,true)`,[id,patients.shares,DOCTOR_EMAIL_TAG+key+'@example.invalid',method,Buffer.concat([Buffer.alloc(31,0xf6),Buffer.from([++digestCounter])]),created,expires,revoked]);
+   for(const kind of sessions)await c.query(`INSERT INTO public.doctor_share_sessions(id,grant_id,patient_id,doctor_email,doctor_name,challenge_id,token_hash,grant_version,patient_security_version,created_at,expires_at,revoked_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,1,1,now()-interval '30 minutes',now()+$8::interval,CASE WHEN $9::boolean THEN now() END)`,[randomUUID(),id,patients.shares,DOCTOR_EMAIL_TAG+key+'@example.invalid',DOCTOR_NAME,randomUUID(),SECRETS.session+(++sessionCounter).toString(16).padStart(2,'0'),kind==='expired'?'-1 minute':'1 hour',kind==='revoked']);
+   for(const event of events)await c.query('INSERT INTO public.doctor_share_events(grant_id,event) VALUES($1,$2)',[id,event]);
+  };
+  await grant('active_qr','qr_code','-1 hour','1 hour',false,['live','live','revoked','expired'],['created','opened','otp_requested','otp_verified','authorized']);
+  await grant('active_link','unique_link','-2 hours','2 hours',false,[],['created','opened','denied','otp_failed','otp_failed']);
+  await grant('expired','unique_link','-3 hours','-1 hour',false,[],['created','expiry_denied']);await grant('revoked','qr_code','-3 hours','5 hours',true,['revoked'],['created','revoked']);
+  const delivery=async(key:string,purpose:string,state:string,attempts:number,failure:string|null)=>{
+   const id=randomUUID();deliveries[key]=id;
+   await c.query(`INSERT INTO public.patient_security_email_deliveries(id,challenge_id,patient_id,purpose,state,attempts,claim_id,claim_expires_at,provider_reference_hash,failure_category,delivered_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[id,randomUUID(),patients.mail,purpose,state,attempts,state==='sending'?randomUUID():null,state==='sending'?new Date(Date.now()+60000):null,state==='delivered'?SECRETS.provider:null,failure,state==='delivered'?new Date(Date.now()+1000):null]);
+   await c.query('INSERT INTO public.patient_security_email_payloads(delivery_id,nonce,ciphertext,tag) VALUES($1,$2,$3,$4)',[id,Buffer.alloc(12,1),Buffer.from('LEAKSENTINEL one-time code 482913 and magic link https://example.invalid/token'),Buffer.alloc(16,2)]);
+  };
+  await delivery('verify_delivered','verify_email','delivered',1,null);await delivery('reset_failed','reset_password','permanent_failed',3,'rejected');await delivery('otp_retry','doctor_share_otp','transient_failed',2,'timeout');
+  await delivery('invite_pending','guardian_invitation','pending',0,null);await delivery('verify_sending','verify_email','sending',1,null);
+  const job=async(key:string,kind:string,state:string,attempts:number,failure:string|null)=>{
+   const id=randomUUID();jobs[key]=id;
+   await c.query(`INSERT INTO public.guardian_medical_jobs(id,patient_id,relationship_id,recipient_hash,patient_security_version,kind,policy_sha256,window_start,window_end,not_before,state,attempts,max_attempts,content_sha256,provider_reference_hash,failure_code,delivered_at)
+    VALUES($1,$2,$3,$4,1,$5,$6,$7,$8,COALESCE($8,now()),$9,$10,3,$11,$12,$13,$14)`,[id,patients.notify,guardians.active,SECRETS.recipient,kind,SECRETS.policy,kind==='routine_digest'?new Date(Date.now()-86400000):null,kind==='routine_digest'?new Date(Date.now()-3600000):null,state,attempts,
+     state==='delivered'?SECRETS.content:null,state==='delivered'?SECRETS.provider:null,failure,state==='delivered'?new Date(Date.now()+1000):null]);
+   if(kind==='serious_alert')await c.query(`INSERT INTO public.guardian_rule_results(id,patient_id,document_id,snapshot_id,rule_id,rule_version,definition_sha256,outcome,result,job_id)
+    VALUES($1,$2,$3,$4,'rule','1',$5,'TRIGGERED',$6::jsonb,$7)`,[randomUUID(),patients.notify,randomUUID(),randomUUID(),SECRETS.policyKey,JSON.stringify({outcome:'TRIGGERED',finding:'LEAKSENTINEL serious finding'}),id]);
+  };
+  await job('digest_delivered','routine_digest','delivered',1,null);await job('alert_failed','serious_alert','permanent_failed',3,'source_denied');await job('digest_retry','routine_digest','retry_wait',1,'transport');await job('alert_pending','serious_alert','pending',0,null);
+ });
+ return {patients,guardians,grants,deliveries,jobs};
+})();}
+const statusUrl=(path:string)=>'/api/v1/admin/status/'+path;
+const allStatusRoutes=async()=>{const w=await buildWorld();return [statusUrl('guardians'),statusUrl('guardians/summary'),statusUrl('guardians/'+w.guardians.active),statusUrl('shares'),statusUrl('shares/summary'),statusUrl('shares/'+w.grants.active_qr),statusUrl('deliveries'),statusUrl('deliveries/summary')];};
+async function pageAll(path:string,token:string,key:string,limit:number){
+ const seen:any[]=[];let cursor:string|null=null,pages=0;
+ do{const r:any=await call(path+(path.includes('?')?'&':'?')+'limit='+limit+(cursor?'&cursor='+cursor:''),{token});assert.equal(r.status,200,path);seen.push(...r.data[key]);cursor=r.data.next_cursor;pages++;}while(cursor&&pages<20);
+ return {seen,pages};
+}
+
+test('P9-28 guardian relationship status: filters, paging, detail and counts show status only, never the guardian email',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),w=await buildWorld(),mine=(extra='')=>statusUrl('guardians?'+extra);
+ const revokedOwner=w.patients.revoked,own=await call(mine('patient_id='+revokedOwner),{token});assert.equal(own.status,200);assert.equal(own.data.guardians.length,2);
+ for(const g of own.data.guardians){assert.deepEqual(Object.keys(g).sort(),guardianKeys);assert.equal(g.patient_id,revokedOwner);assert.equal(g.status,'REVOKED');assert.ok(g.revoked_at);}
+ const ids=Object.values(w.guardians);
+ const all=await pageAll(statusUrl('guardians'),token,'guardians',2);assert.ok(all.pages>=2);assert.equal(new Set(all.seen.map(g=>g.id)).size,all.seen.length,'no row twice');
+ assert.deepEqual(all.seen.map(g=>g.id),(await owner.query('SELECT id FROM public.guardian_relationships ORDER BY created_at DESC,id DESC')).rows.map(r=>r.id),'newest first');
+ for(const id of ids)assert.ok(all.seen.some(g=>g.id===id));
+ for(const [status,key] of [['PENDING','pending'],['ACTIVE','active'],['EXPIRED','expired']] as const)assert.deepEqual((await call(mine('status='+status+'&patient_id='+w.patients[key]),{token})).data.guardians.map((g:any)=>g.id),[w.guardians[key]]);
+ assert.equal((await call(mine('status=REVOKED&patient_id='+w.patients.pending),{token})).data.guardians.length,0);
+ const detail=await call(statusUrl('guardians/'+w.guardians.revoked),{token});assert.equal(detail.status,200);assert.deepEqual(Object.keys(detail.data.guardian).sort(),[...guardianKeys,'events'].sort());
+ assert.deepEqual(detail.data.guardian.events.map((e:any)=>e.event),['nominated','accepted','revoked']);for(const e of detail.data.guardian.events)assert.deepEqual(Object.keys(e).sort(),['event','occurred_at']);
+ const summary=await call(statusUrl('guardians/summary'),{token});assert.equal(summary.status,200);
+ for(const row of (await owner.query('SELECT status,count(*)::int AS n FROM public.guardian_relationships GROUP BY 1')).rows)assert.equal(summary.data.summary.by_status[row.status],row.n,row.status);
+ assert.deepEqual(Object.keys(summary.data.summary).sort(),['by_status','total']);
+ for(const bad of ['status=active','status=PENDING&status=ACTIVE','patient_id=x','limit=0','limit=51','cursor=garbage','email=a@b.c','x[y]=1'])assert.equal((await call(mine(bad),{token})).status,400,bad);
+ const missing=randomUUID();assert.equal((await call(statusUrl('guardians/'+missing),{token})).status,404);assert.equal((await audit("action='admin.guardians.read' AND target_id=$1",[missing]))[0].outcome,'failure');
+ for(const path of [statusUrl('guardians/not-a-uuid'),statusUrl('guardians/'+w.guardians.active+'?x=1'),statusUrl('guardians/summary?x=1')])assert.equal((await call(path,{token})).status,400,path);
+ const reads=await audit("action='admin.guardians.read' AND actor_admin_id=$1",[a.id]);assert.ok(reads.length>=10&&reads.every(r=>r.target_type==='guardian_relationship'));
+ assert.ok(!JSON.stringify(reads).includes(revokedOwner)&&!JSON.stringify(reads).includes('REVOKED'),'filter values are not copied into the audit log');
+ const shaped=reads.find(r=>r.scope.view==='list'&&r.scope.filters.length===2)!.scope;assert.deepEqual(Object.keys(shaped).sort(),['filters','limit','returned','view']);assert.deepEqual(shaped.filters,['patient_id','status']);
+});
+
+test('P9-29 doctor share-grant status: computed state, session counts and event counts without link secrets, OTPs or doctor identity',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),w=await buildWorld(),list=(extra='')=>statusUrl('shares?patient_id='+w.patients.shares+extra);
+ const all=await call(list(),{token});assert.equal(all.status,200);assert.equal(all.data.shares.length,4);
+ for(const g of all.data.shares)assert.deepEqual(Object.keys(g).sort(),shareKeys);
+ const by=Object.fromEntries(all.data.shares.map((g:any)=>[g.id,g]));
+ assert.equal(by[w.grants.active_qr].status,'active');assert.equal(by[w.grants.active_qr].active_session_count,2,'only unrevoked, unexpired sessions are counted');assert.equal(by[w.grants.active_qr].sharing_method,'qr_code');
+ assert.equal(by[w.grants.active_link].status,'active');assert.equal(by[w.grants.active_link].active_session_count,0);assert.equal(by[w.grants.expired].status,'expired');assert.equal(by[w.grants.revoked].status,'revoked');assert.ok(by[w.grants.revoked].revoked_at);assert.equal(by[w.grants.revoked].active_session_count,0);
+ const only=async(q:string)=>(await call(list('&'+q),{token})).data.shares.map((g:any)=>g.id).sort();
+ assert.deepEqual(await only('status=active'),[w.grants.active_qr,w.grants.active_link].sort());assert.deepEqual(await only('status=expired'),[w.grants.expired]);assert.deepEqual(await only('status=revoked'),[w.grants.revoked]);
+ assert.deepEqual(await only('method=qr_code'),[w.grants.active_qr,w.grants.revoked].sort());assert.deepEqual(await only('method=unique_link&status=active'),[w.grants.active_link]);
+ const paged=await pageAll(list(),token,'shares',3);assert.equal(paged.pages,2);assert.deepEqual(paged.seen.map(g=>g.id),all.data.shares.map((g:any)=>g.id));
+ assert.deepEqual(all.data.shares.map((g:any)=>g.id),(await owner.query('SELECT id FROM public.doctor_sharing_grants WHERE patient_id=$1 ORDER BY created_at DESC,id DESC',[w.patients.shares])).rows.map(r=>r.id));
+ const detail=await call(statusUrl('shares/'+w.grants.active_qr),{token});assert.equal(detail.status,200);assert.deepEqual(Object.keys(detail.data.share).sort(),[...shareKeys,'event_counts','last_event_at'].sort());
+ assert.deepEqual(detail.data.share.event_counts,{created:1,opened:1,otp_requested:1,otp_verified:1,authorized:1});assert.ok(detail.data.share.last_event_at);
+ assert.deepEqual((await call(statusUrl('shares/'+w.grants.active_link),{token})).data.share.event_counts,{created:1,opened:1,denied:1,otp_failed:2});
+ const summary=await call(statusUrl('shares/summary'),{token});assert.equal(summary.status,200);assert.deepEqual(Object.keys(summary.data.summary).sort(),['by_method','by_status','total']);
+ const expected=(await owner.query("SELECT CASE WHEN revoked_at IS NOT NULL THEN 'revoked' WHEN expires_at<=clock_timestamp() THEN 'expired' ELSE 'active' END AS status,count(*)::int AS n FROM public.doctor_sharing_grants GROUP BY 1")).rows;
+ for(const row of expected)assert.equal(summary.data.summary.by_status[row.status],row.n,row.status);assert.equal(summary.data.summary.total,expected.reduce((n,row)=>n+row.n,0));
+ for(const bad of ['status=live','method=email','patient_id=x','status=active&status=expired','doctor_email=a@b.c','limit=x'])assert.equal((await call(list('&'+bad),{token})).status,400,bad);
+ assert.equal((await call(statusUrl('shares/'+randomUUID()),{token})).status,404);
+ const reads=await audit("action='admin.shares.read' AND actor_admin_id=$1",[a.id]);assert.ok(reads.length>=8&&reads.every(r=>r.target_type==='share_grant'));assert.ok(!JSON.stringify(reads).includes(w.patients.shares));
+});
+
+test('P9-30 delivery status: email and guardian-notification states, reasons and counts, with no recipient, payload or kind of notification',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),w=await buildWorld(),list=(patient:string,extra='')=>statusUrl('deliveries?patient_id='+patient+extra);
+ const mail=await call(list(w.patients.mail),{token});assert.equal(mail.status,200);assert.equal(mail.data.deliveries.length,5);
+ for(const d of mail.data.deliveries){assert.deepEqual(Object.keys(d).sort(),deliveryKeys);assert.equal(d.channel,'security_email');assert.equal(d.max_attempts,null);}
+ const by=Object.fromEntries(mail.data.deliveries.map((d:any)=>[d.id,d]));
+ assert.deepEqual([by[w.deliveries.reset_failed].state,by[w.deliveries.reset_failed].failure_reason,by[w.deliveries.reset_failed].attempts,by[w.deliveries.reset_failed].purpose],['permanent_failed','rejected',3,'reset_password']);
+ assert.deepEqual([by[w.deliveries.otp_retry].state,by[w.deliveries.otp_retry].failure_reason,by[w.deliveries.otp_retry].purpose],['transient_failed','timeout','doctor_share_otp']);
+ assert.ok(by[w.deliveries.verify_delivered].delivered_at);assert.equal(by[w.deliveries.invite_pending].delivered_at,null);
+ const notify=await call(list(w.patients.notify),{token});assert.equal(notify.data.deliveries.length,4);
+ for(const d of notify.data.deliveries){assert.deepEqual(Object.keys(d).sort(),deliveryKeys);assert.equal(d.channel,'guardian_notification');assert.equal(d.purpose,null);assert.equal(d.max_attempts,3);}
+ const nby=Object.fromEntries(notify.data.deliveries.map((d:any)=>[d.id,d]));assert.deepEqual([nby[w.jobs.alert_failed].state,nby[w.jobs.alert_failed].failure_reason,nby[w.jobs.alert_failed].attempts],['permanent_failed','source_denied',3]);
+ assert.equal(nby[w.jobs.digest_retry].state,'retry_wait');assert.equal(nby[w.jobs.digest_retry].failure_reason,'transport');assert.ok(nby[w.jobs.digest_delivered].delivered_at);
+ const ids=async(patient:string,q:string)=>(await call(list(patient,q),{token})).data.deliveries.map((d:any)=>d.id).sort();
+ assert.deepEqual(await ids(w.patients.mail,'&state=permanent_failed'),[w.deliveries.reset_failed]);assert.deepEqual(await ids(w.patients.mail,'&purpose=verify_email'),[w.deliveries.verify_delivered,w.deliveries.verify_sending].sort());
+ assert.deepEqual(await ids(w.patients.mail,'&channel=guardian_notification'),[]);assert.deepEqual(await ids(w.patients.notify,'&channel=security_email'),[]);assert.deepEqual(await ids(w.patients.notify,'&state=pending'),[w.jobs.alert_pending]);
+ assert.deepEqual(await ids(w.patients.notify,'&state=permanent_failed&channel=guardian_notification'),[w.jobs.alert_failed]);
+ const everything=await pageAll(statusUrl('deliveries'),token,'deliveries',4);assert.ok(everything.pages>=3);assert.equal(new Set(everything.seen.map(d=>d.id)).size,everything.seen.length);
+ assert.deepEqual(everything.seen.map(d=>d.id),(await owner.query(`SELECT id FROM (SELECT id,created_at FROM public.patient_security_email_deliveries UNION ALL SELECT id,created_at FROM public.guardian_medical_jobs) u ORDER BY created_at DESC,id DESC`)).rows.map(r=>r.id),'both channels interleave newest first');
+ const summary=await call(statusUrl('deliveries/summary'),{token});assert.equal(summary.status,200);assert.deepEqual(Object.keys(summary.data.summary).sort(),['by_channel','total']);
+ const emailCounts=(await owner.query('SELECT state,count(*)::int AS n FROM public.patient_security_email_deliveries GROUP BY 1')).rows,jobCounts=(await owner.query('SELECT state,count(*)::int AS n FROM public.guardian_medical_jobs GROUP BY 1')).rows;
+ for(const row of emailCounts)assert.equal(summary.data.summary.by_channel.security_email[row.state],row.n,row.state);for(const row of jobCounts)assert.equal(summary.data.summary.by_channel.guardian_notification[row.state],row.n,row.state);
+ assert.equal(summary.data.summary.total,emailCounts.concat(jobCounts).reduce((n,row)=>n+row.n,0));
+ for(const bad of ['channel=sms','state=bogus','purpose=other','patient_id=x','state=pending&state=delivered','kind=serious_alert','recipient=a@b.c','limit=99'])assert.equal((await call(statusUrl('deliveries?'+bad),{token})).status,400,bad);
+ const reads=await audit("action='admin.deliveries.read' AND actor_admin_id=$1",[a.id]);assert.ok(reads.length>=10&&reads.every(r=>r.target_type==='delivery'));assert.ok(!JSON.stringify(reads).includes(w.patients.mail)&&!JSON.stringify(reads).includes('permanent_failed'));
+});
+
+test('P9-31 no medical field or secret can leak into any status response or audit row',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),w=await buildWorld(),routes=await allStatusRoutes();
+ routes.push(statusUrl('guardians?limit=50'),statusUrl('shares?limit=50'),statusUrl('deliveries?limit=50'),statusUrl('shares/'+w.grants.active_link),statusUrl('guardians/'+w.guardians.pending));
+ const wire:string[]=[];for(const path of routes){const r=await call(path,{token});assert.equal(r.status,200,path);wire.push(JSON.stringify(r.data));}
+ for(const path of [statusUrl('guardians/'+randomUUID()),statusUrl('shares/'+randomUUID())])wire.push(JSON.stringify((await call(path,{token})).data));
+ const text=wire.join('\n'),rows=JSON.stringify(await audit('true'));
+ const forbidden=[SENTINEL,SENTINEL.toLowerCase(),DOCTOR_NAME,'Dr ',GUARDIAN_EMAIL_TAG,DOCTOR_EMAIL_TAG,'example.invalid/token','482913','one-time code','magic link','serious finding',...Object.values(SECRETS),'9vb29vb29vb2',
+  'token_digest','token_hash','doctor_email','"otp"','otp_code','ciphertext','nonce','payload','provider_reference','recipient_hash','content_sha256','policy_sha256','invitation_id','claim_id','definition_sha256','"kind"','serious_alert','routine_digest','"email"','"password"','password_hash','claim_expires_at','verifier','summary_text','document_id','document_name','filename'];
+ for(const word of forbidden){assert.ok(!text.includes(word),'a response leaks '+word);assert.ok(!rows.includes(word),'an audit row leaks '+word);}
+ const keys=new Set<string>();(function walk(value:unknown){if(Array.isArray(value))value.forEach(walk);else if(value&&typeof value==='object')for(const [k,v] of Object.entries(value)){keys.add(k);walk(v);}})(wire.map(w=>JSON.parse(w)));
+ const allowed=new Set([...guardianKeys,...shareKeys,...deliveryKeys,'success','guardians','guardian','shares','share','deliveries','next_cursor','summary','by_status','by_method','by_channel','total','events','event','occurred_at','event_counts','last_event_at','error','code','message',
+  ...guardianStatuses_(),...['created','opened','otp_requested','otp_verified','otp_failed','authorized','denied','download','revoked','expiry_denied'],...['security_email','guardian_notification'],...['pending','sending','running','retry_wait','transient_failed','permanent_failed','delivered','expired','superseded','cancelled'],...['active','qr_code','unique_link']]);
+ for(const key of keys)assert.ok(allowed.has(key),'unexpected response field '+key);
+ const sources=await Promise.all(['status-views.ts'].map(f=>readFile(new URL('../admin/'+f,import.meta.url),'utf8')));const code=sources.join('\n').replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
+ for(const word of ['patient_security_email_payloads','patient_auth_challenges','doctor_otp_challenges','sharing_grant_documents','guardian_medical_items','guardian_medical_events','guardian_rule_results','guardian_routine_sources','guardian_serious_rules','guardian_notification_events','serious_finding_evaluations','token_digest','token_hash','doctor_email','otp_verifier','ciphertext','provider_reference_hash','recipient_hash','content_sha256','policy_sha256','invitation_id','claim_id','medical_documents','extracted_medical_text','ai_report_summaries','email,'])
+  assert.ok(!code.includes(word),'status-views.ts must not mention '+word);
+ assert.ok(!/\bkind\b/.test(code),'the notification kind (digest or serious alert) is not exposed');
+});
+function guardianStatuses_(){return ['PENDING','ACTIVE','REVOKED','EXPIRED'];}
+
+test('P9-32 unauthenticated, patient, doctor and forged callers are rejected; each permission is separate; views never change data',async()=>{
+ const w=await buildWorld(),patient=await livePatient(),doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex'),routes=await allStatusRoutes();
+ const hashes=async()=>(await owner.query(`SELECT (SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.guardian_relationships t)||(SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.doctor_sharing_grants t)
+  ||(SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.patient_security_email_deliveries t)||(SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.guardian_medical_jobs t)
+  ||(SELECT md5(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY id),'')) FROM public.doctor_share_sessions t) AS h`)).rows[0].h as string;
+ const state=await hashes(),auditBefore=await auditCount();
+ for(const path of routes)for(const token of [undefined,patient.access,patient.refresh,doctor,'not-a-token'])assert.equal((await call(path,{token})).status,401,path);
+ assert.equal(await auditCount(),auditBefore,'rejected callers leave no audit rows');
+ const forged=await forge(patientConfig.jwtKey,adminConfig.jwtAudience,randomUUID(),randomUUID());assert.equal((await call(routes[0],{token:forged})).status,401);
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ const map:Record<string,string[]>={'admin.guardians.read':routes.slice(0,3),'admin.shares.read':routes.slice(3,6),'admin.deliveries.read':routes.slice(6,8)};
+ for(const [permission,paths] of Object.entries(map)){
+  await owner.query("DELETE FROM public.admin_role_permissions WHERE role_name='support_admin' AND permission=$1",[permission]);
+  try{
+   for(const path of paths)assert.equal((await call(path,{token})).status,403,permission+' '+path);
+   assert.equal((await audit("action=$1 AND outcome='denied' AND actor_admin_id=$2",[permission,a.id])).length,paths.length);
+   for(const [other,otherPaths] of Object.entries(map))if(other!==permission)assert.equal((await call(otherPaths[0],{token})).status,200,'other permissions are unaffected');
+  }finally{await owner.query("INSERT INTO public.admin_role_permissions(role_name,permission) VALUES('support_admin',$1)",[permission]);}
+ }
+ for(const path of routes)assert.equal((await call(path,{token})).status,200,path);
+ for(const method of ['POST','PUT','PATCH','DELETE'])for(const path of routes)assert.equal((await call(path,{method,token,body:{status:'REVOKED'}})).status,404,method+' '+path);
+ assert.equal(await hashes(),state,'status views and rejected writes changed no guardian, share or delivery row');
+ assert.equal((await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0].first_invalid,null);
+ void w;
 });
