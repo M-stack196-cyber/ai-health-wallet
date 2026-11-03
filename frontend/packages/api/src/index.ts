@@ -3,7 +3,14 @@ export * from "./client";
 import { ApiClient } from "./client";
 import {
   filterQuery,
+  queryString,
   InputError,
+  type AdminPatient,
+  type AdminPatientQuery,
+  type AdminPage,
+  type AdminJob,
+  type AdminJobQuery,
+  type AdminJobSummary,
   type Filters,
   type Profile,
   type ProfileEdit,
@@ -208,6 +215,54 @@ export function doctorApi(client: ApiClient) {
         root + "/doctor/rag/queries",
         "POST",
         { question },
+      ),
+  };
+}
+
+/** Read-only metadata views plus the audited actions the backend permits. Nothing here can fetch medical content. */
+export function adminApi(client: ApiClient) {
+  const admin = root + "/admin";
+  return {
+    patients: async (query: AdminPatientQuery = {}): Promise<AdminPage<AdminPatient>> => {
+      const r = await client.request<{
+        patients: AdminPatient[];
+        next_cursor: string | null;
+      }>(admin + "/patients" + queryString({ ...query }));
+      return { items: r.patients, nextCursor: r.next_cursor };
+    },
+    patient: (patientId: string) =>
+      client.request<{ patient: AdminPatient }>(
+        admin + "/patients/" + id(patientId),
+      ),
+    suspend: (patientId: string) =>
+      client.request<{ patient: AdminPatient }>(
+        admin + "/patients/" + id(patientId) + "/suspend",
+        "POST",
+      ),
+    reactivate: (patientId: string) =>
+      client.request<{ patient: AdminPatient }>(
+        admin + "/patients/" + id(patientId) + "/reactivate",
+        "POST",
+      ),
+    processingSummary: () =>
+      client.request<{ summary: AdminJobSummary }>(
+        admin + "/processing/summary",
+      ),
+    jobs: async (query: AdminJobQuery = {}): Promise<AdminPage<AdminJob>> => {
+      const r = await client.request<{
+        jobs: AdminJob[];
+        next_cursor: string | null;
+      }>(admin + "/processing/jobs" + queryString({ ...query }));
+      return { items: r.jobs, nextCursor: r.next_cursor };
+    },
+    job: (documentId: string) =>
+      client.request<{ job: AdminJob }>(
+        admin + "/processing/jobs/" + id(documentId),
+      ),
+    retryJob: (documentId: string) =>
+      client.request<{ job: AdminJob }>(
+        admin + "/processing/jobs/" + id(documentId) + "/retry",
+        "POST",
       ),
   };
 }

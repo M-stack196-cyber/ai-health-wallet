@@ -1,4 +1,4 @@
-import { InputError, type SessionTokens } from "./contracts";
+import { InputError, type AdminLogin, type SessionTokens } from "./contracts";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -55,6 +55,10 @@ export class ApiClient {
     this.baseUrl = base;
     this.transport = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? 20000;
+  }
+  /** Whether a protected response of this status ends the session. Admin sessions override this: a 403 there means "your role may not do this", not "signed out". */
+  protected endsSession(status: number) {
+    return status === 401 || status === 403;
   }
   onClear(fn: () => void) {
     this.listeners.add(fn);
@@ -120,10 +124,7 @@ export class ApiClient {
         } catch {
           /* no server details */
         }
-        if (
-          protectedRequest &&
-          (response.status === 401 || response.status === 403)
-        )
+        if (protectedRequest && this.endsSession(response.status))
           this.clear();
         throw new ApiError(response.status, code);
       }
@@ -273,6 +274,84 @@ export class DoctorSession extends ApiClient {
     clearTimeout(this.expiry);
     super.clear();
   }
+}
+
+export type AdminSessionEnd = "expired" | "signed_out" | "denied";
+/** Admin access tokens are short-lived and there is no refresh: the token lives only in memory and the session ends, with a stated reason, when it runs out. */
+export class AdminSession extends ApiClient {
+  private expiry?: ReturnType<typeof setTimeout>;
+  private reason?: AdminSessionEnd;
+  private until = 0;
+  protected override endsSession(status: number) {
+    return status === 401;
+  }
+  /** When the access token stops working (milliseconds since the epoch), or 0 when signed out. */
+  get expiresAt() {
+    return this.token ? this.until : 0;
+  }
+  /** Why the last session ended; valid inside an onClear listener. */
+  get endReason(): AdminSessionEnd | undefined {
+    return this.reason;
+  }
+  async login(email: string, password: string) {
+    const epoch = this.epoch;
+    const result = await super.request<AdminLogin>(
+      "/api/v1/admin/auth/login",
+      "POST",
+      { email, password },
+      false,
+    );
+    if (epoch !== this.epoch) throw new ApiError(401, "SESSION_CHANGED");
+    if (!(result.expires_in > 0)) throw new ApiError(0, "BAD_SESSION");
+    this.reason = undefined;
+    this.token = result.access_token;
+    this.until = Date.now() + result.expires_in * 1000;
+    this.expiry = setTimeout(
+      () => this.end("expired"),
+      Math.min(result.expires_in * 1000, 2147483647),
+    );
+  }
+  end(reason: AdminSessionEnd) {
+    this.reason = reason;
+    this.clear();
+  }
+  signOut() {
+    this.end("signed_out");
+  }
+  override clear() {
+    clearTimeout(this.expiry);
+    this.reason ??= "denied";
+    super.clear();
+  }
+}
+
+export function adminMessage(error: unknown): string {
+  if (error instanceof InputError) return error.message;
+  if (!(error instanceof ApiError))
+    return "Something went wrong. Try again.";
+  switch (error.code) {
+    case "INVALID_CREDENTIALS":
+      return "Sign-in failed. Check your email and password.";
+    case "FORBIDDEN":
+      return "Your admin role is not allowed to do this.";
+    case "ACCOUNT_STATE_CONFLICT":
+      return "That account is not in a state that allows this action. Reload and check its status.";
+    case "JOB_NOT_RETRYABLE":
+      return "This job cannot be retried right now. It may already be queued, running, completed or out of attempts.";
+    case "SESSION_REQUIRED":
+    case "SESSION_CHANGED":
+      return "Your session ended. Sign in again.";
+  }
+  if (error.status === 429)
+    return "Too many attempts. Wait a few minutes and try again.";
+  if (error.status === 404) return "That record was not found.";
+  if (error.status === 400) return "Check the values you entered.";
+  if (error.status === 401) return "Your session ended. Sign in again.";
+  if (error.status === 503)
+    return "The service is unavailable right now. Try again later.";
+  if (error.status === 0)
+    return "Connection problem. Check that the server is running, then try again.";
+  return "The request could not be completed.";
 }
 
 export function safeMessage(error: unknown): string {

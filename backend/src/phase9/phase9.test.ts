@@ -1259,6 +1259,9 @@ async function productionRouters(){
   createRagRoutes:()=>createRagRoutes(db as unknown as RagDatabase,patientConfig),createSummaryRoutes:()=>createSummaryRoutes(db,patientConfig),createProcessingRoutes:()=>createProcessingRoutes(db,patientConfig),
   createDocumentRoutes:()=>createDocumentRoutes(db,patientConfig,docConfig as never,null),createTimelineRoutes:()=>createTimelineRoutes(db,patientConfig),createGuardianRoutes:()=>createGuardianRoutes(db,patientConfig,{mailer:shareMailer}),
  };
+ // The routers that cover every /api/v1 path reject query strings and demand patient credentials, so the admin routes must be mounted before them.
+ const adminAt=mounts.findIndex(m=>m.name==='createAdminRoutes');assert.ok(adminAt>=0);
+ for(const [index,m] of mounts.entries())if(m.prefix==='/api/v1')assert.ok(adminAt<index,'app.ts mounts '+m.name+' on /api/v1 before the admin routes');
  const parsed=new Set(mounts.map(m=>m.name));
  for(const name of parsed)assert.ok(name in factories,'app.ts mounts '+name+', which this test does not know how to build: review its separation from admin and add it');
  for(const name of Object.keys(factories))assert.ok(parsed.has(name),'this test builds '+name+' but app.ts no longer mounts it');

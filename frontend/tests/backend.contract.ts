@@ -52,6 +52,8 @@ import { createRagRoutes } from "../../backend/src/rag/routes.ts";
 import { createRagClient } from "../../backend/src/rag/client.ts";
 import { createRagService } from "../../backend/src/rag/service.ts";
 import { errorHandler } from "../../backend/src/http/errors.ts";
+import { createAdminRoutes } from "../../backend/src/admin/routes.ts";
+import { createAdminAccount } from "../../backend/src/admin/bootstrap.ts";
 const socket = process.env.IDENTITY_TEST_SOCKET;
 if (!socket || !/^\/tmp\/hw-phase1-pg-[a-zA-Z0-9]+$/.test(socket))
   throw Error("Owned disposable socket required.");
@@ -136,6 +138,15 @@ const verification = createSecurityEmailDelivery(
     },
   },
 );
+const adminConfig = {
+  jwtKey: new Uint8Array(randomBytes(32)),
+  jwtAlgorithm: "HS256" as const,
+  jwtLifetimeSeconds: 900,
+  jwtIssuer: "phase8-admin",
+  jwtAudience: "phase8-admin-audience",
+  rateLimitMax: 100,
+  rateWindowSeconds: 900,
+};
 let fixtureHash: string, server: any, base: string, python: any, ocrUrl: string;
 const serviceToken = randomBytes(32).toString("hex");
 async function startPython() {
@@ -213,7 +224,7 @@ before(async () => {
   )
     .filter((f) => f.endsWith(".sql"))
     .sort();
-  assert.equal(files.length, 12);
+  assert.equal(files.length, 19);
   for (const file of files) {
     if (file.startsWith("0005"))
       await admin.query(
@@ -251,6 +262,11 @@ before(async () => {
   });
   app.use("/api/v1/auth", identity.auth);
   app.use("/api/v1/patients", identity.profile);
+  // Mounted before the routers that cover all of /api/v1, as in app.ts.
+  app.use(
+    "/api/v1/admin",
+    createAdminRoutes(db, auth, adminConfig, { health: { services: [] } }),
+  );
   app.use(
     "/api/v1/documents",
     createDocumentRoutes(db, auth, documentConfig, storage),
@@ -749,5 +765,130 @@ test("P8-API-06 real Chrome doctor flow through Vite proxy to actual backend/DB/
     vite.kill();
     await once(vite, "exit").catch(() => {});
     await u.client.logout();
+  }
+});
+
+test("P8-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual backend and database: sign-in, search, suspend/reactivate, processing and retry, with audit rows", async () => {
+  const { chromium, expect } = await import("@playwright/test");
+  const adminPassword = "Synthetic admin passphrase 731!",
+    adminEmail = randomUUID() + "@example.invalid";
+  const created = await createAdminAccount(
+    admin,
+    (p: string) => createPasswordService(auth).hash(p),
+    { email: adminEmail, fullName: "Synthetic Admin", role: "support_admin", password: adminPassword },
+  );
+  const u = await user(),
+    patientClient = patientApi(u.client),
+    name = "Synthetic Patient";
+  assert.ok(await patientClient.profile());
+  // a failed, retryable job staged with triggers off (CHECK constraints still apply)
+  const documentId = randomUUID(),
+    c = await admin.connect();
+  try {
+    await c.query("BEGIN");
+    await c.query("SET LOCAL session_replication_role=replica");
+    await c.query(
+      `INSERT INTO public.medical_documents(id,patient_id,s3_bucket,s3_object_key,original_filename,file_type,category,hospital_name,processing_status,content_type,size_bytes,sha256)
+       VALUES($1,$2,'synthetic-private-bucket',$3,'LEAK-admin-check.pdf','pdf','lab_report','LEAK Hospital','failed','application/pdf',24,'02be06dafdca1e35e82ce33d549485f29627c07274b644fafb0e54befbe732de')`,
+      [documentId, u.id, "medical-documents/" + documentId + ".pdf"],
+    );
+    await c.query(
+      "INSERT INTO public.document_processing_jobs(document_id,patient_id,state,attempt_count,max_attempts,started_at,finished_at,last_error_code) VALUES($1,$2,'failed',1,3,clock_timestamp(),clock_timestamp(),'PROCESSOR_FAILED')",
+      [documentId, u.id],
+    );
+    await c.query("COMMIT");
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
+  const probe = createServer();
+  probe.listen(0, "127.0.0.1");
+  await once(probe, "listening");
+  const port = (probe.address() as { port: number }).port;
+  await new Promise<void>((r) => probe.close(() => r()));
+  const vite = spawn(
+    process.execPath,
+    ["node_modules/vite/bin/vite.js", "--config", "apps/admin/vite.config.ts", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    { cwd: new URL("../", import.meta.url), env: { PATH: process.env.PATH, HW_LOCAL_API: base }, stdio: "ignore" },
+  );
+  let browser;
+  try {
+    const origin = "http://127.0.0.1:" + port;
+    let ready = false;
+    for (let i = 0; i < 100; i++) {
+      try {
+        if ((await fetch(origin)).ok) { ready = true; break; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.ok(ready);
+    browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+    const page = await browser.newPage();
+    const paths: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/v1/")) paths.push(r.method() + " " + new URL(r.url()).pathname);
+    });
+
+    await page.goto(origin + "/");
+    await page.getByLabel("Email").fill(adminEmail);
+    await page.getByLabel("Password").fill("wrong password");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByText("Sign-in failed. Check your email and password.")).toBeVisible();
+    await page.getByLabel("Password").fill(adminPassword);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByRole("heading", { name: "Patient accounts" })).toBeVisible();
+    // search by the patient's exact email, then suspend with confirmation
+    await page.getByLabel("Search name or email").fill(u.email);
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page.getByRole("row")).toHaveCount(2);
+    await expect(page.getByRole("row", { name: new RegExp(u.email) })).toHaveCount(1);
+    await page.getByRole("button", { name: "Open " + name }).click();
+    const detail = page.getByRole("complementary", { name: "Account detail" });
+    await expect(detail).toContainText(u.email);
+    await expect(detail).toContainText("active");
+    await detail.getByRole("button", { name: "Suspend account" }).click();
+    assert.equal((await admin.query("SELECT account_status FROM patients WHERE id=$1", [u.id])).rows[0].account_status, "active", "nothing changes before confirmation");
+    await detail.getByRole("button", { name: "Confirm suspend" }).click();
+    await expect(detail.getByText(/was suspended/)).toBeVisible();
+    assert.equal((await admin.query("SELECT account_status FROM patients WHERE id=$1", [u.id])).rows[0].account_status, "suspended");
+    await assert.rejects(patientClient.profile(), ApiError, "the patient's own session is cut off by the real backend");
+    await detail.getByRole("button", { name: "Reactivate account" }).click();
+    await detail.getByRole("button", { name: "Confirm reactivate" }).click();
+    await expect(detail.getByText(/was reactivated/)).toBeVisible();
+    assert.equal((await admin.query("SELECT account_status FROM patients WHERE id=$1", [u.id])).rows[0].account_status, "active");
+    await assert.rejects(patientClient.profile(), ApiError, "reactivation does not bring the old session back");
+    // processing: filter to the staged failed job, retry with confirmation
+    await page.getByRole("button", { name: "Processing" }).click();
+    await expect(page.getByRole("heading", { name: "Document processing" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Processing summary" })).toContainText("All jobs");
+    await page.getByLabel("Patient ID").fill(u.id);
+    await page.getByLabel("State").selectOption("failed");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await page.getByRole("button", { name: "Open job " + documentId.slice(0, 8) }).click();
+    const job = page.getByRole("complementary", { name: "Job detail" });
+    await expect(job).toContainText("1 of 3");
+    await expect(job).toContainText("processor failed");
+    await job.getByRole("button", { name: "Retry job" }).click();
+    assert.equal((await admin.query("SELECT state FROM document_processing_jobs WHERE document_id=$1", [documentId])).rows[0].state, "failed", "nothing changes before confirmation");
+    await job.getByRole("button", { name: "Confirm retry" }).click();
+    await expect(job.getByText(/Retry queued/)).toBeVisible();
+    const after = (await admin.query("SELECT j.state,j.attempt_count,d.processing_status FROM document_processing_jobs j JOIN medical_documents d ON d.id=j.document_id WHERE j.document_id=$1", [documentId])).rows[0];
+    assert.deepEqual([after.state, after.attempt_count, after.processing_status], ["retry_wait", 1, "processing"]);
+    const body = await page.locator("body").innerText();
+    for (const word of ["LEAK", "admin-check.pdf"]) assert.ok(!body.includes(word), "the screens never show " + word);
+    assert.deepEqual(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length, cookies: document.cookie })), { local: 0, session: 0, cookies: "" });
+    assert.ok(paths.every((p) => p.includes("/api/v1/admin/")), "only admin endpoints were called: " + [...new Set(paths)].join(", "));
+    assert.ok(!paths.some((p) => /documents|download|summary-jobs|rag|doctor|timeline/.test(p.replace("/processing/summary", ""))));
+    // the actions are in the audit log, attributed to this admin
+    const audit = (await admin.query("SELECT action,outcome FROM admin_audit_events WHERE actor_admin_id=$1 AND action IN ('admin.patients.suspend','admin.patients.reactivate','admin.processing.retry') ORDER BY seq", [created.id])).rows;
+    assert.deepEqual(audit.map((r: any) => r.action + ":" + r.outcome), ["admin.patients.suspend:success", "admin.patients.reactivate:success", "admin.processing.retry:success"]);
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  } finally {
+    await browser?.close();
+    vite.kill();
+    await once(vite, "exit").catch(() => {});
   }
 });

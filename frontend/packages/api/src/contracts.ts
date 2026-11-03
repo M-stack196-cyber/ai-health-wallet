@@ -188,3 +188,95 @@ export function validateFile(name: string, mime: string) {
     );
   return type;
 }
+
+/** Admin dashboard (M13). Everything here is account or job metadata; the backend never returns medical content to an admin. */
+export const adminPatientStatuses = [
+  "unverified",
+  "active",
+  "suspended",
+  "deletion_pending",
+  "deletion_restricted",
+  "deleted",
+  "revoked",
+] as const;
+export type AdminPatientStatus = (typeof adminPatientStatuses)[number];
+export interface AdminLogin {
+  access_token: string;
+  token_type: "Bearer";
+  expires_in: number;
+}
+export interface AdminPatient {
+  id: string;
+  email: string;
+  full_name: string;
+  account_status: AdminPatientStatus;
+  email_verified: boolean;
+  email_verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface AdminPatientQuery {
+  q?: string;
+  status?: AdminPatientStatus;
+  verified?: boolean;
+  limit?: number;
+  cursor?: string;
+}
+export interface AdminPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+export const adminJobStates = [
+  "pending",
+  "running",
+  "retry_wait",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+export type AdminJobState = (typeof adminJobStates)[number];
+export const adminJobErrorCodes = [
+  "PROCESSOR_FAILED",
+  "PROCESSOR_TIMEOUT",
+  "INTERRUPTED",
+  "INVALID_INPUT",
+  "LEASE_EXPIRED",
+] as const;
+export type AdminJobErrorCode = (typeof adminJobErrorCodes)[number];
+export interface AdminJob {
+  document_id: string;
+  patient_id: string;
+  state: AdminJobState;
+  attempt_count: number;
+  max_attempts: number;
+  last_error_code: AdminJobErrorCode | null;
+  next_attempt_at: string;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  lease_active: boolean;
+  lease_expired: boolean;
+}
+export interface AdminJobQuery {
+  state?: AdminJobState;
+  error_code?: AdminJobErrorCode;
+  patient_id?: string;
+  limit?: number;
+  cursor?: string;
+}
+export interface AdminJobSummary {
+  by_state: Record<AdminJobState, number>;
+  failures_by_error_code: Record<AdminJobErrorCode, number>;
+  running_with_expired_lease: number;
+  total: number;
+}
+export function queryString(
+  params: Record<string, string | number | boolean | undefined>,
+) {
+  const search = new URLSearchParams();
+  for (const [k, v] of Object.entries(params))
+    if (v !== undefined && v !== "") search.set(k, String(v));
+  const q = search.toString();
+  return q ? "?" + q : "";
+}

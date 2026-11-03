@@ -9,6 +9,9 @@ import {
   PatientSession,
   patientApi,
   doctorApi,
+  AdminSession,
+  adminApi,
+  adminMessage,
   shareReference,
   validateFile,
   grantState,
@@ -383,4 +386,88 @@ test("secure storage failure prevents a retained patient session", async () => {
   assert.equal(client.authorized, false);
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(removed, 1);
+});
+
+test("admin session keeps the token in memory only, ends with a stated reason at expiry, and a role denial does not sign the admin out", async () => {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  let denyNext = false;
+  const transport: typeof fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    const path = new URL(String(url), "https://synthetic.invalid").pathname;
+    if (path === "/api/v1/admin/auth/login")
+      return json({ success: true, access_token: "admin-secret", token_type: "Bearer", expires_in: 1 });
+    if (denyNext) return json({ error: { code: "FORBIDDEN" } }, 403);
+    return json({ success: true, patients: [], next_cursor: null });
+  };
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const before = [globals.localStorage, globals.sessionStorage];
+  const session = new AdminSession({ baseUrl: "https://synthetic.invalid", fetch: transport });
+  const ended: (string | undefined)[] = [];
+  session.onClear(() => ended.push(session.endReason));
+  await assert.rejects(adminApi(session).patients(), ApiError, "protected calls need a session first");
+  await session.login("admin@example.invalid", "synthetic password");
+  assert.ok(session.authorized && session.expiresAt > Date.now() && session.expiresAt <= Date.now() + 1000);
+  assert.deepEqual([globals.localStorage, globals.sessionStorage], before, "nothing is written to browser storage");
+  await adminApi(session).patients({ q: "ab", status: "active", verified: false, limit: 10, cursor: "c1" });
+  const list = calls.at(-1)!;
+  assert.equal(list.url, "https://synthetic.invalid/api/v1/admin/patients?q=ab&status=active&verified=false&limit=10&cursor=c1");
+  assert.equal((list.init!.headers as Record<string, string>).Authorization, "Bearer admin-secret");
+  assert.equal(list.init!.credentials, "omit");
+  // 403 means "your role may not do this": the session continues
+  denyNext = true;
+  await assert.rejects(adminApi(session).suspend("11111111-1111-4111-8111-111111111111"), (e: unknown) => e instanceof ApiError && e.status === 403 && e.code === "FORBIDDEN");
+  assert.ok(session.authorized, "a permission denial does not end the session");
+  assert.match(adminMessage(new ApiError(403, "FORBIDDEN")), /role is not allowed/);
+  denyNext = false;
+  // the token runs out after expires_in: no more requests are possible, and the reason is "expired"
+  await new Promise((r) => setTimeout(r, 1150));
+  assert.equal(session.authorized, false);
+  assert.deepEqual(ended, ["expired"]);
+  const used = calls.length;
+  await assert.rejects(adminApi(session).processingSummary(), (e: unknown) => e instanceof ApiError && e.status === 401);
+  assert.equal(calls.length, used, "an ended session sends nothing");
+  // sign-out and server-side rejection give their own reasons
+  await session.login("admin@example.invalid", "synthetic password");
+  session.signOut();
+  assert.equal(session.endReason, "signed_out");
+  assert.equal(session.authorized, false);
+  const rejecting = new AdminSession({ baseUrl: "https://synthetic.invalid", fetch: async (url) => String(url).endsWith("/login") ? json({ access_token: "t", token_type: "Bearer", expires_in: 900 }) : json({ error: { code: "UNAUTHORIZED" } }, 401) });
+  await rejecting.login("a@example.invalid", "p");
+  await assert.rejects(adminApi(rejecting).jobs());
+  assert.equal(rejecting.endReason, "denied");
+  assert.equal(rejecting.authorized, false);
+});
+
+test("admin client builds only reviewed admin paths, sends no body on actions, and turns failures into plain messages", async () => {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const session = new AdminSession({
+    baseUrl: "",
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return String(url).endsWith("/login") ? json({ access_token: "t", token_type: "Bearer", expires_in: 900 }) : json({ success: true, patient: {}, job: {}, summary: {}, patients: [], jobs: [], next_cursor: "next" });
+    },
+  });
+  await session.login("a@example.invalid", "p");
+  const api = adminApi(session), id = "22222222-2222-4222-8222-222222222222";
+  await api.patient(id); await api.suspend(id); await api.reactivate(id);
+  await api.processingSummary(); await api.job(id); await api.retryJob(id);
+  const page = await api.jobs({ state: "failed", error_code: "PROCESSOR_FAILED", patient_id: id, limit: 10 });
+  assert.equal(page.nextCursor, "next");
+  const paths = calls.slice(1).map((c) => (c.init?.method ?? "GET") + " " + c.url);
+  assert.deepEqual(paths, [
+    `GET /api/v1/admin/patients/${id}`, `POST /api/v1/admin/patients/${id}/suspend`, `POST /api/v1/admin/patients/${id}/reactivate`,
+    "GET /api/v1/admin/processing/summary", `GET /api/v1/admin/processing/jobs/${id}`, `POST /api/v1/admin/processing/jobs/${id}/retry`,
+    `GET /api/v1/admin/processing/jobs?state=failed&error_code=PROCESSOR_FAILED&patient_id=${id}&limit=10`,
+  ]);
+  for (const c of calls.slice(1).filter((x) => x.init?.method === "POST")) assert.equal(c.init!.body, undefined, "the backend rejects a request body on these actions");
+  for (const c of calls.slice(1)) assert.ok(!/documents|records|download|summary-jobs|rag|doctor/.test(c.url.replace("/processing/summary", "")), "no medical path is reachable from the admin client");
+  await assert.rejects(session.request("https://elsewhere.invalid/api/v1/admin/me"), /Invalid API path/);
+  const message = (status: number, code: string) => adminMessage(new ApiError(status, code));
+  assert.match(message(401, "INVALID_CREDENTIALS"), /email and password/);
+  assert.match(message(429, "RATE_LIMITED"), /Too many attempts/);
+  assert.match(message(409, "ACCOUNT_STATE_CONFLICT"), /not in a state/);
+  assert.match(message(409, "JOB_NOT_RETRYABLE"), /cannot be retried/);
+  assert.match(message(0, "NETWORK_ERROR"), /Connection problem/);
+  assert.equal(adminMessage(new Error("postgres://user:secret@host/db")), "Something went wrong. Try again.");
+  session.signOut(); // clears the expiry timer so the test process can exit
 });

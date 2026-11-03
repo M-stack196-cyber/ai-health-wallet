@@ -47,3 +47,5 @@ playwright-report/
 
 # Local cloud credentials; never commit.
 /.aws/
+
+/ai-service/venv/

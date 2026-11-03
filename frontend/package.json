@@ -7,13 +7,14 @@
     "apps/*"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit -p packages/api && tsc --noEmit -p apps/doctor && tsc --noEmit -p apps/patient",
+    "typecheck": "tsc --noEmit -p packages/api && tsc --noEmit -p apps/doctor && tsc --noEmit -p apps/admin && tsc --noEmit -p apps/patient",
     "build:doctor": "npm run build -w @health-wallet/doctor",
+    "build:admin": "npm run build -w @health-wallet/admin",
     "build:patient": "npm run build -w @health-wallet/patient",
     "test": "node --import tsx tests/client.test.ts",
     "test:mobile": "npm run test -w @health-wallet/patient",
     "test:contracts": "node ../infrastructure/identity/run.mjs --execute-isolated --phase8",
-    "test:browser": "node --import tsx --test tests/doctor.browser.ts"
+    "test:browser": "node --import tsx --test tests/doctor.browser.ts tests/admin.browser.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
