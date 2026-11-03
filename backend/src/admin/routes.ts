@@ -12,6 +12,7 @@ import type { AdminAuthenticationConfig } from "./config.js";
 import { createAdminTokenService } from "./tokens.js";
 import { createAdminRepository } from "./repository.js";
 import { adminIdentity, requireAdmin } from "./middleware.js";
+import { mountConfigRoutes } from "./config-routes.js";
 import { createAdminStatusViews, deliveryQuery, guardianQuery, shareQuery, statusIdParameter } from "./status-views.js";
 import { createAdminProcessingJobs, jobIdParameter, validateJobListQuery } from "./processing-jobs.js";
 import { createAdminPatientAccounts, patientIdParameter, validatePatientListQuery, type StatusAction } from "./patient-accounts.js";
@@ -144,5 +145,6 @@ export function createAdminRoutes(database: PatientDatabase, auth: Authenticatio
     await statusAudit(admin, "admin.deliveries.read", "delivery", shape(parsed, result.rows.length));
     res.status(200).json({ success: true, deliveries: result.rows, next_cursor: result.nextCursor });
   });
+  mountConfigRoutes(router, { database, tokens, repository });
   return router;
 }

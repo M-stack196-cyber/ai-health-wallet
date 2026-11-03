@@ -17,6 +17,12 @@ import {createAdminRoutes} from '../admin/routes.js';
 import {createAdminTokenService} from '../admin/tokens.js';
 import {AdminBootstrapError,createAdminAccount} from '../admin/bootstrap.js';
 import {writeAdminAudit} from '../admin/repository.js';
+import {settingRegistry} from '../admin/settings.js';
+import {getDocumentConfig} from '../config/documents.js';
+import {getAuthenticationConfig} from '../config/auth.js';
+import {getSecurityPolicy as runtimeSecurityPolicy} from '../auth/security-policy.js';
+import {sharingConfig} from '../sharing/config.js';
+import {guardianNotificationConfig} from '../guardian-notifications/config.js';
 
 // Plain PostgreSQL 16 only: M13 Phase 1 needs no pgvector, so migrations 0010-0012 (pgvector/RAG/sharing/guardian) are not applied.
 const socket=process.env.IDENTITY_TEST_SOCKET;
@@ -39,7 +45,7 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_admin_phase9');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,17);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,18);
  for(const f of files){
   if(f.startsWith('0010'))await owner.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
@@ -77,7 +83,7 @@ async function forge(key:Uint8Array,audience:string,sub:string,sid:string|undefi
  return new SignJWT(sid?{sid}:{}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(sub).setIssuer(adjust.iss??adminConfig.jwtIssuer).setAudience(audience)
   .setIssuedAt(adjust.iat??now).setExpirationTime(adjust.exp??now+600).sign(key);
 }
-const allPermissions=['admin.deliveries.read','admin.guardians.read','admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read','admin.shares.read'];
+const allPermissions=['admin.deliveries.read','admin.guardians.read','admin.patients.reactivate','admin.patients.read','admin.patients.suspend','admin.processing.read','admin.processing.retry','admin.profile.read','admin.rules.create','admin.rules.read','admin.settings.approve','admin.settings.change','admin.settings.read','admin.shares.read'];
 const sqlState=(code:string)=>(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===code;
 
 test('P9-01 admin configuration is disabled by default and cannot share patient secrets or audience',()=>{
@@ -292,7 +298,7 @@ async function medicalSnapshot(patientId:string){
 test('P9-13 the three roles hold the new patient-account permissions and nothing reaches medical content',async()=>{
  for(const role of ['support_admin','operations_admin','config_admin'])
   assert.deepEqual((await owner.query('SELECT permission FROM public.admin_role_permissions WHERE role_name=$1 ORDER BY permission',[role])).rows.map(r=>r.permission),allPermissions,role);
- assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing|guardians|shares|deliveries)\.[a-z]+$/.test(permission)));
+ assert.ok(allPermissions.every(permission=>/^admin\.(profile|patients|processing|guardians|shares|deliveries|settings|rules)\.[a-z]+$/.test(permission)));
 });
 
 test('P9-14 account list searches, filters and pages by keyset and shows only identity and status fields',async()=>{
@@ -799,4 +805,226 @@ test('P9-32 unauthenticated, patient, doctor and forged callers are rejected; ea
  assert.equal(await hashes(),state,'status views and rejected writes changed no guardian, share or delivery row');
  assert.equal((await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0].first_invalid,null);
  void w;
+});
+
+// ---- Phase 5: operational settings, release gate and serious-rule versions (M13-005, M13-006, M13-016, M13-017) ----
+const settingsUrl=(path='')=>'/api/v1/admin/settings'+path;
+const rulesUrl=(path='')=>'/api/v1/admin/rules'+path;
+const propose=(key:string,token:string,body:unknown)=>call(settingsUrl('/'+key+'/versions'),{method:'POST',token,body});
+const decide=(key:string,version:number,token:string,body:unknown)=>call(settingsUrl('/'+key+'/versions/'+version+'/decision'),{method:'POST',token,body});
+const gatedSpecs=settingRegistry.filter(spec=>spec.gate);
+const versionRows=async(key:string)=>(await owner.query('SELECT version,value,requires_approval,gate,proposed_by FROM public.admin_setting_versions WHERE setting_key=$1 ORDER BY version',[key])).rows;
+const effectiveRow=async(key:string)=>(await owner.query('SELECT version,value FROM public.admin_setting_effective WHERE setting_key=$1',[key])).rows[0];
+const settingState=async(token:string,key:string)=>(await call(settingsUrl('/'+key),{token})).data.setting;
+function withEnv<T>(vars:Record<string,string|undefined>,fn:()=>T):T{
+ const saved:Record<string,string|undefined>={};for(const k of Object.keys(vars))saved[k]=process.env[k];
+ try{for(const [k,v] of Object.entries(vars)){if(v===undefined)delete process.env[k];else process.env[k]=v;}return fn();}
+ finally{for(const [k,v] of Object.entries(saved)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
+}
+const accepted=(fn:()=>unknown)=>{try{fn();return true;}catch{return false;}};
+const SAFE_ENV={DOCUMENT_STORAGE_ENABLED:'false',JWT_SECRET:'0123456789abcdef'.repeat(4),JWT_ALGORITHM:'HS256',JWT_EXPIRES_IN_SECONDS:undefined,AUTH_REFRESH_ABSOLUTE_SECONDS:undefined,AUTH_REFRESH_IDLE_SECONDS:undefined,AUTH_VERIFICATION_SECONDS:undefined,AUTH_RESET_SECONDS:undefined,
+ DOCUMENT_MAX_UPLOAD_BYTES:undefined,DOCUMENT_MAX_CONCURRENT_UPLOADS:undefined,DOCUMENT_UPLOAD_RATE_LIMIT_MAX:undefined,DOCUMENT_MAX_PDF_PAGES:undefined};
+
+test('P9-33 the allowlist matches the SRS gates and every bound and default matches the runtime validator it feeds',()=>{
+ assert.deepEqual(settingRegistry.map(s=>s.key),['guardian.digest_window_hours','documents.max_upload_bytes','documents.max_concurrent_uploads','documents.upload_rate_limit_max','documents.max_pdf_pages','auth.access_token_seconds','auth.verification_seconds','auth.reset_seconds','auth.refresh_idle_seconds','auth.refresh_absolute_seconds','sharing.otp_seconds']);
+ assert.deepEqual(gatedSpecs.map(s=>[s.key,s.gate!.cfg]),[['auth.access_token_seconds','CFG-16'],['auth.verification_seconds','CFG-16'],['auth.reset_seconds','CFG-16'],['auth.refresh_idle_seconds','CFG-16'],['auth.refresh_absolute_seconds','CFG-16'],['sharing.otp_seconds','CFG-04']],'only the security lifetimes whose SRS gate names a security review are gated');
+ for(const spec of settingRegistry.filter(s=>!s.gate))assert.ok(['CFG-15','CFG-03'].includes(spec.source),spec.key+' carries no review requirement in the SRS');
+ for(const spec of settingRegistry){assert.ok(/^[a-z]+(\.[a-z_]+){1,2}$/.test(spec.key)&&spec.min<=spec.default&&spec.default<=spec.max);assert.ok(!/secret|password|key$|token$|hash|url|bucket|email/.test(spec.key.replace('access_token_seconds','')),spec.key+' is not a secret-like setting');}
+ const probes:Record<string,{set:(v:number)=>unknown;read:()=>number}>={
+  'guardian.digest_window_hours':{set:v=>guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline',GUARDIAN_DIGEST_SECONDS:String(v*3600)},Buffer.alloc(32,7)),read:()=>guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline'},Buffer.alloc(32,7))!.windowSeconds/3600},
+  'sharing.otp_seconds':{set:v=>sharingConfig({SHARING_PUBLIC_ORIGIN:'https://doctor.example.invalid',SHARING_OTP_SECONDS:String(v)}),read:()=>sharingConfig({SHARING_PUBLIC_ORIGIN:'https://doctor.example.invalid'})!.otpSeconds},
+ };
+ const envProbes:Record<string,[string,()=>number,Record<string,string>?]>={
+  'documents.max_upload_bytes':['DOCUMENT_MAX_UPLOAD_BYTES',()=>getDocumentConfig().maxFileBytes],'documents.max_concurrent_uploads':['DOCUMENT_MAX_CONCURRENT_UPLOADS',()=>getDocumentConfig().maxConcurrentUploads],
+  'documents.upload_rate_limit_max':['DOCUMENT_UPLOAD_RATE_LIMIT_MAX',()=>getDocumentConfig().uploadRateLimitMax],'documents.max_pdf_pages':['DOCUMENT_MAX_PDF_PAGES',()=>getDocumentConfig().maxPdfPages],
+  'auth.access_token_seconds':['JWT_EXPIRES_IN_SECONDS',()=>getAuthenticationConfig().jwtLifetimeSeconds],'auth.verification_seconds':['AUTH_VERIFICATION_SECONDS',()=>runtimeSecurityPolicy().verificationSeconds],'auth.reset_seconds':['AUTH_RESET_SECONDS',()=>runtimeSecurityPolicy().resetSeconds],
+  'auth.refresh_idle_seconds':['AUTH_REFRESH_IDLE_SECONDS',()=>runtimeSecurityPolicy().refreshIdleSeconds,{AUTH_REFRESH_ABSOLUTE_SECONDS:'2592000'}],
+  'auth.refresh_absolute_seconds':['AUTH_REFRESH_ABSOLUTE_SECONDS',()=>runtimeSecurityPolicy().refreshAbsoluteSeconds,{AUTH_REFRESH_IDLE_SECONDS:'60'}],
+ };
+ for(const spec of settingRegistry){
+  if(probes[spec.key]){const probe=probes[spec.key];
+   assert.equal(probe.read(),spec.default,spec.key+' default');assert.ok(accepted(()=>probe.set(spec.min))&&accepted(()=>probe.set(spec.max)),spec.key+' bounds accepted');assert.ok(!accepted(()=>probe.set(spec.min-1))&&!accepted(()=>probe.set(spec.max+1)),spec.key+' bounds are tight');continue;}
+  const [name,read,extra={}]=envProbes[spec.key];
+  withEnv({...SAFE_ENV,...extra},()=>{
+   assert.equal(read(),spec.default,spec.key+' default');
+   for(const [value,ok] of [[spec.min,true],[spec.max,true],[spec.min-1,false],[spec.max+1,false]] as const)
+    assert.equal(accepted(()=>withEnv({[name]:String(value)},read)),ok,spec.key+' '+value);
+  });
+ }
+});
+
+test('P9-34 the settings list shows every approved key with its default, effective value, bounds and visible release gate',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),list=await call(settingsUrl(),{token});
+ assert.equal(list.status,200);assert.deepEqual(list.data.settings.map((s:any)=>s.key),settingRegistry.map(s=>s.key));
+ for(const s of list.data.settings){assert.deepEqual(Object.keys(s).sort(),['default','gate','key','max','min','pending_versions','source','unit','value','version']);}
+ const by=Object.fromEntries(list.data.settings.map((s:any)=>[s.key,s]));
+ assert.deepEqual(by['auth.reset_seconds'].gate,{cfg:'CFG-16',requirement:'Security review and negative-path tests required before release.'});assert.equal(by['sharing.otp_seconds'].gate.cfg,'CFG-04');
+ assert.equal(by['guardian.digest_window_hours'].gate,null);assert.equal(by['documents.max_upload_bytes'].gate,null);
+ const detail=await call(settingsUrl('/auth.verification_seconds'),{token});assert.equal(detail.status,200);assert.deepEqual(detail.data.setting.history,[]);assert.equal(detail.data.setting.value,86400);assert.equal(detail.data.setting.version,0);
+ for(const bad of ['/auth.jwt_secret','/NOT-A-KEY','/'+'a'.repeat(80)])assert.equal((await call(settingsUrl(bad),{token})).status,404,bad);
+ assert.equal((await audit("action='admin.settings.read' AND outcome='failure' AND actor_admin_id=$1",[a.id])).length,3);
+ assert.equal((await call(settingsUrl('?x=1'),{token})).status,400);
+});
+
+test('P9-35 an ungated change takes effect at once, is versioned and audited in the same transaction, and history is never overwritten',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),key='guardian.digest_window_hours';
+ const first=await propose(key,token,{value:48});assert.equal(first.status,201);assert.equal(first.data.status,'effective');assert.equal(first.data.version,1);assert.equal(first.data.setting.value,48);
+ assert.deepEqual(await effectiveRow(key),{version:1,value:48});
+ const second=await propose(key,token,{value:12});assert.equal(second.status,201);assert.equal(second.data.version,2);assert.equal(second.data.setting.value,12);
+ const rows=await versionRows(key);assert.deepEqual(rows.map(r=>[r.version,Number(r.value),r.requires_approval,r.gate]),[[1,48,false,null],[2,12,false,null]],'both versions are kept');
+ const detail=await settingState(token,key);assert.deepEqual(detail.history.map((h:any)=>[h.version,h.value,h.status]),[[2,12,'effective'],[1,48,'superseded']]);assert.ok(detail.history.every((h:any)=>h.proposed_by===a.id&&h.decision===null));
+ const events=await audit("action='admin.settings.change' AND target_id=$1 AND outcome='success'",[key]);assert.equal(events.length,2);assert.deepEqual(events[1].scope,{version:2,previous:48,value:12,gate:null,status:'effective'});assert.deepEqual(events[0].scope,{version:1,previous:24,value:48,gate:null,status:'effective'});assert.equal(events[0].actor_admin_id,a.id);
+ const same=await propose(key,token,{value:12});assert.equal(same.status,409);assert.equal(same.data.error.code,'SETTING_UNCHANGED');assert.equal((await versionRows(key)).length,2);assert.equal((await audit("action='admin.settings.change' AND target_id=$1 AND outcome='failure'",[key]))[0].scope.reason,'unchanged');
+ assert.equal((await propose('documents.max_pdf_pages',token,{value:100})).status,409,'the default counts as the value in effect');
+ for(const sql of ["UPDATE public.admin_setting_versions SET value='1'::jsonb","DELETE FROM public.admin_setting_versions"]){
+  await assert.rejects(db.query(sql),sqlState('42501'));await assert.rejects(owner.query(sql),(e:unknown)=>sqlState('42501')(e)&&/append-only/.test((e as Error).message),'even the owner cannot rewrite history: '+sql);
+ }
+ await assert.rejects(db.query('TRUNCATE public.admin_setting_versions'),sqlState('42501'));await assert.rejects(owner.query('TRUNCATE public.admin_setting_versions'),'the owner cannot truncate history either (the foreign key from decisions already forbids it)');
+ await assert.rejects(db.query("INSERT INTO public.admin_setting_versions(setting_key,version,value,requires_approval,proposed_by,proposed_at) VALUES('documents.max_pdf_pages',1,'5'::jsonb,false,$1,'2001-01-01')",[a.id]),sqlState('42501'));
+ await assert.rejects(owner.query("INSERT INTO public.admin_setting_versions(setting_key,version,value,requires_approval,proposed_by) VALUES('documents.max_pdf_pages',7,'5'::jsonb,false,$1)",[a.id]),sqlState('23514'),'versions must be consecutive');
+ await assert.rejects(owner.query("INSERT INTO public.admin_setting_versions(setting_key,version,value,requires_approval,gate,proposed_by) VALUES('documents.max_pdf_pages',1,'5'::jsonb,true,NULL,$1)",[a.id]),sqlState('23514'));
+ await assert.rejects(owner.query("INSERT INTO public.admin_setting_versions(setting_key,version,value,requires_approval,proposed_by) VALUES('documents.max_pdf_pages',1,'\"text\"'::jsonb,false,$1)",[a.id]),sqlState('23514'));
+ // Same-transaction audit: when the audit write fails, no version is stored and nothing takes effect.
+ const before=await versionRows('documents.max_pdf_pages');
+ await owner.query("ALTER TABLE public.admin_audit_events ADD CONSTRAINT p9_block_setting CHECK(action<>'admin.settings.change') NOT VALID");
+ try{assert.equal((await propose('documents.max_pdf_pages',token,{value:50})).status,500);}finally{await owner.query('ALTER TABLE public.admin_audit_events DROP CONSTRAINT p9_block_setting');}
+ assert.deepEqual(await versionRows('documents.max_pdf_pages'),before);assert.equal(await effectiveRow('documents.max_pdf_pages'),undefined);
+ assert.equal((await propose('documents.max_pdf_pages',token,{value:50})).status,201,'the same change works once auditing works');
+ const other=await adminToken((await newAdmin('operations_admin')).email),race=await Promise.all([propose('documents.max_upload_bytes',token,{value:1048576}),propose('documents.max_upload_bytes',other,{value:2097152})]);
+ assert.deepEqual(race.map(r=>r.status),[201,201]);assert.deepEqual((await versionRows('documents.max_upload_bytes')).map(r=>r.version),[1,2],'simultaneous changes get consecutive versions');
+});
+
+test('P9-36 keys outside the allowlist and invalid values are refused and audited, and nothing is stored',async()=>{
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),total=async()=>Number((await owner.query('SELECT count(*) FROM public.admin_setting_versions')).rows[0].count);
+ const before=await total(),key='documents.max_concurrent_uploads';
+ for(const outside of ['auth.jwt_secret','admin.jwt_secret','database.password','documents.bucket_name','auth.password_hash','guardian.digest_window_seconds','sharing.public_origin','admin.rate_limit.max','a.b'])
+  {const r=await propose(outside,token,{value:1});assert.equal(r.status,403,outside);assert.equal(r.data.error.code,'SETTING_NOT_PERMITTED');
+   const [event]=await audit("action='admin.settings.change' AND outcome='denied' AND target_id=$1 AND actor_admin_id=$2",[outside,a.id]);assert.ok(event,'no audit row for '+outside);assert.equal(event.scope.reason,'not_in_allowlist',outside);}
+ for(const malformed of ['documents.s3_bucket','AUTH.RESET','auth..reset','x'.repeat(65),'auth.reset%20seconds','..%2F..%2Fetc%2Fpasswd'])
+  {const r=await propose(malformed,token,{value:1});assert.equal(r.status,403,malformed);}
+ const malformedRows=await audit("action='admin.settings.change' AND outcome='denied' AND scope->>'reason'='malformed_key' AND actor_admin_id=$1",[a.id]);assert.equal(malformedRows.length,6);assert.ok(malformedRows.every(r=>r.target_id===null),'malformed key text is never copied into the audit log');
+ assert.equal((await decide('auth.jwt_secret',1,token,{decision:'approved',reference:'REV-1'})).status,403);
+ const spec=settingRegistry.find(s=>s.key===key)!;
+ for(const value of ['3',3.5,null,true,[3],{n:3},spec.min-1,spec.max+1,-1,0,Number.MAX_SAFE_INTEGER,1e21,'abc'])
+  {const r=await propose(key,token,{value});assert.equal(r.status,400,JSON.stringify(value));assert.equal(r.data.error.code,'INVALID_SETTING_VALUE'===r.data.error.code?'INVALID_SETTING_VALUE':r.data.error.code);}
+ for(const body of [{},{value:3,extra:1},{val:3},[3],'3',null])assert.equal((await propose(key,token,body)).status,400,JSON.stringify(body));
+ assert.equal((await call(settingsUrl('/'+key+'/versions?x=1'),{method:'POST',token,body:{value:3}})).status,400);
+ assert.equal((await call(settingsUrl('/'+key+'/versions'),{method:'POST',token,headers:{'Content-Type':'text/plain'}})).status,415);
+ assert.equal(await total(),before,'no refused change stored a version');assert.equal(await effectiveRow(key),undefined);
+ assert.ok((await audit("action='admin.settings.change' AND outcome='failure' AND target_id=$1 AND scope->>'reason'='invalid_value'",[key])).length>=13,'invalid values are audited');
+ // idle refresh lifetime may not exceed the absolute one (checked against values in effect)
+ const approver=await adminToken((await newAdmin('config_admin')).email),ok=async(k:string,v:number)=>{const p=await propose(k,token,{value:v});assert.equal(p.status,201,k);assert.equal((await decide(k,p.data.version,approver,{decision:'approved',reference:'REV-'+v})).status,200,k);};
+ await ok('auth.refresh_idle_seconds',60000);await ok('auth.refresh_absolute_seconds',100000);
+ const tooLong=await propose('auth.refresh_idle_seconds',token,{value:200000});assert.equal(tooLong.status,400);assert.match(tooLong.data.error.message,/idle refresh lifetime/);
+ const tooShort=await propose('auth.refresh_absolute_seconds',token,{value:50000});assert.equal(tooShort.status,400);
+ assert.equal((await versionRows('auth.refresh_idle_seconds')).length,1);
+});
+
+test('P9-37 a gated setting cannot change without a recorded approval from a different admin',async()=>{
+ const proposer=await newAdmin('support_admin'),pToken=await adminToken(proposer.email),reviewer=await newAdmin('config_admin'),rToken=await adminToken(reviewer.email),key='auth.reset_seconds';
+ const pending=await propose(key,pToken,{value:600});assert.equal(pending.status,201);assert.equal(pending.data.status,'pending_approval');assert.equal(pending.data.setting.value,900,'the value in effect is unchanged');assert.equal(pending.data.setting.version,0);assert.equal(pending.data.setting.pending_versions,1);
+ assert.equal(await effectiveRow(key),undefined);assert.deepEqual((await versionRows(key)).map(r=>[r.version,r.requires_approval,r.gate]),[[1,true,'CFG-16']]);
+ const own=await decide(key,1,pToken,{decision:'approved',reference:'SELF-1'});assert.equal(own.status,403);assert.equal(own.data.error.code,'SELF_APPROVAL_FORBIDDEN');
+ assert.equal((await audit("action='admin.settings.decide' AND outcome='denied' AND actor_admin_id=$1",[proposer.id]))[0].scope.reason,'self_approval');assert.equal(await effectiveRow(key),undefined);
+ assert.equal(Number((await owner.query('SELECT count(*) FROM public.admin_setting_decisions d JOIN public.admin_setting_versions v ON v.id=d.version_id WHERE v.setting_key=$1',[key])).rows[0].count),0);
+ const versionId=(await owner.query('SELECT id FROM public.admin_setting_versions WHERE setting_key=$1 AND version=1',[key])).rows[0].id;
+ await assert.rejects(db.query("INSERT INTO public.admin_setting_decisions(version_id,decision,decided_by,reference) VALUES($1,'approved',$2,'DB-SELF')",[versionId,proposer.id]),(e:unknown)=>sqlState('42501')(e)&&/cannot be approved by the admin who proposed/.test((e as Error).message),'the database refuses self-approval even without the API');
+ await assert.rejects(owner.query("INSERT INTO public.admin_setting_decisions(version_id,decision,decided_by,reference) VALUES($1,'approved',$2,'DB-SELF')",[versionId,proposer.id]),sqlState('42501'));
+ for(const body of [{decision:'approved'},{reference:'REV-1'},{decision:'maybe',reference:'REV-1'},{decision:'approved',reference:''},{decision:'approved',reference:'<script>'},{decision:'approved',reference:'x'.repeat(121)},{decision:'approved',reference:'REV-1',approved_by:reviewer.id},{decision:'approved',reference:'REV-1',decided_by:reviewer.id},null,[]])
+  assert.equal((await decide(key,1,rToken,body)).status,400,JSON.stringify(body));
+ assert.equal((await decide(key,99,rToken,{decision:'approved',reference:'REV-1'})).status,404);assert.equal((await decide(key,0,rToken,{decision:'approved',reference:'REV-1'})).status,400);
+ const approved=await decide(key,1,rToken,{decision:'approved',reference:'SEC-REVIEW-2031-04'});assert.equal(approved.status,200);assert.equal(approved.data.setting.value,600);assert.equal(approved.data.setting.version,1);assert.deepEqual(await effectiveRow(key),{version:1,value:600});
+ const h=approved.data.setting.history[0];assert.equal(h.status,'effective');assert.deepEqual([h.decision.decision,h.decision.decided_by,h.decision.reference,h.proposed_by],['approved',reviewer.id,'SEC-REVIEW-2031-04',proposer.id]);
+ assert.deepEqual((await audit("action='admin.settings.decide' AND outcome='success' AND actor_admin_id=$1",[reviewer.id]))[0].scope,{version:1,decision:'approved',gate:'CFG-16'});
+ assert.equal((await decide(key,1,rToken,{decision:'rejected',reference:'LATE-1'})).status,409,'one decision per version');
+ await assert.rejects(owner.query("UPDATE public.admin_setting_decisions SET decision='rejected'"),sqlState('42501'));await assert.rejects(db.query('DELETE FROM public.admin_setting_decisions'),sqlState('42501'));
+ // rejection leaves the approved value in place
+ const second=await propose(key,pToken,{value:300});assert.equal(second.data.version,2);
+ const rejected=await decide(key,2,rToken,{decision:'rejected',reference:'SEC-REVIEW-REJECT'});assert.equal(rejected.status,200);
+ assert.equal((await settingState(rToken,key)).value,600);assert.deepEqual((await settingState(rToken,key)).history.map((x:any)=>[x.version,x.status]),[[2,'rejected'],[1,'effective']]);
+ // a proposer may withdraw (reject) their own pending change, but cannot approve it
+ const own3=await propose(key,pToken,{value:420});assert.equal((await decide(key,3,pToken,{decision:'rejected',reference:'WITHDRAWN'})).status,200);
+ void own3;
+ // a version that is not gated cannot take a decision
+ const free=await propose('documents.max_pdf_pages',pToken,{value:60});assert.equal(free.status,201);const notReq=await decide('documents.max_pdf_pages',free.data.version,rToken,{decision:'approved',reference:'NA-1'});assert.equal(notReq.status,409);assert.equal(notReq.data.error.code,'APPROVAL_NOT_REQUIRED');
+ // an older pending version cannot be approved once a newer one is in effect
+ const k2='sharing.otp_seconds',v1=await propose(k2,pToken,{value:300}),v2=await propose(k2,pToken,{value:200});assert.deepEqual([v1.data.version,v2.data.version],[1,2]);
+ assert.equal((await decide(k2,2,rToken,{decision:'approved',reference:'CFG-04-REVIEW'})).status,200);const stale=await decide(k2,1,rToken,{decision:'approved',reference:'CFG-04-OLD'});assert.equal(stale.status,409);assert.equal(stale.data.error.code,'VERSION_SUPERSEDED');assert.equal((await effectiveRow(k2)).version,2);
+ // two reviewers deciding at once: exactly one decision is recorded
+ const r2=await adminToken((await newAdmin('operations_admin')).email),k3='auth.verification_seconds',p3=await propose(k3,pToken,{value:3600});
+ const both=await Promise.all([decide(k3,p3.data.version,rToken,{decision:'approved',reference:'A-1'}),decide(k3,p3.data.version,r2,{decision:'approved',reference:'B-1'})]);assert.deepEqual(both.map(r=>r.status).sort(),[200,409]);
+ assert.equal(Number((await owner.query('SELECT count(*) FROM public.admin_setting_decisions d JOIN public.admin_setting_versions v ON v.id=d.version_id WHERE v.setting_key=$1',[k3])).rows[0].count),1);
+ const chain=(await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0];assert.equal(chain.first_invalid,null);
+});
+
+test('P9-38 serious-rule versions are append-only records that an admin can create and view but never mark clinically approved',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),definition={field:'Marker One',units:'units/L',operator:'between',bounds:[2,9.5],context:{age:'adult'}};
+ const guardianRulesBefore=Number((await owner.query('SELECT count(*) FROM public.guardian_serious_rules')).rows[0].count);
+ const v1=await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_ALPHA',definition}});assert.equal(v1.status,201);
+ const rule=v1.data.rule;assert.deepEqual(Object.keys(rule).sort(),['clinical_approval','created_at','created_by','definition','definition_sha256','id','rule_id','version']);
+ assert.equal(rule.version,1);assert.equal(rule.clinical_approval,'not_clinically_approved');assert.equal(rule.created_by,a.id);assert.deepEqual(rule.definition,definition);
+ assert.equal(rule.definition_sha256,(await owner.query("SELECT encode(sha256(convert_to($1::jsonb::text,'UTF8')),'hex') AS h",[JSON.stringify(definition)])).rows[0].h,'the digest is computed by the database');
+ const v2=await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_ALPHA',definition:{...definition,bounds:[3,9]}}});assert.equal(v2.data.rule.version,2);assert.notEqual(v2.data.rule.definition_sha256,rule.definition_sha256);
+ const other=await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_BETA',definition:{field:'Marker Two',units:'%',operator:'gt',bounds:[7],context:{}}}});assert.equal(other.data.rule.version,1);
+ const race=await Promise.all([1,2,3].map(n=>call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_RACE',definition:{...definition,bounds:[n,n+5]}}})));assert.deepEqual(race.map(r=>r.status),[201,201,201]);assert.deepEqual(race.map(r=>r.data.rule.version).sort(),[1,2,3]);
+ const alpha=await call(rulesUrl('?rule_id=RULE_ALPHA'),{token});assert.deepEqual(alpha.data.rules.map((r:any)=>r.version),[2,1],'both versions are kept, newest first');
+ const paged=await pageAll(rulesUrl(),token,'rules',2);assert.ok(paged.pages>=3);assert.equal(new Set(paged.seen.map(r=>r.id)).size,paged.seen.length);
+ assert.equal((await call(rulesUrl('/'+rule.id),{token})).data.rule.rule_id,'RULE_ALPHA');assert.equal((await call(rulesUrl('/'+randomUUID()),{token})).status,404);
+ for(const bad of ['?rule_id=lower','?x=1','?limit=0','?rule_id=RULE_ALPHA&rule_id=RULE_BETA'])assert.equal((await call(rulesUrl(bad),{token})).status,400,bad);
+ const stored=async()=>Number((await owner.query('SELECT count(*) FROM public.admin_serious_rule_versions')).rows[0].count),count=await stored();
+ const approvalAttempts:Array<Record<string,unknown>>=[{approved:true},{clinical_approval:'clinically_approved'},{clinically_approved:true},{approval_status:'clinically_approved'},{approval_metadata:{qualified_approver:'x',approval_reference:'y'}},{status:'approved'},{validated:true},{reviewed_by:a.id},{qualified_approver:'Dr X'},{certified:true},{clinical_status:'approved'},{signed_off:true}];
+ for(const extra of approvalAttempts){const r=await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_GAMMA',definition,...extra}});assert.equal(r.status,403,JSON.stringify(extra));assert.equal(r.data.error.code,'CLINICAL_APPROVAL_FORBIDDEN');}
+ for(const nested of [{approval:{status:'clinically_approved'}},{clinical_approval:'approved'},{approved:true},{status:'x'}]){const r=await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_GAMMA',definition:{...definition,...nested}}});assert.equal(r.status,403,JSON.stringify(nested));}
+ assert.equal(await stored(),count,'no attempt stored a rule');assert.equal((await audit("action='admin.rules.create' AND outcome='denied' AND actor_admin_id=$1",[a.id])).length,approvalAttempts.length+4);
+ assert.ok((await audit("action='admin.rules.create' AND outcome='denied'")).every(r=>r.scope.reason==='clinical_approval_not_permitted'));
+ const invalidRules:unknown[]=[{rule_id:'lower',definition},{rule_id:'RULE_X',definition:{...definition,operator:'near'}},{rule_id:'RULE_X',definition:{...definition,bounds:[9,2]}},{rule_id:'RULE_X',definition:{...definition,bounds:[1]}},{rule_id:'RULE_X',definition:{...definition,operator:'gt',bounds:[1,2]}},
+  {rule_id:'RULE_X',definition:{...definition,bounds:[1e9,2e9]}},{rule_id:'RULE_X',definition:{...definition,units:'<b>'}},{rule_id:'RULE_X',definition:{...definition,field:''}},{rule_id:'RULE_X',definition:{...definition,context:{a:1}}},{rule_id:'RULE_X',definition:{...definition,context:Object.fromEntries(Array.from({length:6},(_,i)=>['k'+i,'v']))}},
+  {rule_id:'RULE_X',definition:{field:'F',units:'u'}},{rule_id:'RULE_X',definition:{...definition,note:'free text'}},{rule_id:'RULE_X'},{definition},{rule_id:'RULE_X',definition:'x'},[],null];
+ for(const body of invalidRules)assert.equal((await call(rulesUrl(),{method:'POST',token,body})).status,400,JSON.stringify(body));assert.equal(await stored(),count);
+ await assert.rejects(owner.query("INSERT INTO public.admin_serious_rule_versions(rule_id,version,definition,created_by,clinical_approval) VALUES('RULE_DELTA',1,'{}'::jsonb,$1,'clinically_approved')",[a.id]),sqlState('23514'),'no value but not_clinically_approved is representable');
+ await assert.rejects(db.query("INSERT INTO public.admin_serious_rule_versions(rule_id,version,definition,created_by,clinical_approval) VALUES('RULE_DELTA',1,'{}'::jsonb,$1,'not_clinically_approved')",[a.id]),sqlState('42501'),'the API role cannot even name the column');
+ await assert.rejects(db.query("INSERT INTO public.admin_serious_rule_versions(rule_id,version,definition,created_by,definition_sha256) VALUES('RULE_DELTA',1,'{}'::jsonb,$1,$2)",[a.id,'0'.repeat(64)]),sqlState('42501'));
+ for(const sql of ["UPDATE public.admin_serious_rule_versions SET definition='{}'::jsonb","DELETE FROM public.admin_serious_rule_versions","TRUNCATE public.admin_serious_rule_versions"]){await assert.rejects(db.query(sql),sqlState('42501'));await assert.rejects(owner.query(sql),(e:unknown)=>sqlState('42501')(e)&&/append-only/.test((e as Error).message));}
+ assert.equal(Number((await owner.query('SELECT count(*) FROM public.guardian_serious_rules')).rows[0].count),guardianRulesBefore,'editing never reaches the rules the guardian service evaluates');
+ assert.deepEqual((await owner.query("SELECT DISTINCT clinical_approval FROM public.admin_serious_rule_versions")).rows.map(r=>r.clinical_approval),['not_clinically_approved']);
+ assert.equal((await audit("action='admin.rules.create' AND outcome='success' AND actor_admin_id=$1",[a.id])).length,await stored());
+ assert.deepEqual((await audit("action='admin.rules.create' AND outcome='success' AND target_id=$1",[rule.id]))[0].scope,{rule_id:'RULE_ALPHA',version:1,clinical_approval:'not_clinically_approved'});
+ await owner.query("ALTER TABLE public.admin_audit_events ADD CONSTRAINT p9_block_rule CHECK(action<>'admin.rules.create') NOT VALID");
+ try{assert.equal((await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_ATOMIC',definition}})).status,500);}finally{await owner.query('ALTER TABLE public.admin_audit_events DROP CONSTRAINT p9_block_rule');}
+ assert.equal(Number((await owner.query("SELECT count(*) FROM public.admin_serious_rule_versions WHERE rule_id='RULE_ATOMIC'")).rows[0].count),0,'a failed audit write rolls the rule back');
+});
+
+test('P9-39 configuration endpoints reject non-admin callers, enforce each permission, and no response or audit row contains a secret',async()=>{
+ const patient=await livePatient(),doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex'),someId=randomUUID();
+ const routes:Array<[string,string,unknown]>=[['GET',settingsUrl(),undefined],['GET',settingsUrl('/auth.reset_seconds'),undefined],['POST',settingsUrl('/documents.max_pdf_pages/versions'),{value:10}],['POST',settingsUrl('/auth.reset_seconds/versions/1/decision'),{decision:'approved',reference:'X-1'}],
+  ['GET',rulesUrl(),undefined],['GET',rulesUrl('/'+someId),undefined],['POST',rulesUrl(),{rule_id:'RULE_ZZZ',definition:{field:'F',units:'u',operator:'gt',bounds:[1],context:{}}}]];
+ const settingsBefore=Number((await owner.query('SELECT count(*) FROM public.admin_setting_versions')).rows[0].count),rulesBefore=Number((await owner.query('SELECT count(*) FROM public.admin_serious_rule_versions')).rows[0].count),auditBefore=await auditCount();
+ const forgedKey=await forge(patientConfig.jwtKey,adminConfig.jwtAudience,randomUUID(),randomUUID());
+ for(const [method,path,body] of routes)for(const token of [undefined,patient.access,patient.refresh,doctor,forgedKey,'not-a-token'])assert.equal((await call(path,{method,token,body})).status,401,method+' '+path);
+ assert.equal(await auditCount(),auditBefore,'rejected callers leave no audit rows');assert.equal(Number((await owner.query('SELECT count(*) FROM public.admin_setting_versions')).rows[0].count),settingsBefore);assert.equal(Number((await owner.query('SELECT count(*) FROM public.admin_serious_rule_versions')).rows[0].count),rulesBefore);
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email);
+ const map:Record<string,Array<[string,string,unknown]>>={'admin.settings.read':routes.slice(0,2),'admin.settings.change':[routes[2]],'admin.settings.approve':[routes[3]],'admin.rules.read':routes.slice(4,6),'admin.rules.create':[routes[6]]};
+ for(const [permission,targets] of Object.entries(map)){
+  await owner.query("DELETE FROM public.admin_role_permissions WHERE role_name='support_admin' AND permission=$1",[permission]);
+  try{
+   for(const [method,path,body] of targets)assert.equal((await call(path,{method,token,body})).status,403,permission+' '+path);
+   assert.equal((await audit("action=$1 AND outcome='denied' AND actor_admin_id=$2",[permission,a.id])).length,targets.length,permission);
+  }finally{await owner.query("INSERT INTO public.admin_role_permissions(role_name,permission) VALUES('support_admin',$1)",[permission]);}
+ }
+ for(const method of ['PUT','PATCH','DELETE'])for(const path of [settingsUrl('/documents.max_pdf_pages'),settingsUrl('/documents.max_pdf_pages/versions/1'),rulesUrl('/'+someId),rulesUrl()])assert.equal((await call(path,{method,token,body:{value:1}})).status,404,method+' '+path);
+ // exercise every endpoint, then look for secrets in every response and audit row
+ const approver=await adminToken((await newAdmin('config_admin')).email),wire:string[]=[];
+ const keep=(r:{data:unknown})=>{wire.push(JSON.stringify(r.data));return r;};
+ keep(await call(settingsUrl(),{token}));keep(await call(settingsUrl('/auth.reset_seconds'),{token}));keep(await propose('auth.access_token_seconds',token,{value:600}));keep(await propose('auth.jwt_secret',token,{value:1}));keep(await propose('documents.max_pdf_pages',token,{value:'x'}));
+ keep(await decide('auth.access_token_seconds',1,token,{decision:'approved',reference:'SELF'}));keep(await decide('auth.access_token_seconds',1,approver,{decision:'approved',reference:'SEC-OK-1'}));
+ keep(await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_LEAK',definition:{field:'F',units:'u',operator:'gt',bounds:[1],context:{}}}}));keep(await call(rulesUrl(),{method:'POST',token,body:{rule_id:'RULE_LEAK',definition:{field:'F',units:'u',operator:'gt',bounds:[1],context:{}},approved:true}}));keep(await call(rulesUrl(),{token}));
+ const text=wire.join('\n'),rows=JSON.stringify(await audit('true')),secrets=[process.env.JWT_SECRET,process.env.ADMIN_JWT_SECRET,process.env.DB_PASSWORD,process.env.MIGRATION_DB_PASSWORD,process.env.AWS_SECRET_ACCESS_KEY,process.env.AWS_ACCESS_KEY_ID,Buffer.from(adminConfig.jwtKey).toString('hex'),Buffer.from(patientConfig.jwtKey).toString('hex'),adminPassword,patientPassword,token,approver,patient.access,patient.refresh].filter((v):v is string=>!!v&&v.length>=8);
+ assert.ok(secrets.length>=8);for(const secret of secrets){assert.ok(!text.includes(secret),'a response contains a secret');assert.ok(!rows.includes(secret),'an audit row contains a secret');}
+ for(const word of ['"password"','$argon2','"access_token"','"refresh_token"','token_hash','JWT_','DB_PASSWORD'])assert.ok(!text.includes(word),'a response mentions '+word);
+ const keys=new Set<string>();(function walk(value:unknown){if(Array.isArray(value))value.forEach(walk);else if(value&&typeof value==='object')for(const [k,v] of Object.entries(value)){keys.add(k);walk(v);}})(wire.map(w=>JSON.parse(w)));
+ const allowed=new Set(['success','settings','setting','key','unit','min','max','default','source','gate','cfg','requirement','value','version','pending_versions','history','status','requires_approval','proposed_by','proposed_at','decision','decided_by','reference','decided_at','rules','rule','id','rule_id','definition','field','units','operator','bounds','context','definition_sha256','clinical_approval','created_by','created_at','next_cursor','error','code','message','age']);
+ for(const key of keys)assert.ok(allowed.has(key),'unexpected response field '+key);
+ const code=(await Promise.all(['settings.ts','rules.ts','config-routes.ts'].map(f=>readFile(new URL('../admin/'+f,import.meta.url),'utf8')))).join('\n').replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
+ for(const word of ['process.env','JWT_SECRET','DB_PASSWORD','password_hash','guardian_serious_rules','approval_status','approval_metadata'])assert.ok(!code.includes(word),'configuration code must not mention '+word);
+ assert.ok(!/(?<!not_)clinically_approved/.test(code),'configuration code never writes a clinical approval value');
 });
