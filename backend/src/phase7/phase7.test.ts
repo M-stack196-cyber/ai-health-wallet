@@ -33,6 +33,9 @@ import {guardianNotificationConfig,notificationDigest,type GuardianNotificationC
 import {demoRule,evaluateDemoRule,type SeriousRule} from '../guardian-notifications/rules.js';
 import {syntheticGuardianEmailProvider} from '../guardian-notifications/provider.js';
 import {createGuardianNotificationRoutes} from '../guardian-notifications/routes.js';
+import {createAdminRoutes} from '../admin/routes.js';
+import {createAdminAccount} from '../admin/bootstrap.js';
+import type {AdminAuthenticationConfig} from '../admin/config.js';
 const socket=process.env.IDENTITY_TEST_SOCKET;if(!socket||!/^\/tmp\/hw-phase1-pg-[a-zA-Z0-9]+$/.test(socket))throw Error('Test-owned socket required.');
 const conn={host:socket,port:55481,database:'hw_phase7'},admin=new pg.Pool({...conn,user:userInfo().username}),db=new pg.Pool({...conn,user:'health_wallet_app',max:16});
 const auth={jwtKey:randomBytes(32),jwtAlgorithm:'HS256' as const,jwtLifetimeSeconds:900,jwtIssuer:'phase7-synthetic',jwtAudience:'patient',argonMemoryKiB:19456,argonTimeCost:2,argonParallelism:1,maxHashConcurrency:4,rateLimitWindowMs:900000,rateLimitMax:10000};
@@ -47,6 +50,7 @@ const verification=createSecurityEmailDelivery(db,{mode:'sandbox',endpoint:'http
 const guardians=createGuardianRepository(db,policy,verification.mailer);
 const medical=new Map<string,{message:ProviderMessage;reference:string}>(),attempts:ProviderMessage[]=[];
 let failures:('transient'|'permanent'|'accepted_lost'|'invalid_receipt')[]=[],handoffHook:((id:string)=>Promise<void>)|undefined,providerPause:(()=>Promise<void>)|undefined;
+const adminKey=randomBytes(32),adminConfig:AdminAuthenticationConfig={jwtKey:new Uint8Array(adminKey),jwtAlgorithm:'HS256',jwtLifetimeSeconds:900,jwtIssuer:'phase7-admin',jwtAudience:'phase7-admin-audience',rateLimitMax:100,rateWindowSeconds:900};
 let provider:SyntheticGuardianProvider,fixtureHash:string,server:ReturnType<ReturnType<typeof express>['listen']>,sandbox:ReturnType<typeof createServer>,base:string;
 before(async()=>{
  assert.equal((await stat(socket!)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
@@ -61,7 +65,7 @@ before(async()=>{
  }
  sandbox=createServer(async(req,res)=>{try{assert.equal(req.url,'/guardian-medical-email');let size=0;const chunks:Buffer[]=[];for await(const b of req){size+=b.length;if(size>131072){res.writeHead(413).end();return;}chunks.push(b);}const m=JSON.parse(Buffer.concat(chunks).toString()) as ProviderMessage;assert.equal(m.idempotencyKey,req.headers['idempotency-key']);assert.match(m.to,/@[^\s]+\.invalid$/);attempts.push(m);const fail=failures.shift();if(fail==='transient'||fail==='permanent'){res.writeHead(fail==='transient'?503:422).end();return;}let item=medical.get(m.idempotencyKey);if(item){assert.equal(notificationDigest(JSON.stringify(item.message)),notificationDigest(JSON.stringify(m)));}else{item={message:m,reference:'synthetic-medical-'+randomUUID()};medical.set(m.idempotencyKey,item);}await providerPause?.();if(fail==='accepted_lost'){res.writeHead(503).end();return;}res.writeHead(202,{'Content-Type':'application/json'}).end(JSON.stringify(fail==='invalid_receipt'?{}:{message_id:item.reference}));}catch{res.writeHead(422).end();}});
  sandbox.listen(0,'127.0.0.1');await once(sandbox,'listening');const a=sandbox.address();assert.ok(a&&typeof a==='object');provider=syntheticGuardianEmailProvider({mode:'sandbox',endpoint:'http://127.0.0.1:'+a.port+'/guardian-medical-email',from:'guardian-demo@example.invalid',encryptionKey:randomBytes(32),timeoutMs:1500,retrySeconds:1,maxAttempts:3});
- const app=express();app.use(express.json());const identity=createPatientRoutes(db,auth,{mailer:verification.mailer,policy});app.use('/api/v1/auth',identity.auth);app.use('/api/v1/patients',identity.profile);app.use('/api/v1',createGuardianRoutes(db,auth,{mailer:verification.mailer,policy}));app.use('/api/v1',createGuardianNotificationRoutes(db,auth,documentConfig,storage));app.use('/api/v1/documents',createDocumentRoutes(db,auth,documentConfig,storage));app.use(errorHandler);server=app.listen(0,'127.0.0.1');await once(server,'listening');const b=server.address();assert.ok(b&&typeof b==='object');base='http://127.0.0.1:'+b.port+'/api/v1';
+ const app=express();app.use(express.json());const identity=createPatientRoutes(db,auth,{mailer:verification.mailer,policy});app.use('/api/v1/auth',identity.auth);app.use('/api/v1/patients',identity.profile);app.use('/api/v1',createGuardianRoutes(db,auth,{mailer:verification.mailer,policy}));app.use('/api/v1',createGuardianNotificationRoutes(db,auth,documentConfig,storage));app.use('/api/v1/documents',createDocumentRoutes(db,auth,documentConfig,storage));app.use('/api/v1/admin',createAdminRoutes(db,auth,adminConfig,{health:{services:[]}}));app.use(errorHandler);server=app.listen(0,'127.0.0.1');await once(server,'listening');const b=server.address();assert.ok(b&&typeof b==='object');base='http://127.0.0.1:'+b.port+'/api/v1';
 });
 after(async()=>{for(const s of [server,sandbox])if(s){s.closeAllConnections();await new Promise<void>(r=>s.close(()=>r()));}await db.end();await admin.end();});
 const worker=(config:GuardianNotificationConfig=settings,rules:readonly SeriousRule[]=[demoRule])=>createGuardianNotificationService(db,config,provider,rules,{beforeHandoff:async id=>{await handoffHook?.(id);}});
@@ -183,4 +187,29 @@ test('P7-19 inactive rule versions and withdrawn demo-rule status cannot authori
  const v2={...demoRule,version:'2',bounds:[12]};await worker(settings,[v2]).scan(u.id);assert.equal((await jobRows(u.id)).length,0);assert.equal(sentTo(g.email).length,0);
  const y=await user(),yg=await guardian(y);await document(y,'Glucose: 90 mg/dL\nDEMO_MARKER: 11 demo_units');await worker().scan(y.id);
  try{await admin.query("UPDATE guardian_serious_rules SET approval_status='pending_review' WHERE id=$1 AND version=$2",[demoRule.id,demoRule.version]);assert.deepEqual(await worker().drain(y.id),['cancelled']);assert.equal(sentTo(yg.email).length,0);}finally{await admin.query("UPDATE guardian_serious_rules SET approval_status='non_clinical_demo' WHERE id=$1 AND version=$2",[demoRule.id,demoRule.version]);}
+});
+
+test('P7-20 an admin suspending the patient cuts off guardian report links and notifications, and reactivation revives no old link',async()=>{
+ const adminPassword='Synthetic admin passphrase 731!',email=randomUUID()+'@example.invalid';
+ await createAdminAccount(admin,p=>createPasswordService(auth).hash(p),{email,fullName:'Synthetic Admin',role:'support_admin',password:adminPassword});
+ const login=await fetch(base+'/admin/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:adminPassword})});assert.equal(login.status,200);const adminToken=((await login.json()) as {access_token:string}).access_token;
+ const act=(path:string)=>fetch(base+'/admin/patients/'+path,{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
+ const eligible=async(patient:string)=>Number((await admin.query('SELECT count(*) FROM guardian_communication_eligibility WHERE patient_id=$1',[patient])).rows[0].count);
+ const {u,g}=await ready();assert.deepEqual(await worker().drain(u.id),['delivered']);const ref=reference(sentTo(g.email)[0].message);assert.ok(ref);
+ assert.equal((await request('/guardian-notifications/reports',undefined,{token:ref})).status,200,'the emailed report link works for an active patient');
+ assert.equal(await eligible(u.id),1);assert.equal((await request('/patients/me/guardian-notifications',u.token)).status,200);
+ // suspension by an admin
+ const suspended=await act(u.id+'/suspend');assert.equal(suspended.status,200);
+ assert.equal((await request('/guardian-notifications/reports',undefined,{token:ref})).status,403,'the emailed report link stops working');
+ assert.equal(await eligible(u.id),0,'the guardian is not eligible for any message while the patient is suspended');
+ assert.equal((await request('/patients/me/guardian-notifications',u.token)).status,401);
+ await worker().scan(u.id);await due(u.id);const sentBefore=sentTo(g.email).length;assert.deepEqual(await worker().drain(u.id),[],'nothing is dispatched to the guardian while suspended');assert.equal(sentTo(g.email).length,sentBefore);
+ // reactivation
+ assert.equal((await act(u.id+'/reactivate')).status,200);
+ assert.equal((await request('/guardian-notifications/reports',undefined,{token:ref})).status,403,'the link issued before the suspension stays dead after reactivation');
+ assert.equal((await request('/patients/me/guardian-notifications',u.token)).status,401,'the old patient token stays dead');
+ // the relationship is the patient\'s own consent, which an admin never touches, so it is eligible again; only the old link, session and tokens are gone
+ assert.equal((await admin.query('SELECT status FROM guardian_relationships WHERE id=$1',[g.id])).rows[0].status,'ACTIVE');assert.equal(await eligible(u.id),1);
+ const fresh=await security.login(u.id,fixtureHash);assert.ok(fresh);assert.equal((await request('/patients/me/guardian-notifications',await tokens.issue(u.id,fresh.sessionId))).status,200);
+ assert.equal((await request('/guardian-notifications/reports',undefined,{token:ref})).status,403,'signing in again does not revive the old link');
 });

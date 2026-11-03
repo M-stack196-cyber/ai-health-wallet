@@ -21,6 +21,15 @@ import {settingRegistry} from '../admin/settings.js';
 import {aiServicesFromEnv,type HealthOptions,type ServiceProbe} from '../admin/health.js';
 import {safeScope} from '../admin/audit-viewer.js';
 import {createServer,type Server,type IncomingMessage} from 'node:http';
+import {createGuardianNotificationRoutes} from '../guardian-notifications/routes.js';
+import {createSharingRoutes} from '../sharing/routes.js';
+import {createRagRoutes} from '../rag/routes.js';
+import {createSummaryRoutes} from '../summaries/routes.js';
+import {createProcessingRoutes} from '../processing/api.js';
+import {createDocumentRoutes} from '../documents/routes.js';
+import {createTimelineRoutes} from '../timeline/routes.js';
+import {createGuardianRoutes} from '../guardians/routes.js';
+import type {RagDatabase} from '../rag/repository.js';
 import {createHash} from 'node:crypto';
 import {getDocumentConfig} from '../config/documents.js';
 import {getAuthenticationConfig} from '../config/auth.js';
@@ -771,7 +780,7 @@ test('P9-31 no medical field or secret can leak into any status response or audi
  routes.push(statusUrl('guardians?limit=50'),statusUrl('shares?limit=50'),statusUrl('deliveries?limit=50'),statusUrl('shares/'+w.grants.active_link),statusUrl('guardians/'+w.guardians.pending));
  const wire:string[]=[];for(const path of routes){const r=await call(path,{token});assert.equal(r.status,200,path);wire.push(JSON.stringify(r.data));}
  for(const path of [statusUrl('guardians/'+randomUUID()),statusUrl('shares/'+randomUUID())])wire.push(JSON.stringify((await call(path,{token})).data));
- const text=wire.join('\n'),rows=JSON.stringify(await audit('true'));
+ const text=wire.join('\n'),rows=JSON.stringify((await audit('true')).map(({event_hash:_a,prev_hash:_b,id:_c,request_id:_d,...row})=>row));
  const forbidden=[SENTINEL,SENTINEL.toLowerCase(),DOCTOR_NAME,'Dr ',GUARDIAN_EMAIL_TAG,DOCTOR_EMAIL_TAG,'example.invalid/token','482913','one-time code','magic link','serious finding',...Object.values(SECRETS),'9vb29vb29vb2',
   'token_digest','token_hash','doctor_email','"otp"','otp_code','ciphertext','nonce','payload','provider_reference','recipient_hash','content_sha256','policy_sha256','invitation_id','claim_id','definition_sha256','"kind"','serious_alert','routine_digest','"email"','"password"','password_hash','claim_expires_at','verifier','summary_text','document_id','document_name','filename'];
  for(const word of forbidden){assert.ok(!text.includes(word),'a response leaks '+word);assert.ok(!rows.includes(word),'an audit row leaks '+word);}
@@ -1229,4 +1238,204 @@ test('P9-45 health and audit review reject non-admin and forged callers, enforce
  assert.ok(!/(INSERT|UPDATE|DELETE)\s/i.test(code.replace(/readdir|\.update\(/g,'')),'health and audit review code contains no write statements');
  for(const word of ['medical_documents','extracted_medical_text','ai_report_summaries','public.patients','password_hash','DB_PASSWORD','JWT_SECRET','connectionString','DATABASE_URL'])assert.ok(!code.includes(word),'must not mention '+word);
  assert.equal((await db.query<{first_invalid:string|null}>('SELECT * FROM public.verify_admin_audit_chain()',[])).rows[0].first_invalid,null);
+});
+
+// ---- Phase 7: separation guarantees (M13-009, M13-021 and the default-deny half of M13-020) ----
+interface RouteRef{method:string;path:string}
+type AnyRouter={stack:Array<{route?:{path:string;methods:Record<string,boolean>};handle?:AnyRouter}>};
+const docConfig={maxFileBytes:4096,maxConcurrentUploads:2,uploadTimeoutMs:3000,validationTimeoutMs:1000,maxImagePixels:1000,maxPdfPages:1,downloadExpirySeconds:60,uploadRateLimitMax:1000,storage:null};
+const otpMessages:Array<{to:string;token:string}>=[];
+const shareMailer={async send(){},async enqueue(message:{to:string;token:string}){otpMessages.push({to:message.to,token:message.token});}};
+const sharingTestConfig=sharingConfig({SHARING_PUBLIC_ORIGIN:'https://doctor.example.invalid',SHARING_RESEND_SECONDS:'1'})!;
+let nestedMounts=new Map<object,string>();
+/** Builds every router the production app mounts, using the mount prefixes parsed from app.ts, and records nested router paths. */
+async function productionRouters(){
+ const source=await readFile(new URL('../app.ts',import.meta.url),'utf8'),mounts=[...source.matchAll(/app\.use\(\s*["']([^"']+)["']\s*,\s*(?:noStore\s*,\s*)?(routes\.\w+|documents|create\w+Routes)\b/g)].map(m=>({prefix:m[1],name:m[2]==='documents'?'createDocumentRoutes':m[2]}));
+ const patientRoutes=createPatientRoutes(db,patientConfig,{mailer:{async send(){}},policy:{...getSecurityPolicy(),challengeRateMax:10000}});
+ const factories:Record<string,()=>unknown>={
+  'routes.auth':()=>patientRoutes.auth,'routes.profile':()=>patientRoutes.profile,createAdminRoutes:()=>createAdminRoutes(db,patientConfig,adminConfig,{health:{services:[]}}),
+  createGuardianNotificationRoutes:()=>createGuardianNotificationRoutes(db,patientConfig,docConfig as never,null),
+  createSharingRoutes:()=>createSharingRoutes(db as unknown as RagDatabase,patientConfig,docConfig as never,null,{config:sharingTestConfig,mailer:shareMailer}),
+  createRagRoutes:()=>createRagRoutes(db as unknown as RagDatabase,patientConfig),createSummaryRoutes:()=>createSummaryRoutes(db,patientConfig),createProcessingRoutes:()=>createProcessingRoutes(db,patientConfig),
+  createDocumentRoutes:()=>createDocumentRoutes(db,patientConfig,docConfig as never,null),createTimelineRoutes:()=>createTimelineRoutes(db,patientConfig),createGuardianRoutes:()=>createGuardianRoutes(db,patientConfig,{mailer:shareMailer}),
+ };
+ const parsed=new Set(mounts.map(m=>m.name));
+ for(const name of parsed)assert.ok(name in factories,'app.ts mounts '+name+', which this test does not know how to build: review its separation from admin and add it');
+ for(const name of Object.keys(factories))assert.ok(parsed.has(name),'this test builds '+name+' but app.ts no longer mounts it');
+ let proto=Object.getPrototypeOf(express.Router());while(proto&&!Object.hasOwn(proto,'use'))proto=Object.getPrototypeOf(proto);
+ const original=proto.use;nestedMounts=new Map();
+ proto.use=function(this:unknown,...args:unknown[]){if(typeof args[0]==='string')for(const handler of args.slice(1))if(handler&&typeof handler==='function'&&'stack' in handler)nestedMounts.set(handler,args[0]);return original.apply(this,args);};
+ try{return mounts.map(m=>({...m,router:factories[m.name]() as AnyRouter}));}finally{proto.use=original;}
+}
+function routesOf(router:AnyRouter,prefix:string,out:RouteRef[]=[]):RouteRef[]{
+ for(const layer of router.stack){
+  if(layer.route)for(const method of Object.keys(layer.route.methods))out.push({method:method.toUpperCase(),path:prefix+layer.route.path});
+  else if(layer.handle?.stack)routesOf(layer.handle,prefix+(nestedMounts.get(layer.handle)??''),out);
+ }
+ return out;
+}
+const concrete=(path:string)=>path.replace(/:([A-Za-z]+)/g,(_m,name:string)=>/operation/i.test(name)?'query':randomUUID());
+async function bare(base:string,route:RouteRef,token?:string,withoutBody=false){
+ const bodiless=route.method==='GET'||route.method==='HEAD'||withoutBody;
+ const response=await fetch(base+concrete(route.path),{method:route.method,headers:{...(bodiless?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:bodiless?undefined:'{}',signal:AbortSignal.timeout(15000)});
+ const text=await response.text();return {status:response.status,text:text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,'<id>')};
+}
+const ADMIN_ROUTES=[
+ 'GET /api/v1/admin/audit','GET /api/v1/admin/health','GET /api/v1/admin/me','GET /api/v1/admin/patients','GET /api/v1/admin/patients/:id','GET /api/v1/admin/processing/jobs','GET /api/v1/admin/processing/jobs/:documentId','GET /api/v1/admin/processing/summary',
+ 'GET /api/v1/admin/rules','GET /api/v1/admin/rules/:id','GET /api/v1/admin/settings','GET /api/v1/admin/settings/:key','GET /api/v1/admin/status/deliveries','GET /api/v1/admin/status/deliveries/summary','GET /api/v1/admin/status/guardians','GET /api/v1/admin/status/guardians/:id',
+ 'GET /api/v1/admin/status/guardians/summary','GET /api/v1/admin/status/shares','GET /api/v1/admin/status/shares/:id','GET /api/v1/admin/status/shares/summary',
+ 'POST /api/v1/admin/auth/login','POST /api/v1/admin/patients/:id/reactivate','POST /api/v1/admin/patients/:id/suspend','POST /api/v1/admin/processing/jobs/:documentId/retry','POST /api/v1/admin/rules','POST /api/v1/admin/settings/:key/versions','POST /api/v1/admin/settings/:key/versions/:version/decision'];
+
+test('P9-46 an admin token, even with every permission, gets nothing from any patient, record, summary, timeline, RAG, doctor-share or doctor-session route',async()=>{
+ const a=await newAdmin('config_admin'),token=await adminToken(a.email),mounted=await productionRouters(),routes:RouteRef[]=[];
+ for(const m of mounted)if(m.name!=='createAdminRoutes')routesOf(m.router,m.prefix,routes);
+ const keys=routes.map(r=>r.method+' '+r.path);assert.deepEqual(keys.filter((k,i)=>keys.indexOf(k)!==i),[],'each route is registered once');assert.ok(routes.length>=50,'the production routes were enumerated ('+routes.length+')');
+ for(const word of ['/documents','/timeline','/summary','/rag','/doctor/records','/sharing/grants','/patients/me','/guardian-notifications','/guardian-invitations'])assert.ok(keys.some(k=>k.includes(word)),'the inventory covers '+word);
+ const app=express();app.use(express.json());for(const m of mounted)app.use(m.prefix,m.router as never);app.use(errorHandler);
+ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const address=server.address();assert.ok(address&&typeof address==='object');const root='http://127.0.0.1:'+address.port;
+ const results:Array<{route:string;admin:number;anonymous:number}>=[];
+ try{
+  for(const route of routes){
+   const withAdmin=await bare(root,route,token),anonymous=await bare(root,route);
+   assert.equal(withAdmin.status,anonymous.status,route.method+' '+route.path+': an admin token changes the outcome');assert.equal(withAdmin.text,anonymous.text,route.method+' '+route.path+': an admin token changes the response');
+   assert.ok(![500,502,504].includes(withAdmin.status),route.method+' '+route.path+' failed with '+withAdmin.status);assert.ok(withAdmin.status<200||withAdmin.status>299,route.method+' '+route.path+' answered an admin token with success');
+   assert.ok(!withAdmin.text.includes(a.id)&&!withAdmin.text.includes(a.email),'the admin identity is never echoed');
+   results.push({route:route.method+' '+route.path,admin:withAdmin.status,anonymous:anonymous.status});
+  }
+  const guarded=results.filter(r=>r.admin===401||r.admin===403);assert.ok(guarded.length>=40,'most routes demand their own credential ('+guarded.length+' of '+results.length+')');
+  for(const needle of ['/doctor/records','/doctor/timeline','/rag/queries','/documents','/timeline','/sharing/grants']){const rows=results.filter(r=>r.route.includes(needle));assert.ok(rows.length>0&&rows.every(r=>r.admin===401||r.admin===403),'every '+needle+' route refuses an admin token');}
+  // the same tokens in the forms the other actors use
+  const doctorForm='ds1.'+a.id+'.'+randomBytes(32).toString('hex');
+  for(const route of routes.filter(r=>r.path.startsWith('/api/v1/doctor/')).slice(0,6))assert.ok([401,403].includes((await bare(root,route,doctorForm)).status));
+ } finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+test('P9-47 the admin routes are a fixed reviewed list: no medical path, no record-writing verb, and every one demands an admin credential',async()=>{
+ const mounted=await productionRouters(),admin=mounted.find(m=>m.name==='createAdminRoutes')!,routes=routesOf(admin.router,admin.prefix),keys=routes.map(r=>r.method+' '+r.path).sort();
+ assert.deepEqual(keys,[...ADMIN_ROUTES].sort(),'a new admin route needs a separation review before this list is changed');
+ const medical=/(^|\/)(documents?|records?|files?|downloads?|views?|summaries|timeline|rag|extraction|extractions|ocr|text|content|chunks?|doctor|doctors|history-summary|originals?|uploads?|reports?)(\/|$)/;
+ for(const key of keys)assert.ok(!medical.test(key.split(' ')[1].replace('/api/v1/admin','')),key+' names medical content');
+ assert.deepEqual(keys.filter(k=>!k.startsWith('GET ')),[...ADMIN_ROUTES].filter(k=>k.startsWith('POST')).sort(),'no PUT, PATCH or DELETE exists, and every POST is one of the reviewed operational actions');
+ const nonMedicalWriters=['/auth/login','/patients/:id/suspend','/patients/:id/reactivate','/processing/jobs/:documentId/retry','/rules','/settings/:key/versions','/settings/:key/versions/:version/decision'].map(p=>'POST /api/v1/admin'+p).sort();assert.deepEqual(keys.filter(k=>k.startsWith('POST')),nonMedicalWriters);
+ // every admin route refuses the other actors' credentials (login is a public entry point and answers them exactly as it answers anyone)
+ const patient=await livePatient(),doctor='ds1.'+randomUUID()+'.'+randomBytes(32).toString('hex'),mount=mountApp(adminConfig,{services:[]}).listen(0,'127.0.0.1');await once(mount,'listening');
+ const address=mount.address();assert.ok(address&&typeof address==='object');const root='http://127.0.0.1:'+address.port;let checked=0;
+ try{
+  for(const route of routes){
+   const anonymous=await bare(root,route);
+   for(const credential of [undefined,patient.access,patient.refresh,doctor]){
+    const outcomes=[await bare(root,route,credential),await bare(root,{...route,method:route.method==='POST'?'POST':route.method},credential,true)];
+    if(route.path.endsWith('/auth/login'))assert.deepEqual(outcomes[0],anonymous);
+    else{assert.ok(outcomes.some(o=>o.status===401),route.method+' '+route.path+' never answered 401 to a non-admin credential ('+outcomes.map(o=>o.status)+')');assert.ok(outcomes.every(o=>o.status<200||o.status>299),route.method+' '+route.path+' succeeded for a non-admin credential');}
+    checked++;
+   }
+  }
+  assert.equal(checked,routes.length*4);
+ } finally{mount.closeAllConnections();await new Promise<void>(resolve=>mount.close(()=>resolve()));}
+ const a=await newAdmin('support_admin'),withToken=await adminToken(a.email),w=await buildWorld();
+ for(const [method,path] of [['POST','/api/v1/admin/documents'],['PUT','/api/v1/admin/documents/'+randomUUID()],['PATCH','/api/v1/admin/patients/'+w.patients.active+'/profile'],['DELETE','/api/v1/admin/patients/'+w.patients.active],['GET','/api/v1/admin/documents'],['GET','/api/v1/admin/records/'+randomUUID()+'/download'],['GET','/api/v1/admin/patients/'+w.patients.active+'/documents'],
+  ['GET','/api/v1/admin/patients/'+w.patients.active+'/summary'],['GET','/api/v1/admin/timeline'],['POST','/api/v1/admin/rag/queries'],['GET','/api/v1/admin/shares/'+randomUUID()+'/records'],['POST','/api/v1/admin/support-access'],['GET','/api/v1/admin/support-access'],['POST','/api/v1/admin/medical-access']] as const)
+  assert.equal((await call(path,{method,token:withToken,body:method==='GET'?undefined:{}})).status,404,method+' '+path);
+});
+
+test('P9-48 medical content is denied to admins by default: no permission, table or setting offers a way in, and no exceptional access exists yet',async()=>{
+ const permissions=(await owner.query('SELECT DISTINCT permission FROM public.admin_role_permissions ORDER BY 1')).rows.map(r=>r.permission as string);
+ assert.deepEqual(permissions,allPermissions);
+ for(const permission of permissions){assert.match(permission,/^admin\.(profile|patients|processing|guardians|shares|deliveries|settings|rules|health|audit)\.(read|suspend|reactivate|retry|change|approve|create)$/);assert.ok(!permission.split('.').some(segment=>['documents','document','medical','records','record','summary','summaries','files','file','content','rag','timeline','download','support','exceptional','impersonate','override','bypass','sudo'].includes(segment)),permission);}
+ assert.deepEqual((await owner.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND (table_name ~* 'support|exceptional|impersonat|breakglass|break_glass|elevat|emergency') ORDER BY 1")).rows,[],'no exceptional-access table exists: that stays blocked on CFG-17');
+ assert.deepEqual((await owner.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name LIKE 'admin\\_%' AND (column_name ~* 'support|exceptional|impersonat|on_behalf|act_as|medical|document|summary|ocr|s3_' OR column_name ~* '^bucket$|bucket_name|bucket_key') ORDER BY 1")).rows,[]);
+ assert.deepEqual((await owner.query("SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname ~* 'support|impersonat|exceptional|breakglass'")).rows,[]);
+ assert.ok(!settingRegistry.some(spec=>/support|exceptional|medical|document_content|impersonat/.test(spec.key)),'no setting could enable medical access');
+ assert.deepEqual((await owner.query("SELECT rolname FROM pg_roles WHERE rolname ~* 'admin'")).rows,[],'admins have no database login: they act only through the API role');
+ // an admin with every permission, asked for any patient's records through the admin API, gets nothing and writes nothing
+ const a=await newAdmin('operations_admin'),token=await adminToken(a.email),patient=await seedPatient('Deny Owner','deny-'+randomUUID()+'@example.invalid','active',true),doc=await jobFixture(patient,{sentinel:true,state:'completed'});
+ const before=await medicalSnapshot(patient),texts:string[]=[];
+ for(const path of ['/api/v1/admin/patients/'+patient,'/api/v1/admin/patients?q=Deny','/api/v1/admin/processing/jobs?patient_id='+patient,'/api/v1/admin/processing/jobs/'+doc,'/api/v1/admin/processing/summary','/api/v1/admin/status/guardians?patient_id='+patient,'/api/v1/admin/status/shares?patient_id='+patient,'/api/v1/admin/status/deliveries?patient_id='+patient,
+  '/api/v1/admin/audit?limit=50','/api/v1/admin/health','/api/v1/admin/settings','/api/v1/admin/rules'])
+  {const r=await call(path,{token});assert.ok(r.status===200||r.status===404,path+' '+r.status);texts.push(JSON.stringify(r.data));}
+ const wire=texts.join('\n');for(const word of [SENTINEL,SENTINEL.toLowerCase(),'extracted OCR','summary text','report.pdf','Hospital','medical-documents/','synthetic-private-bucket'])assert.ok(!wire.includes(word),'an admin response exposes '+word);
+ assert.equal(await medicalSnapshot(patient),before,'nothing medical changed');
+});
+
+test('P9-49 suspending a patient cuts off their doctor shares at once, and reactivation brings back no old session, link or code',async()=>{
+ const a=await newAdmin('support_admin'),admin_=await adminToken(a.email),patient=await livePatient(),doc=await jobFixture(patient.id,{state:'completed'});
+ const shareApp=express();shareApp.use(express.json());shareApp.use((_req,res,next)=>{res.set('Cache-Control','no-store');next();});
+ const identityRoutes=createPatientRoutes(db,patientConfig,{mailer:{async send(){}},policy:{...getSecurityPolicy(),challengeRateMax:10000}});shareApp.use('/api/v1/auth',identityRoutes.auth);shareApp.use('/api/v1/patients',identityRoutes.profile);
+ shareApp.use('/api/v1',createSharingRoutes(db as unknown as RagDatabase,patientConfig,docConfig as never,null,{config:sharingTestConfig,mailer:shareMailer}));shareApp.use('/api/v1/admin',createAdminRoutes(db,patientConfig,adminConfig,{health:{services:[]}}));shareApp.use(errorHandler);
+ const server=shareApp.listen(0,'127.0.0.1');await once(server,'listening');const address=server.address();assert.ok(address&&typeof address==='object');const root='http://127.0.0.1:'+address.port,api=(path:string,opts:Parameters<typeof call>[1]={})=>call('/api/v1'+path,{...opts,root});
+ try{
+  const share=async(token:string,kind='unique_link')=>{const r=await api('/sharing/grants',{method:'POST',token,body:{document_ids:[doc],share_type:kind,...(kind==='unique_link'?{doctor_email:'doctor-'+randomUUID()+'@example.invalid'}:{})}});assert.equal(r.status,201);return {id:r.data.grant.id as string,token:(r.data.share_url as string).split('#/share/')[1],email:''};};
+  const redeem=async(link:{token:string},email:string)=>{
+   const otp=await api('/sharing/otp',{method:'POST',body:{share_token:link.token,email,name:'Dr Synthetic'}});if(otp.status!==202)return {otp,verify:undefined,session:undefined as string|undefined};
+   const code=otpMessages.filter(m=>m.to===email).at(-1)!.token,verify=await api('/sharing/otp/verify',{method:'POST',body:{share_token:link.token,email,challenge_id:otp.data.challenge_id,otp:code}});
+   return {otp,verify,session:verify.status===200?verify.data.access_token as string:undefined,code};
+  };
+  const grantEmail=async(id:string)=>(await owner.query('SELECT doctor_email FROM public.doctor_sharing_grants WHERE id=$1',[id])).rows[0].doctor_email as string;
+  // 1. a doctor with a live session, a doctor holding an unused link, and a doctor holding an unused one-time code
+  const g1=await share(patient.access),g2=await share(patient.access),g3=await share(patient.access,'qr_code');
+  const e1=await grantEmail(g1.id),e3='third-'+randomUUID()+'@example.invalid';
+  const live=await redeem(g1,e1);assert.ok(live.session,'the doctor session was issued');
+  const listed=await api('/doctor/records',{token:live.session});assert.equal(listed.status,200);assert.deepEqual(listed.data.documents.map((d:any)=>d.id),[doc]);
+  assert.equal((await api('/sharing/open',{method:'POST',body:{share_token:g2.token}})).status,200);
+  const pending=await api('/sharing/otp',{method:'POST',body:{share_token:g3.token,email:e3,name:'Dr Pending'}});assert.equal(pending.status,202);const pendingCode=otpMessages.filter(m=>m.to===e3).at(-1)!.token,pendingChallenge=pending.data.challenge_id as string;
+  // 2. an admin suspends the patient
+  const suspended=await api('/admin/patients/'+patient.id+'/suspend',{method:'POST',token:admin_});assert.equal(suspended.status,200);
+  const denied=async(label:string)=>{
+   const records=await api('/doctor/records',{token:live.session});assert.equal(records.status,403,label+': the live session is refused');assert.equal(records.data.error.code,'SHARE_ACCESS_DENIED');assert.ok(!('documents' in records.data));
+   for(const path of ['/doctor/timeline','/doctor/history-summary','/doctor/records/'+doc,'/doctor/records/'+doc+'/view','/doctor/records/'+doc+'/download','/doctor/records/'+doc+'/summary'])assert.equal((await api(path,{token:live.session})).status,403,label+' '+path);
+   assert.equal((await api('/doctor/rag/queries',{method:'POST',token:live.session,body:{question:'What does the record say?'}})).status,403,label+' rag');
+   for(const link of [g1,g2,g3])assert.equal((await api('/sharing/open',{method:'POST',body:{share_token:link.token}})).status,403,label+': an old link no longer opens');
+   assert.equal((await api('/sharing/otp',{method:'POST',body:{share_token:g2.token,email:'late-'+randomUUID()+'@example.invalid',name:'Dr Late'}})).status,403,label+': no new code can be requested');
+   assert.equal((await api('/sharing/otp',{method:'POST',body:{share_token:g1.token,email:e1,name:'Dr Again'}})).status,403,label+': the original doctor cannot start over');
+   assert.equal((await api('/sharing/otp/verify',{method:'POST',body:{share_token:g3.token,email:e3,challenge_id:pendingChallenge,otp:pendingCode}})).status,403,label+': an unused code is dead');
+   assert.equal((await api('/patients/me',{token:patient.access})).status,401,label+': the patient\'s own old token is dead');assert.equal((await api('/auth/refresh',{method:'POST',body:{refresh_token:patient.refresh}})).status,401);
+  };
+  await denied('while suspended');
+  // 3. reactivation: the account returns, nothing issued earlier does
+  await new Promise(resolve=>setTimeout(resolve,1200));
+  assert.equal((await api('/admin/patients/'+patient.id+'/reactivate',{method:'POST',token:admin_})).status,200);
+  await denied('after reactivation');
+  assert.equal((await owner.query("SELECT account_status FROM public.patients WHERE id=$1",[patient.id])).rows[0].account_status,'active');
+  // 4. the patient can sign in again and make a brand-new share that works, which also proves the denials above are not simply a broken feature
+  const login=await api('/auth/login',{method:'POST',body:{email:patient.email,password:patientPassword}});assert.equal(login.status,200);
+  const g4=await share(login.data.access_token),e4=await grantEmail(g4.id),fresh=await redeem(g4,e4);assert.ok(fresh.session);
+  assert.equal((await api('/doctor/records',{token:fresh.session})).status,200);assert.equal((await api('/doctor/records',{token:live.session})).status,403,'the new share does not revive the old session');
+  const audits=await audit("action IN ('admin.patients.suspend','admin.patients.reactivate') AND target_id=$1 AND outcome='success'",[patient.id]);assert.deepEqual(audits.map(e=>e.action),['admin.patients.suspend','admin.patients.reactivate']);
+ } finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+test('P9-50 the admin code never reaches a medical-content table, medical function, storage object or content-serving module',async()=>{
+ const files=(await readdir(new URL('../admin/',import.meta.url))).filter(f=>f.endsWith('.ts')),sources=await Promise.all(files.map(async f=>({f,text:(await readFile(new URL('../admin/'+f,import.meta.url),'utf8')).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/gm,'$1')})));
+ assert.ok(files.length>=15,'the admin files were found');
+ const allowedRelations=new Set(['patients','patient_auth_sessions','patient_security_events','guardian_relationships','guardian_lifecycle_events','doctor_sharing_grants','doctor_share_sessions','doctor_share_events','patient_security_email_deliveries','guardian_medical_jobs','document_processing_jobs',
+  'schema_migrations','admin_roles','admin_role_permissions','admin_accounts','admin_sessions','admin_auth_rate_limits','admin_audit_events','admin_setting_versions','admin_setting_decisions','admin_setting_effective','admin_serious_rule_versions','verify_admin_audit_chain','admin_processing_queue_health','admin_migration_history']);
+ const tables=(await owner.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name NOT LIKE 'admin\\_%'")).rows.map(r=>r.table_name as string);
+ const functions=(await owner.query("SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname NOT LIKE 'admin\\_%'")).rows.map(r=>r.proname as string);
+ const medicalTables=tables.filter(t=>!allowedRelations.has(t));assert.ok(medicalTables.length>=25&&['medical_documents','extracted_medical_text','ai_report_summaries','medical_document_chunks','rag_chunk_embeddings','sharing_grant_documents','doctor_otp_challenges','patient_security_email_payloads','guardian_medical_items','guardian_rule_results','summary_source_snapshots','patient_auth_challenges'].every(t=>medicalTables.includes(t)),'the forbidden set is derived from the live schema');
+ const medicalFunctions=functions.filter(fn=>/document|summary|extraction|accessible|current|guardian_medical|rag|doctor_|restrict|persist|lock_summary|valid_extraction/.test(fn)&&!allowedRelations.has(fn));assert.ok(medicalFunctions.length>=5);
+ for(const {f,text} of sources){
+  const referenced=[...text.matchAll(/\b(?:public\.|FROM\s+|JOIN\s+|INTO\s+|UPDATE\s+)([a-z][a-z0-9_]*)\b/g)].map(m=>m[1]).filter(name=>tables.includes(name)||functions.includes(name)||name.startsWith('admin_'));
+  for(const name of referenced)assert.ok(allowedRelations.has(name)||name.startsWith('admin_'),f+' references '+name+', which is outside the reviewed operational set');
+  for(const table of medicalTables)assert.ok(!new RegExp('\\b'+table+'\\b').test(text),f+' references the table '+table);
+  for(const fn of medicalFunctions)assert.ok(!new RegExp('\\b'+fn+'\\b').test(text),f+' calls the function '+fn);
+  assert.ok(!/aws-sdk|S3Client|GetObject|PutObject|createS3Storage|DocumentStorage|readOriginal|createPatientFileAccess|presign|s3_object_key|s3_bucket|\bbucket\b|\.pdf\b|multipart|busboy|sharp\b|pdfjs/i.test(text),f+' touches stored files');
+  assert.ok(!/extracted_text|summary_text|structured_output|original_filename|hospital_name|source_metadata|date_of_birth|phone_number|sex_gender|pending_guardian_email/.test(text),f+' names a medical or personal profile field');
+ }
+ const imports=sources.flatMap(({f,text})=>[...text.matchAll(/(?:\bfrom\s+|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'](\.{1,2}\/[^"']+)["']/g)].map(m=>({f,path:m[1]}))).filter(i=>i.path.startsWith('../'));
+ const permittedImports=new Set(['../config/env.js','../config/auth.js','../http/errors.js','../patients/repository.js','../patients/validation.js','../auth/middleware.js','../auth/passwords.js','../auth/security-repository.js','../processing/api-repository.js','../database/migrations.js','../database/migration-pool.js']);
+ for(const i of imports)assert.ok(permittedImports.has(i.path),i.f+' imports '+i.path+', a module outside the reviewed set (documents, summaries, timeline, RAG, sharing, guardians and storage are off limits)');
+ assert.deepEqual(imports.filter(i=>i.path.startsWith('../processing/')).map(i=>i.f),['processing-jobs.ts'],'the single sanctioned route into the existing owner-fenced retry');
+ for(const forbidden of ['../documents/','../summaries/','../timeline/','../rag/','../sharing/','../guardians/','../guardian-notifications/'])assert.ok(!imports.some(i=>i.path.startsWith(forbidden)),'no admin file imports '+forbidden);
+ const retry=sources.find(s=>s.f==='processing-jobs.ts')!.text;assert.ok(retry.includes('createPatientProcessingRepository')&&!/medical_documents/.test(retry));
+});
+
+test('P9-51 a password-reset link issued before an admin suspension is dead after reactivation, and the password does not change',async()=>{
+ const a=await newAdmin('support_admin'),token=await adminToken(a.email),patient=await livePatient();
+ assert.equal((await call('/api/v1/auth/forgot-password',{body:{email:patient.email}})).status,202);
+ const reset=mail.filter(m=>m.to===patient.email&&m.purpose==='reset_password').at(-1);assert.ok(reset,'a reset message was queued');
+ assert.equal((await call('/api/v1/admin/patients/'+patient.id+'/suspend',{method:'POST',token})).status,200);
+ assert.equal((await call('/api/v1/admin/patients/'+patient.id+'/reactivate',{method:'POST',token})).status,200);
+ const replacement='Replacement secure phrase 498!',attempt=await call('/api/v1/auth/reset-password',{body:{token:reset.token,new_password:replacement}});assert.equal(attempt.status,400,'the old reset link is refused');
+ assert.equal((await call('/api/v1/auth/login',{body:{email:patient.email,password:replacement}})).status,401,'the replacement password was not set');
+ assert.equal((await call('/api/v1/auth/login',{body:{email:patient.email,password:patientPassword}})).status,200,'the original password still works');
 });
