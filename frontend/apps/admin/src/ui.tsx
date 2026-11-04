@@ -181,3 +181,31 @@ export function Detail({ rows }: { rows: [string, ReactNode][] }) {
     </dl>
   );
 }
+
+/** "retry_wait" -> "retry wait". */
+export const words = (s: string) => s.replace(/_/g, " ").toLowerCase();
+export const idProblem = "The patient ID must be a full ID, like 3f2c1a9e-….";
+
+/** A strong, always-visible statement, for messages the admin must not miss. */
+export function Callout({ tone = "info", title, children }: { tone?: "info" | "warn"; title: string; children: ReactNode }) {
+  return (
+    <div className={"callout " + tone} role="note" aria-label={title}>
+      <strong>{title}</strong>
+      <p>{children}</p>
+    </div>
+  );
+}
+
+/** Count tiles. Zero is shown as 0, never hidden. */
+export function Counts({ items, label }: { items: { name: string; count: number; alert?: boolean }[]; label: string }) {
+  return (
+    <ul className="cards" aria-label={label}>
+      {items.map((i) => (
+        <li key={i.name} className={i.alert ? "alert-card" : ""}>
+          <b>{i.count}</b>
+          <span>{i.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}

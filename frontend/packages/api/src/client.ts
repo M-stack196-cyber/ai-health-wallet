@@ -338,6 +338,22 @@ export function adminMessage(error: unknown): string {
       return "That account is not in a state that allows this action. Reload and check its status.";
     case "JOB_NOT_RETRYABLE":
       return "This job cannot be retried right now. It may already be queued, running, completed or out of attempts.";
+    case "SETTING_NOT_PERMITTED":
+      return "This setting cannot be changed from the Admin Dashboard.";
+    case "SETTING_UNCHANGED":
+      return "That is already the value in effect. Enter a different value.";
+    case "INVALID_SETTING_VALUE":
+      return "That value is not allowed. Check the range, and that the idle refresh lifetime does not exceed the absolute one.";
+    case "SELF_APPROVAL_FORBIDDEN":
+      return "You proposed this change, so a different admin must approve it.";
+    case "DECISION_EXISTS":
+      return "A decision is already recorded for this version. Reload to see it.";
+    case "APPROVAL_NOT_REQUIRED":
+      return "This version does not need approval.";
+    case "VERSION_SUPERSEDED":
+      return "A newer version is already in effect, so this one can no longer be approved.";
+    case "CLINICAL_APPROVAL_FORBIDDEN":
+      return "Clinical approval cannot be set from the Admin Dashboard. Rules saved here are never clinically approved.";
     case "SESSION_REQUIRED":
     case "SESSION_CHANGED":
       return "Your session ended. Sign in again.";

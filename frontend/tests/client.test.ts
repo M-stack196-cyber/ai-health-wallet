@@ -12,6 +12,9 @@ import {
   AdminSession,
   adminApi,
   adminMessage,
+  validateSettingInput,
+  validateDecisionInput,
+  validateRuleForm,
   shareReference,
   validateFile,
   grantState,
@@ -470,4 +473,83 @@ test("admin client builds only reviewed admin paths, sends no body on actions, a
   assert.match(message(0, "NETWORK_ERROR"), /Connection problem/);
   assert.equal(adminMessage(new Error("postgres://user:secret@host/db")), "Something went wrong. Try again.");
   session.signOut(); // clears the expiry timer so the test process can exit
+});
+
+test("admin client builds only reviewed paths for status, settings, rules, health and audit; rule requests carry no approval field", async () => {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const session = new AdminSession({
+    baseUrl: "",
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return String(url).endsWith("/login")
+        ? json({ access_token: "t", token_type: "Bearer", expires_in: 900 })
+        : json({ success: true, admin: {}, summary: {}, guardians: [], guardian: {}, shares: [], share: {}, deliveries: [], settings: [], setting: {}, rules: [], rule: {}, health: {}, events: [], chain: { status: "intact", events_checked: 3, first_invalid_seq: null }, next_cursor: "next" });
+    },
+  });
+  await session.login("a@example.invalid", "p");
+  const api = adminApi(session), id = "33333333-3333-4333-8333-333333333333";
+  await api.me(); await api.guardianSummary(); await api.guardian(id); await api.shareSummary(); await api.share(id); await api.deliverySummary();
+  await api.guardians({ status: "ACTIVE", patient_id: id, limit: 10, cursor: "c" });
+  await api.shares({ status: "revoked", method: "qr_code", limit: 10 });
+  await api.deliveries({ channel: "security_email", state: "delivered", purpose: "verify_email", limit: 10 });
+  await api.settings(); await api.setting("documents.max_pdf_pages");
+  await api.proposeSetting("documents.max_pdf_pages", 50);
+  await api.decideSetting("sharing.otp_seconds", 2, "approved", "SEC-REVIEW-1");
+  await api.rules({ rule_id: "LAB_X", limit: 10 }); await api.rule(id);
+  await api.health();
+  const page = await api.audit({ outcome: "denied", from: "2026-02-10T11:30:00Z", limit: 15 });
+  assert.equal(page.chain?.status, "intact");
+  assert.equal(page.nextCursor, "next");
+  const rule = { rule_id: "LAB_X", definition: { field: "glucose", units: "mg/dL", operator: "gt" as const, bounds: [180], context: { fasting: "yes" } } };
+  // a caller that tries to add an approval field (through a cast) still sends only the reviewed fields
+  await api.createRule({ ...rule, clinical_approval: "approved", definition: { ...rule.definition, approved: true } } as never);
+  const used = calls.slice(1).map((c) => (c.init?.method ?? "GET") + " " + c.url);
+  assert.deepEqual(used, [
+    "GET /api/v1/admin/me",
+    "GET /api/v1/admin/status/guardians/summary", `GET /api/v1/admin/status/guardians/${id}`,
+    "GET /api/v1/admin/status/shares/summary", `GET /api/v1/admin/status/shares/${id}`, "GET /api/v1/admin/status/deliveries/summary",
+    `GET /api/v1/admin/status/guardians?status=ACTIVE&patient_id=${id}&limit=10&cursor=c`,
+    "GET /api/v1/admin/status/shares?status=revoked&method=qr_code&limit=10",
+    "GET /api/v1/admin/status/deliveries?channel=security_email&state=delivered&purpose=verify_email&limit=10",
+    "GET /api/v1/admin/settings", "GET /api/v1/admin/settings/documents.max_pdf_pages",
+    "POST /api/v1/admin/settings/documents.max_pdf_pages/versions",
+    "POST /api/v1/admin/settings/sharing.otp_seconds/versions/2/decision",
+    "GET /api/v1/admin/rules?rule_id=LAB_X&limit=10", `GET /api/v1/admin/rules/${id}`,
+    "GET /api/v1/admin/health",
+    "GET /api/v1/admin/audit?outcome=denied&from=2026-02-10T11%3A30%3A00Z&limit=15",
+    "POST /api/v1/admin/rules",
+  ]);
+  const body = (n: number) => JSON.parse(calls.slice(1).filter((c) => c.init?.method === "POST")[n].init!.body as string);
+  assert.deepEqual(body(0), { value: 50 });
+  assert.deepEqual(body(1), { decision: "approved", reference: "SEC-REVIEW-1" });
+  assert.deepEqual(Object.keys(body(2)).sort(), ["definition", "rule_id"]);
+  assert.deepEqual(Object.keys(body(2).definition).sort(), ["bounds", "context", "field", "operator", "units"]);
+  assert.ok(!/approv|clinical/i.test(JSON.stringify(body(2))), "no approval field is ever sent");
+  for (const c of calls.slice(1).filter((x) => !x.init?.method || x.init.method === "GET")) assert.equal(c.init!.body, undefined, "reads send no body");
+  for (const c of calls.slice(1)) assert.ok(!/documents\/|records|download|summary-jobs|rag|doctor|timeline/.test(c.url), "no medical path is reachable: " + c.url);
+  session.signOut();
+});
+
+test("admin form checks explain problems in plain words before anything is sent, and backend refusals have their own messages", () => {
+  const setting = { min: 1, max: 4, unit: "uploads", value: 2 };
+  assert.equal(validateSettingInput(setting, " 3 "), 3);
+  for (const [text, message] of [["", /whole number/], ["2.5", /whole number/], ["abc", /whole number/], ["0", /between 1 and 4 uploads/], ["5", /between 1 and 4 uploads/], ["2", /already the value in effect/]] as const)
+    assert.throws(() => validateSettingInput(setting, text), (e: unknown) => e instanceof InputError && message.test(e.message), text);
+  assert.equal(validateDecisionInput(" SEC-REVIEW-1 "), "SEC-REVIEW-1");
+  for (const bad of ["", " ", "-starts-with-dash", "has;semicolon", "x".repeat(121)]) assert.throws(() => validateDecisionInput(bad), InputError, bad);
+  const form = { ruleId: "LAB_X", field: "glucose", units: "mg/dL", operator: "between" as const, bounds: ["70", "99"] as [string, string], context: [{ key: "", value: "" }, { key: "fasting", value: "yes" }] };
+  assert.deepEqual(validateRuleForm(form), { rule_id: "LAB_X", definition: { field: "glucose", units: "mg/dL", operator: "between", bounds: [70, 99], context: { fasting: "yes" } } });
+  assert.deepEqual(validateRuleForm({ ...form, operator: "gt" }).definition.bounds, [70], "a one-sided rule uses one bound");
+  for (const change of [{ ruleId: "lab" }, { ruleId: "LA" }, { field: "" }, { field: "bad;field" }, { units: "" }, { operator: "" as const }, { bounds: ["99", "70"] as [string, string] }, { bounds: ["x", "70"] as [string, string] },
+    { bounds: ["2000000", "3000000"] as [string, string] }, { context: Array.from({ length: 6 }, (_, i) => ({ key: "k" + i, value: "v" })) }, { context: [{ key: "a", value: "1" }, { key: "a", value: "2" }] }, { context: [{ key: "only name", value: "" }] }])
+    assert.throws(() => validateRuleForm({ ...form, ...change }), InputError, JSON.stringify(change));
+  const message = (status: number, code: string) => adminMessage(new ApiError(status, code));
+  assert.match(message(403, "CLINICAL_APPROVAL_FORBIDDEN"), /Clinical approval cannot be set from the Admin Dashboard/);
+  assert.match(message(403, "SELF_APPROVAL_FORBIDDEN"), /different admin must approve/);
+  assert.match(message(403, "SETTING_NOT_PERMITTED"), /cannot be changed from the Admin Dashboard/);
+  assert.match(message(409, "DECISION_EXISTS"), /already recorded/);
+  assert.match(message(409, "VERSION_SUPERSEDED"), /newer version/);
+  assert.match(message(409, "SETTING_UNCHANGED"), /already the value in effect/);
+  assert.match(message(400, "INVALID_SETTING_VALUE"), /not allowed/);
+  assert.match(message(403, "FORBIDDEN"), /role is not allowed/);
 });

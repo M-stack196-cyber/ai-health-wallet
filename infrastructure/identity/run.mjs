@@ -16,7 +16,7 @@ const env={PATH:process.env.PATH,LANG:'C.UTF-8',IDENTITY_TEST_SOCKET:dir};
 if(phase3||phase4||phase5||phase6){env.XDG_CACHE_HOME=join(dir,'font-cache');await mkdir(env.XDG_CACHE_HOME,{mode:0o700});if(!process.env.PHASE3_PYTHON?.startsWith('/'))throw Error('Explicit absolute PHASE3_PYTHON interpreter required.');env.PHASE3_PYTHON=process.env.PHASE3_PYTHON;}
 if(args[2]){const schema=await realpath(args[2]);if(!schema.startsWith(root+'.private-evidence/prd-v2-phase1b-development-'))throw Error('Only the owned development schema checkpoint is allowed.');await copyFile(schema,join(dir,'development-schema.dump'));await chmod(join(dir,'development-schema.dump'),0o600);env.IDENTITY_TEST_SCHEMA_FILE=join(dir,'development-schema.dump');const parent=schema.slice(0,schema.lastIndexOf('/'));for(const name of ['before.dump','checkpoint.json']){await copyFile(join(parent,name),join(dir,'development-'+name));await chmod(join(dir,'development-'+name),0o600);}}
 let started=false;
-function command(exe,args){const r=spawnSync(exe,args,{cwd:join(root,'backend'),env,encoding:'utf8',timeout:phase3||phase4||phase5||phase6||phase7||phase8?300000:180000,maxBuffer:4*1024*1024});return r;}
+function command(exe,args){const r=spawnSync(exe,args,{cwd:join(root,'backend'),env,encoding:'utf8',timeout:phase3||phase4||phase5||phase6||phase7?300000:phase8?600000:180000,maxBuffer:4*1024*1024});return r;}
 try{
  const init=command(bin+'initdb',['-D',join(dir,'data'),'--auth=trust','--no-locale','--encoding=UTF8']);
  await writeFile(join(dir,'init.log'),(init.stdout??'')+(init.stderr??''),{mode:0o600});if(init.status!==0)throw Error('Disposable initdb failed.');
@@ -27,7 +27,7 @@ try{
  const sink=createWriteStream(join(dir,'focused.tap'),{mode:0o600});
  const child=spawn(process.execPath,testArgs,{cwd:join(root,'backend'),env,stdio:['ignore','pipe','pipe']});
  child.stdout.on('data',b=>{sink.write(b);process.stdout.write(b);});child.stderr.on('data',b=>{sink.write(b);process.stderr.write(b);});
- const timer=setTimeout(()=>child.kill('SIGTERM'),phase3||phase4||phase5||phase6||phase7||phase8?300000:180000);
+ const timer=setTimeout(()=>child.kill('SIGTERM'),phase3||phase4||phase5||phase6||phase7?300000:phase8?600000:180000);
  const status=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});clearTimeout(timer);await new Promise(r=>sink.end(r));
  const run={status};
  if(run.status!==0)process.exitCode=1;

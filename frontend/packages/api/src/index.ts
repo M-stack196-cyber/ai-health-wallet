@@ -11,6 +11,28 @@ import {
   type AdminJob,
   type AdminJobQuery,
   type AdminJobSummary,
+  type AdminMe,
+  type AdminPageWithChain,
+  type AdminGuardian,
+  type AdminGuardianQuery,
+  type AdminGuardianSummary,
+  type AdminShare,
+  type AdminShareQuery,
+  type AdminShareSummary,
+  type AdminDelivery,
+  type AdminDeliveryQuery,
+  type AdminDeliverySummary,
+  type AdminSetting,
+  type AdminSettingDetail,
+  type AdminSettingChange,
+  type AdminDecision,
+  type AdminRule,
+  type AdminRuleInput,
+  type AdminRuleQuery,
+  type AdminHealth,
+  type AdminAuditEvent,
+  type AdminAuditChain,
+  type AdminAuditQuery,
   type Filters,
   type Profile,
   type ProfileEdit,
@@ -264,5 +286,78 @@ export function adminApi(client: ApiClient) {
         admin + "/processing/jobs/" + id(documentId) + "/retry",
         "POST",
       ),
+    me: () => client.request<{ admin: AdminMe }>(admin + "/me"),
+
+    guardianSummary: () =>
+      client.request<{ summary: AdminGuardianSummary }>(admin + "/status/guardians/summary"),
+    guardians: async (query: AdminGuardianQuery = {}): Promise<AdminPage<AdminGuardian>> => {
+      const r = await client.request<{ guardians: AdminGuardian[]; next_cursor: string | null }>(
+        admin + "/status/guardians" + queryString({ ...query }),
+      );
+      return { items: r.guardians, nextCursor: r.next_cursor };
+    },
+    guardian: (relationshipId: string) =>
+      client.request<{ guardian: AdminGuardian }>(admin + "/status/guardians/" + id(relationshipId)),
+    shareSummary: () =>
+      client.request<{ summary: AdminShareSummary }>(admin + "/status/shares/summary"),
+    shares: async (query: AdminShareQuery = {}): Promise<AdminPage<AdminShare>> => {
+      const r = await client.request<{ shares: AdminShare[]; next_cursor: string | null }>(
+        admin + "/status/shares" + queryString({ ...query }),
+      );
+      return { items: r.shares, nextCursor: r.next_cursor };
+    },
+    share: (grantId: string) =>
+      client.request<{ share: AdminShare }>(admin + "/status/shares/" + id(grantId)),
+    deliverySummary: () =>
+      client.request<{ summary: AdminDeliverySummary }>(admin + "/status/deliveries/summary"),
+    deliveries: async (query: AdminDeliveryQuery = {}): Promise<AdminPage<AdminDelivery>> => {
+      const r = await client.request<{ deliveries: AdminDelivery[]; next_cursor: string | null }>(
+        admin + "/status/deliveries" + queryString({ ...query }),
+      );
+      return { items: r.deliveries, nextCursor: r.next_cursor };
+    },
+
+    settings: () => client.request<{ settings: AdminSetting[] }>(admin + "/settings"),
+    setting: (key: string) =>
+      client.request<{ setting: AdminSettingDetail }>(admin + "/settings/" + id(key)),
+    proposeSetting: (key: string, value: number) =>
+      client.request<AdminSettingChange>(admin + "/settings/" + id(key) + "/versions", "POST", { value }),
+    decideSetting: (key: string, version: number, decision: AdminDecision, reference: string) =>
+      client.request<{ setting: AdminSettingDetail }>(
+        admin + "/settings/" + id(key) + "/versions/" + id(String(version)) + "/decision",
+        "POST",
+        { decision, reference },
+      ),
+
+    rules: async (query: AdminRuleQuery = {}): Promise<AdminPage<AdminRule>> => {
+      const r = await client.request<{ rules: AdminRule[]; next_cursor: string | null }>(
+        admin + "/rules" + queryString({ ...query }),
+      );
+      return { items: r.rules, nextCursor: r.next_cursor };
+    },
+    rule: (ruleVersionId: string) =>
+      client.request<{ rule: AdminRule }>(admin + "/rules/" + id(ruleVersionId)),
+    /** Sends exactly rule_id and definition. Anything else a caller passes (for example an approval field) is dropped here, and the backend refuses it too. */
+    createRule: (input: AdminRuleInput) =>
+      client.request<{ rule: AdminRule }>(admin + "/rules", "POST", {
+        rule_id: input.rule_id,
+        definition: {
+          field: input.definition.field,
+          units: input.definition.units,
+          operator: input.definition.operator,
+          bounds: [...input.definition.bounds],
+          context: { ...input.definition.context },
+        },
+      }),
+
+    health: () => client.request<{ health: AdminHealth }>(admin + "/health"),
+    audit: async (query: AdminAuditQuery = {}): Promise<AdminPageWithChain<AdminAuditEvent>> => {
+      const r = await client.request<{
+        events: AdminAuditEvent[];
+        next_cursor: string | null;
+        chain: AdminAuditChain | null;
+      }>(admin + "/audit" + queryString({ ...query }));
+      return { items: r.events, nextCursor: r.next_cursor, chain: r.chain };
+    },
   };
 }

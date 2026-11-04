@@ -280,3 +280,260 @@ export function queryString(
   const q = search.toString();
   return q ? "?" + q : "";
 }
+
+/** The signed-in admin, from GET /admin/me. Permissions only decide which menu items are shown; the backend checks every request itself. */
+export interface AdminMe {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  permissions: string[];
+}
+export interface AdminPageWithChain<T> extends AdminPage<T> {
+  chain: AdminAuditChain | null;
+}
+
+/** Status views (guardians, doctor share grants, deliveries). Metadata only: no emails, tokens, codes or message text. */
+export const adminGuardianStatuses = ["PENDING", "ACTIVE", "REVOKED", "EXPIRED"] as const;
+export type AdminGuardianStatus = (typeof adminGuardianStatuses)[number];
+export const adminShareStatuses = ["active", "expired", "revoked"] as const;
+export type AdminShareStatus = (typeof adminShareStatuses)[number];
+export const adminShareMethods = ["qr_code", "unique_link"] as const;
+export type AdminShareMethod = (typeof adminShareMethods)[number];
+export const adminDeliveryChannels = ["security_email", "guardian_notification"] as const;
+export type AdminDeliveryChannel = (typeof adminDeliveryChannels)[number];
+export const adminEmailPurposes = ["verify_email", "reset_password", "guardian_invitation", "doctor_share_otp"] as const;
+export type AdminEmailPurpose = (typeof adminEmailPurposes)[number];
+export const adminDeliveryStates = [
+  "pending",
+  "sending",
+  "running",
+  "retry_wait",
+  "transient_failed",
+  "permanent_failed",
+  "delivered",
+  "expired",
+  "superseded",
+  "cancelled",
+] as const;
+export type AdminDeliveryState = (typeof adminDeliveryStates)[number];
+export interface AdminGuardian {
+  id: string;
+  patient_id: string;
+  status: AdminGuardianStatus;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Detail only. */
+  events?: { event: string; occurred_at: string }[];
+}
+export interface AdminShare {
+  id: string;
+  patient_id: string;
+  sharing_method: AdminShareMethod;
+  recipient_bound: boolean;
+  status: AdminShareStatus;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  active_session_count: number;
+  /** Detail only. */
+  event_counts?: Record<string, number>;
+  last_event_at?: string | null;
+}
+export interface AdminDelivery {
+  channel: AdminDeliveryChannel;
+  id: string;
+  patient_id: string;
+  purpose: AdminEmailPurpose | null;
+  state: AdminDeliveryState;
+  attempts: number;
+  max_attempts: number | null;
+  failure_reason: string | null;
+  next_attempt_at: string | null;
+  created_at: string;
+  delivered_at: string | null;
+}
+export interface AdminGuardianSummary {
+  by_status: Record<AdminGuardianStatus, number>;
+  total: number;
+}
+export interface AdminShareSummary {
+  by_status: Record<AdminShareStatus, number>;
+  by_method: Record<AdminShareMethod, number>;
+  total: number;
+}
+export interface AdminDeliverySummary {
+  by_channel: Record<AdminDeliveryChannel, Record<AdminDeliveryState, number>>;
+  total: number;
+}
+export interface AdminGuardianQuery { status?: AdminGuardianStatus; patient_id?: string; limit?: number; cursor?: string }
+export interface AdminShareQuery { status?: AdminShareStatus; method?: AdminShareMethod; patient_id?: string; limit?: number; cursor?: string }
+export interface AdminDeliveryQuery { channel?: AdminDeliveryChannel; state?: AdminDeliveryState; purpose?: AdminEmailPurpose; patient_id?: string; limit?: number; cursor?: string }
+
+/** Operational settings. The eleven keys are fixed by the backend allowlist; the screen shows whatever the backend lists. */
+export type AdminSettingStatus = "effective" | "superseded" | "pending_approval" | "rejected";
+export interface AdminSettingGate { cfg: string; requirement: string }
+export interface AdminSetting {
+  key: string;
+  unit: string;
+  min: number;
+  max: number;
+  default: number;
+  source: string;
+  gate: AdminSettingGate | null;
+  value: number;
+  version: number;
+  pending_versions: number;
+}
+export interface AdminSettingVersion {
+  version: number;
+  value: number;
+  status: AdminSettingStatus;
+  requires_approval: boolean;
+  gate: string | null;
+  proposed_by: string;
+  proposed_at: string;
+  decision: null | { decision: "approved" | "rejected"; decided_by: string; reference: string; decided_at: string };
+}
+export interface AdminSettingDetail extends AdminSetting {
+  history: AdminSettingVersion[];
+}
+export interface AdminSettingChange {
+  setting: AdminSettingDetail;
+  version: number;
+  status: "effective" | "pending_approval";
+}
+export type AdminDecision = "approved" | "rejected";
+
+/** Serious-rule versions. `clinical_approval` is fixed by the database; the client has no way to send it. */
+export const adminRuleOperators = ["gt", "gte", "lt", "lte", "between", "outside"] as const;
+export type AdminRuleOperator = (typeof adminRuleOperators)[number];
+export interface AdminRuleDefinition {
+  field: string;
+  units: string;
+  operator: AdminRuleOperator;
+  bounds: number[];
+  context: Record<string, string>;
+}
+export interface AdminRule {
+  id: string;
+  rule_id: string;
+  version: number;
+  definition: AdminRuleDefinition;
+  definition_sha256: string;
+  clinical_approval: string;
+  created_by: string;
+  created_at: string;
+}
+export interface AdminRuleInput {
+  rule_id: string;
+  definition: AdminRuleDefinition;
+}
+export interface AdminRuleQuery { rule_id?: string; limit?: number; cursor?: string }
+
+/** System health. Counts, durations and fixed reason codes only. */
+export type AdminHealthStatus = "ok" | "degraded" | "down" | "unknown" | "not_configured";
+export type AdminHealthComponent = { name: string; status: AdminHealthStatus; reason?: string } & Record<string, string | number | boolean | null | undefined>;
+export interface AdminHealth {
+  status: "ok" | "degraded" | "down";
+  checked_at: string;
+  components: AdminHealthComponent[];
+}
+
+/** Audit log review. */
+export const adminAuditOutcomes = ["success", "denied", "failure"] as const;
+export type AdminAuditOutcome = (typeof adminAuditOutcomes)[number];
+export interface AdminAuditEvent {
+  seq: number;
+  id: string;
+  occurred_at: string;
+  actor_admin_id: string | null;
+  actor_role: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  scope: unknown;
+  outcome: AdminAuditOutcome;
+  request_id: string;
+  event_hash: string;
+}
+export interface AdminAuditChain {
+  status: "intact" | "broken";
+  events_checked: number;
+  first_invalid_seq: number | null;
+}
+export interface AdminAuditQuery {
+  actor_admin_id?: string;
+  action?: string;
+  target_type?: string;
+  outcome?: AdminAuditOutcome;
+  from?: string;
+  to?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+/** Same rules as the backend, so a form can explain a problem before anything is sent. The backend still decides. */
+export const adminUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const adminReferencePattern = /^[A-Za-z0-9][A-Za-z0-9 ._:/#-]{0,119}$/;
+export const adminRuleIdPattern = /^[A-Z][A-Z0-9_]{2,79}$/;
+export function validateSettingInput(setting: Pick<AdminSetting, "min" | "max" | "unit" | "value">, text: string): number {
+  const t = text.trim();
+  if (!/^-?\d{1,15}$/.test(t)) throw new InputError("The value must be a whole number.");
+  const value = Number(t);
+  if (value < setting.min || value > setting.max)
+    throw new InputError(`The value must be between ${setting.min} and ${setting.max} ${setting.unit}.`);
+  if (value === setting.value) throw new InputError("That is already the value in effect. Enter a different value.");
+  return value;
+}
+export function validateDecisionInput(reference: string): string {
+  const r = reference.trim();
+  if (!adminReferencePattern.test(r))
+    throw new InputError("Enter the review reference (1 to 120 characters). Use letters, numbers, spaces and . _ : / # - only, starting with a letter or number.");
+  return r;
+}
+
+export interface AdminRuleForm {
+  ruleId: string;
+  field: string;
+  units: string;
+  operator: AdminRuleOperator | "";
+  bounds: [string, string];
+  context: { key: string; value: string }[];
+}
+/** Builds the request from the form, or throws an InputError with a plain message. There is deliberately no approval field here. */
+export function validateRuleForm(form: AdminRuleForm): AdminRuleInput {
+  const ruleId = form.ruleId.trim(), field = form.field.trim(), units = form.units.trim();
+  if (!adminRuleIdPattern.test(ruleId))
+    throw new InputError("The rule ID must be 3 to 80 characters: capital letters, numbers and underscores, starting with a capital letter.");
+  if (!/^[A-Za-z0-9][A-Za-z0-9_ ./-]{0,79}$/.test(field))
+    throw new InputError("The field name must be 1 to 80 characters: letters, numbers, spaces and _ . / - only.");
+  if (!/^[A-Za-z0-9_%/.^-]{1,30}$/.test(units))
+    throw new InputError("The units must be 1 to 30 characters: letters, numbers and _ % / . ^ - only.");
+  const operator = adminRuleOperators.find((o) => o === form.operator);
+  if (!operator) throw new InputError("Choose how the value is compared.");
+  const two = operator === "between" || operator === "outside";
+  const texts = two ? form.bounds : [form.bounds[0]];
+  const bounds = texts.map((t) => {
+    const s = t.trim(),
+      n = Number(s);
+    if (s === "" || !Number.isFinite(n) || Math.abs(n) > 1000000)
+      throw new InputError("Each bound must be a number between -1000000 and 1000000.");
+    return n;
+  });
+  if (two && bounds[0] > bounds[1]) throw new InputError("The first bound cannot be larger than the second.");
+  const rows = form.context.filter((r) => r.key.trim() !== "" || r.value.trim() !== "");
+  if (rows.length > 5) throw new InputError("Use at most 5 context entries.");
+  const pair = /^[A-Za-z0-9_ ./-]{1,60}$/, context: Record<string, string> = Object.create(null);
+  for (const r of rows) {
+    const k = r.key.trim(),
+      v = r.value.trim();
+    if (!pair.test(k) || !pair.test(v))
+      throw new InputError("Each context name and value must be 1 to 60 characters: letters, numbers, spaces and _ . / - only.");
+    if (k in context) throw new InputError("A context name can be used only once.");
+    context[k] = v;
+  }
+  return { rule_id: ruleId, definition: { field, units, operator, bounds, context: { ...context } } };
+}

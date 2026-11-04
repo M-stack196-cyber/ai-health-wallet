@@ -892,3 +892,120 @@ test("P8-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual ba
     await once(vite, "exit").catch(() => {});
   }
 });
+
+test("P9-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual backend and database: menu, health, setting change, serious rule, status screens and the audit chain", async () => {
+  const { chromium, expect } = await import("@playwright/test");
+  const adminPassword = "Synthetic admin passphrase 731!",
+    adminEmail = randomUUID() + "@example.invalid";
+  const created = await createAdminAccount(
+    admin,
+    (p: string) => createPasswordService(auth).hash(p),
+    { email: adminEmail, fullName: "Synthetic Admin", role: "support_admin", password: adminPassword },
+  );
+  const probe = createServer();
+  probe.listen(0, "127.0.0.1");
+  await once(probe, "listening");
+  const port = (probe.address() as { port: number }).port;
+  await new Promise<void>((r) => probe.close(() => r()));
+  const vite = spawn(
+    process.execPath,
+    ["node_modules/vite/bin/vite.js", "--config", "apps/admin/vite.config.ts", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    { cwd: new URL("../", import.meta.url), env: { PATH: process.env.PATH, HW_LOCAL_API: base }, stdio: "ignore" },
+  );
+  let browser;
+  try {
+    const origin = "http://127.0.0.1:" + port;
+    let ready = false;
+    for (let i = 0; i < 100; i++) {
+      try {
+        if ((await fetch(origin)).ok) { ready = true; break; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.ok(ready);
+    browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+    const page = await browser.newPage();
+    const paths: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/v1/")) paths.push(r.method() + " " + new URL(r.url()).pathname);
+    });
+    const go = (name: string) => page.getByRole("navigation", { name: "Sections" }).getByRole("button", { name, exact: true }).click();
+    await page.goto(origin + "/");
+    await page.getByLabel("Email").fill(adminEmail);
+    await page.getByLabel("Password").fill(adminPassword);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByRole("heading", { name: "Patient accounts" })).toBeVisible();
+    // the menu comes from the real /admin/me permissions
+    const perms: string[] = (await admin.query("SELECT permission FROM admin_role_permissions WHERE role_name='support_admin'")).rows.map((r: any) => r.permission);
+    const expected = ["admin.patients.read", "admin.processing.read", "admin.guardians.read", "admin.shares.read", "admin.deliveries.read", "admin.settings.read", "admin.rules.read", "admin.health.read", "admin.audit.read"].filter((p) => perms.includes(p)).length;
+    assert.equal(await page.getByRole("navigation", { name: "Sections" }).getByRole("button").count(), expected);
+    // status screens answer from the real database
+    for (const [item, heading] of [["Guardians", "Guardian relationships"], ["Share grants", "Doctor share grants"], ["Deliveries", "Email and notification delivery"]]) {
+      await go(item);
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+      await expect(page.getByText("Loading…")).toHaveCount(0);
+      await expect(page.getByRole("alert")).toHaveCount(0);
+    }
+    // health: the database component is reported; services that are not configured say so
+    await go("System health");
+    const components = page.getByRole("table", { name: "Components" });
+    await expect(components.getByRole("row", { name: /^Database OK/ })).toBeVisible();
+    await expect(components.getByRole("row", { name: /Question answering/ })).toContainText("Not configured");
+    // an ungated setting: validation, confirmation, then a stored version
+    await go("Settings");
+    await page.getByRole("button", { name: "Open setting documents.max_pdf_pages" }).click();
+    const detail = page.getByRole("complementary", { name: "Setting detail" });
+    await detail.getByLabel("New value").fill("5000");
+    await detail.getByRole("button", { name: "Review change" }).click();
+    await expect(detail.getByRole("alert")).toContainText("The value must be between 1 and 200 pages.");
+    await detail.getByLabel("New value").fill("60");
+    await detail.getByRole("button", { name: "Review change" }).click();
+    assert.equal((await admin.query("SELECT count(*)::int AS n FROM admin_setting_versions WHERE setting_key='documents.max_pdf_pages'")).rows[0].n, 0, "nothing is stored before confirmation");
+    await detail.getByRole("button", { name: "Confirm change" }).click();
+    await expect(detail.getByText("Version 1 was saved and is now in effect.")).toBeVisible();
+    assert.equal((await admin.query("SELECT value::int AS v FROM admin_setting_effective WHERE setting_key='documents.max_pdf_pages'")).rows[0].v, 60);
+    // a gated setting stays pending: the value in effect does not change and the proposer has no decision form
+    await page.getByRole("button", { name: "Open setting auth.reset_seconds" }).click();
+    await detail.getByLabel("New value").fill("600");
+    await detail.getByRole("button", { name: "Review change" }).click();
+    await detail.getByRole("button", { name: "Confirm change" }).click();
+    await expect(detail.getByText(/waiting for approval by a different admin/)).toBeVisible();
+    assert.equal((await admin.query("SELECT count(*)::int AS n FROM admin_setting_effective WHERE setting_key='auth.reset_seconds'")).rows[0].n, 0);
+    await page.getByRole("button", { name: "Review auth.reset_seconds version 1" }).click();
+    await expect(detail).toContainText("You proposed this change, so a different admin must approve it.");
+    // a serious rule: stored as not clinically approved
+    await go("Serious rules");
+    await expect(page.getByRole("note", { name: "Admin editing is NOT clinical approval" })).toBeVisible();
+    const form = page.getByRole("form", { name: "New rule version" });
+    await form.getByLabel("Rule ID").fill("PHASE9_SYNTHETIC_RULE");
+    await form.getByLabel("Field", { exact: true }).fill("synthetic marker");
+    await form.getByLabel("Units").fill("units");
+    await form.getByLabel("Comparison").selectOption("gt");
+    await form.getByLabel("Bound", { exact: true }).fill("10");
+    await form.getByRole("button", { name: "Review rule" }).click();
+    await form.getByRole("button", { name: "Confirm save" }).click();
+    await expect(page.getByText("Saved as version 1 of PHASE9_SYNTHETIC_RULE. It is recorded as not clinically approved.")).toBeVisible();
+    const stored = (await admin.query("SELECT clinical_approval,created_by FROM admin_serious_rule_versions WHERE rule_id='PHASE9_SYNTHETIC_RULE'")).rows;
+    assert.deepEqual(stored.map((r: any) => [r.clinical_approval, r.created_by]), [["not_clinically_approved", created.id]]);
+    // the audit screen shows the real chain result and this session's actions
+    await go("Audit log");
+    await expect(page.getByRole("region", { name: "Audit chain check" })).toContainText("Audit chain: INTACT.");
+    await expect(page.getByRole("region", { name: "Event list" })).toContainText("admin.rules.create");
+    await page.getByLabel("Action").fill("admin.settings.change");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page.getByRole("region", { name: "Event list" }).getByRole("row").nth(1)).toContainText("admin.settings.change");
+    const body = await page.locator("body").innerText();
+    for (const word of ["Bearer", "eyJ", "argon2"]) assert.ok(!body.includes(word), "the page shows " + word);
+    assert.deepEqual(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length, cookies: document.cookie })), { local: 0, session: 0, cookies: "" });
+    assert.ok(paths.every((p) => p.includes("/api/v1/admin/")), "only admin endpoints were called");
+    assert.ok(!paths.some((p) => /documents|download|summary-jobs|rag|doctor|timeline/.test(p.replace("/processing/summary", ""))));
+    const audited = (await admin.query("SELECT action,outcome FROM admin_audit_events WHERE actor_admin_id=$1 AND action IN ('admin.settings.change','admin.rules.create') ORDER BY seq", [created.id])).rows;
+    assert.deepEqual(audited.map((r: any) => r.action + ":" + r.outcome), ["admin.settings.change:success", "admin.settings.change:success", "admin.rules.create:success"]);
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  } finally {
+    await browser?.close();
+    vite.kill();
+    await once(vite, "exit").catch(() => {});
+  }
+});
