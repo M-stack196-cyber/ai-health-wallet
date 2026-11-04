@@ -265,7 +265,7 @@ before(async () => {
   // Mounted before the routers that cover all of /api/v1, as in app.ts.
   app.use(
     "/api/v1/admin",
-    createAdminRoutes(db, auth, adminConfig, { health: { services: [] } }),
+    createAdminRoutes(db, auth, adminConfig, { health: { services: [{ name: "ai_ocr" }, { name: "ai_summary" }, { name: "ai_rag" }] } }),
   );
   app.use(
     "/api/v1/documents",
@@ -998,7 +998,7 @@ test("P9-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual ba
     for (const word of ["Bearer", "eyJ", "argon2"]) assert.ok(!body.includes(word), "the page shows " + word);
     assert.deepEqual(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length, cookies: document.cookie })), { local: 0, session: 0, cookies: "" });
     assert.ok(paths.every((p) => p.includes("/api/v1/admin/")), "only admin endpoints were called");
-    assert.ok(!paths.some((p) => /documents|download|summary-jobs|rag|doctor|timeline/.test(p.replace("/processing/summary", ""))));
+    assert.ok(!paths.some((p) => /documents|download|summary-jobs|rag|doctor|timeline/.test(p.replace("/processing/summary", "").replace(/\/settings\/[^/]+/, "/settings/KEY"))));
     const audited = (await admin.query("SELECT action,outcome FROM admin_audit_events WHERE actor_admin_id=$1 AND action IN ('admin.settings.change','admin.rules.create') ORDER BY seq", [created.id])).rows;
     assert.deepEqual(audited.map((r: any) => r.action + ":" + r.outcome), ["admin.settings.change:success", "admin.settings.change:success", "admin.rules.create:success"]);
     await page.getByRole("button", { name: "Sign out" }).click();
