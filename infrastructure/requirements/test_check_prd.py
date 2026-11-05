@@ -1,102 +1,74 @@
-"""Synthetic ledger-mutation tests; never access services or credentials."""
-import copy
-import json
+"""Tests for the read-only SRS v4 / PRD v2 completeness gate."""
 import unittest
 from pathlib import Path
-from unittest.mock import patch
-from check_prd import ROOT, LEDGER, validate, CoverageError
+from tempfile import TemporaryDirectory
+
+from check_prd import ROOT, TRACKER, validate, CoverageError
+
 
 class CoverageTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.base = json.loads((ROOT / LEDGER).read_text())
+    def copy_sources(self, root):
+        (root / 'docs').mkdir()
+        for relative in (
+            'docs/AI_Health_Wallet_Revised_SRS_v4_0.docx',
+            'docs/AI_Health_Wallet_Module_Wise_PRD_v2_0.docx',
+        ):
+            destination = root / relative
+            destination.write_bytes((ROOT / relative).read_bytes())
+        tracker = root / TRACKER
+        tracker.parent.mkdir(parents=True, exist_ok=True)
+        tracker.write_text((ROOT / TRACKER).read_text(encoding='utf-8'), encoding='utf-8')
 
-    def rejects(self, mutate, code):
-        value = copy.deepcopy(self.base)
-        mutate(value)
-        with self.assertRaisesRegex(CoverageError, '^' + code + '$'):
-            validate(value)
+    def test_current_sources_and_tracker_pass(self):
+        result = validate()
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['counts']['features'], 232)
+        self.assertEqual(result['status_counts'], {
+            'IMPLEMENTED': 115,
+            'PARTIAL': 78,
+            'MISSING': 14,
+            'BLOCKED': 19,
+            'NEEDS_REVERIFICATION': 6,
+        })
 
-    def test_all_exact_source_rows(self):
-        self.assertEqual(validate(self.base)['counts']['features'], 127)
+    def test_source_change_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_sources(root)
+            source = root / 'docs/AI_Health_Wallet_Revised_SRS_v4_0.docx'
+            source.write_bytes(source.read_bytes() + b'changed')
+            with self.assertRaisesRegex(CoverageError, '^SOURCE_CHANGED$'):
+                validate(root=root)
 
-    def test_missing_entry(self):
-        self.rejects(lambda x: x['modules'][0]['features'].pop(), 'FEATURE_COVERAGE')
+    def test_tracker_requirement_text_cannot_drift(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_sources(root)
+            tracker = root / TRACKER
+            text = tracker.read_text(encoding='utf-8')
+            tracker.write_text(text.replace(
+                '| M01-001 | The system shall support patient account registration. |',
+                '| M01-001 | Changed requirement. |',
+                1,
+            ), encoding='utf-8')
+            with self.assertRaisesRegex(CoverageError, '^TRACKER_SOURCE$'):
+                validate(root=root)
 
-    def test_duplicate_entry(self):
-        self.rejects(lambda x: x['modules'][0]['features'].append(copy.deepcopy(x['modules'][0]['features'][0])), 'FEATURE_IDS')
-
-    def test_edited_requirement(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(requirement='Changed source'), 'SOURCE_TEXT_CHANGED')
-
-    def test_edited_acceptance(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(acceptance='Weaker criterion'), 'SOURCE_TEXT_CHANGED')
-
-    def test_wrong_module(self):
-        self.rejects(lambda x: x['modules'][0].update(id='M99'), 'MODULES')
-
-    def test_wrong_source_pin(self):
-        self.rejects(lambda x: x['source_sha256'].update({'AI_Health_Wallet_Final_SRS_v3.docx':'0'*64}), 'SOURCE_CHANGED')
-
-    def test_missing_phase(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(delivery_phases=['B02']), 'PHASE_MAPPING')
-
-    def test_unknown_phase(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(delivery_phases=['B99', 'B21']), 'PHASE_MAPPING')
-
-    def test_false_module_completion(self):
-        self.rejects(lambda x: x['modules'][0].update(module_complete=True), 'RELEASE_EVIDENCE_REQUIRED')
-
-    def test_false_production_readiness(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0]['verification'].update(production_ready=True), 'RELEASE_EVIDENCE_REQUIRED')
-
-    def test_missing_decision(self):
-        self.rejects(lambda x: x['registers']['DEC'].pop(), 'REGISTER_CHANGED')
-
-    def test_missing_configuration(self):
-        self.rejects(lambda x: x['registers']['CFG'].pop(), 'REGISTER_CHANGED')
-
-    def test_missing_requirement_id(self):
-        self.rejects(lambda x: x['registers']['FR'].pop(), 'REGISTER_CHANGED')
-
-    def test_missing_evidence(self):
-        self.rejects(lambda x: x['modules'][0]['candidate_evidence_paths'].append('backend/no-such-file.ts'), 'EVIDENCE_PATH')
-
-    def test_module_boundary_cannot_disappear(self):
-        self.rejects(lambda x: x['modules'][0]['source_context_paragraphs'].pop(), 'MODULE_CONTEXT')
-
-    def test_verification_scenario_cannot_disappear(self):
-        self.rejects(lambda x: x['registers']['V'].pop(), 'REGISTER_CHANGED')
-
-    def test_delivery_completion_needs_acceptance(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(delivery_status='COMPLETE'), 'DELIVERY_ACCEPTANCE')
-
-    def test_delivery_status_is_explicit(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(delivery_status='looks good'), 'DELIVERY_ACCEPTANCE')
-
-    def test_implementation_mapping_is_required(self):
-        self.rejects(lambda x: x['modules'][0]['features'][0].update(existing_implementation={}), 'IMPLEMENTATION_EVIDENCE')
-
-    def test_markdown_cannot_falsely_claim_completion(self):
-        read = Path.read_text
-        def altered(path, *args, **kwargs):
-            text = read(path, *args, **kwargs)
-            return text.replace('| PARTIAL |', '| COMPLETE |', 1) if path.name == 'PRD_MODULE_DELIVERY_TRACKER.md' else text
-        with patch.object(Path, 'read_text', autospec=True, side_effect=altered):
+    def test_complete_status_is_rejected(self):
+        tracker = ROOT / TRACKER
+        original = tracker.read_text(encoding='utf-8')
+        try:
+            mutated = '\n'.join(
+                line.replace('| IMPLEMENTED |', '| COMPLETE |', 1)
+                if line.startswith('| M01-001 |') else line
+                for line in original.splitlines()
+            ) + '\n'
+            tracker.write_text(mutated, encoding='utf-8')
             with self.assertRaisesRegex(CoverageError, '^TRACKER_STATUS$'):
-                validate(self.base)
+                validate()
+        finally:
+            tracker.write_text(original, encoding='utf-8')
 
-    def test_markdown_cannot_weaken_requirement(self):
-        read = Path.read_text
-        def altered(path, *args, **kwargs):
-            text = read(path, *args, **kwargs)
-            return text.replace(self.base['modules'][0]['features'][0]['requirement'], 'Weaker requirement', 1) if path.name == 'PRD_MODULE_DELIVERY_TRACKER.md' else text
-        with patch.object(Path, 'read_text', autospec=True, side_effect=altered):
-            with self.assertRaisesRegex(CoverageError, '^TRACKER_TEXT$'):
-                validate(self.base)
-
-    def test_counts_not_blessed_by_edit(self):
-        self.rejects(lambda x: x['counts'].update(features=126), 'COUNTS')
 
 if __name__ == '__main__':
     unittest.main()

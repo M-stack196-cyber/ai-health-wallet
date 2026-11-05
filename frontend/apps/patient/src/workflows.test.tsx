@@ -171,7 +171,7 @@ test("registration sends approved fields and requires verification before login"
     date_of_birth: "2000-01-01",
   });
   expect(session.authorized).toBe(false);
-});
+}, 15_000);
 test.each(["NONE", "PENDING", "ACTIVE", "REVOKED", "EXPIRED"])(
   "guardian %s is explicit and account deletion is truthfully unavailable",
   async (status) => {

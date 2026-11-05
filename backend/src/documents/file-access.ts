@@ -55,14 +55,14 @@ export function createPatientFileAccess(repository:ReturnType<typeof createDocum
         for await(const chunk of file.createReadStream({autoClose:false,start:0}))hash.update(chunk);
         if(hash.digest('hex')!==row.sha256)throw storageUnavailable();
       }
+      if(!database)throw storageUnavailable();
+      if(policy)await policy.authorize(req,id);else await assertCurrentPatient(req,database);
       // Recheck ownership and immutable storage identity after acquisition, before bytes.
       const current=await repository.reference(id,patientId);
       if(!current)throw notFound();
       if(current.s3_bucket!==row.s3_bucket || current.s3_object_key!==row.s3_object_key
         || current.file_type!==row.file_type || current.sha256!==row.sha256 || current.size_bytes!==row.size_bytes)throw storageUnavailable();
       controller.signal.throwIfAborted();
-      if(!database)throw storageUnavailable();
-      if(policy)await policy.authorize(req,id);else await assertCurrentPatient(req,database);
       const mime=row.file_type==='pdf'?'application/pdf':row.file_type==='png'?'image/png':'image/jpeg';
       const encoded=encodeURIComponent(row.original_filename).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
       res.status(200).set({'Content-Type':mime,'Content-Length':String(info.size),'Cache-Control':'private, no-store',

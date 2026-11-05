@@ -939,6 +939,7 @@ test("P9-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual ba
     const perms: string[] = (await admin.query("SELECT permission FROM admin_role_permissions WHERE role_name='support_admin'")).rows.map((r: any) => r.permission);
     const expected = ["admin.patients.read", "admin.processing.read", "admin.guardians.read", "admin.shares.read", "admin.deliveries.read", "admin.settings.read", "admin.rules.read", "admin.health.read", "admin.audit.read"].filter((p) => perms.includes(p)).length;
     assert.equal(await page.getByRole("navigation", { name: "Sections" }).getByRole("button").count(), expected);
+    assert.ok(perms.includes("admin.settings.change"), "real support_admin lacks admin.settings.change: " + perms.join(","));
     // status screens answer from the real database
     for (const [item, heading] of [["Guardians", "Guardian relationships"], ["Share grants", "Doctor share grants"], ["Deliveries", "Email and notification delivery"]]) {
       await go(item);
@@ -961,6 +962,7 @@ test("P9-ADMIN-API-01 real Chrome admin flow through Vite proxy to the actual ba
     await detail.getByLabel("New value").fill("60");
     await detail.getByRole("button", { name: "Review change" }).click();
     assert.equal((await admin.query("SELECT count(*)::int AS n FROM admin_setting_versions WHERE setting_key='documents.max_pdf_pages'")).rows[0].n, 0, "nothing is stored before confirmation");
+    await expect(detail.getByRole("button", { name: "Confirm change" })).toBeVisible();
     await detail.getByRole("button", { name: "Confirm change" }).click();
     await expect(detail.getByText("Version 1 was saved and is now in effect.")).toBeVisible();
     assert.equal((await admin.query("SELECT value::int AS v FROM admin_setting_effective WHERE setting_key='documents.max_pdf_pages'")).rows[0].v, 60);
