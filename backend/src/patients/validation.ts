@@ -1,4 +1,5 @@
 import { ApiError } from "../http/errors.js";
+import { safeDisplayText } from "../http/text.js";
 
 export interface ProfileChanges {
   full_name?: string;
@@ -55,7 +56,7 @@ function profile(value: Record<string, unknown>): ProfileChanges {
   if (Object.hasOwn(value, "full_name")) {
     if (typeof value.full_name !== "string") invalid();
     const name = value.full_name.trim();
-    if (!name || [...name].length > 120 || /[\u0000-\u001f\u007f]/.test(name)) invalid();
+    if (!name || [...name].length > 120 || !safeDisplayText(name)) invalid();
     changes.full_name = name;
   }
   if (Object.hasOwn(value, "date_of_birth")) {

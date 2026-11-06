@@ -77,7 +77,7 @@ export function createAdminRoutes(database: PatientDatabase, auth: Authenticatio
     res.status(200).json({ success: true, patient });
   });
   for (const action of ["suspend", "reactivate"] as StatusAction[]) {
-    router.post("/patients/:id/" + action, rejectQueryParameters, rejectRequestBody, requireAdmin(tokens, repository, "admin.patients." + action), async (req, res) => {
+    router.post("/patients/:id/" + action, requireAdmin(tokens, repository, "admin.patients." + action), rejectQueryParameters, rejectRequestBody, async (req, res) => {
       const admin = adminIdentity(req), id = patientIdParameter(req.params.id), result = await accounts.changeStatus(admin, id, action);
       if (result.outcome === "not_found") throw new ApiError(404, "NOT_FOUND", "Patient account not found.");
       if (result.outcome === "conflict") throw new ApiError(409, "ACCOUNT_STATE_CONFLICT", "The account is not in a state that permits this action.");
@@ -103,7 +103,7 @@ export function createAdminRoutes(database: PatientDatabase, auth: Authenticatio
     if (!job) throw new ApiError(404, "NOT_FOUND", "Processing job not found.");
     res.status(200).json({ success: true, job });
   });
-  router.post("/processing/jobs/:documentId/retry", rejectQueryParameters, rejectRequestBody, requireAdmin(tokens, repository, "admin.processing.retry"), async (req, res) => {
+  router.post("/processing/jobs/:documentId/retry", requireAdmin(tokens, repository, "admin.processing.retry"), rejectQueryParameters, rejectRequestBody, async (req, res) => {
     const admin = adminIdentity(req), id = jobIdParameter(req.params.documentId), result = await jobs.retry(admin, id);
     if (result.outcome === "not_found") throw new ApiError(404, "NOT_FOUND", "Processing job not found.");
     if (result.outcome === "not_retryable") throw new ApiError(409, "JOB_NOT_RETRYABLE", "This job cannot be retried under the current processing rules.");

@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "sourceMap": false },
+  "exclude": [
+    "node_modules", "dist",
+    "src/**/*.test.ts", "src/**/*.check.ts", "src/**/*.canary.ts", "src/**/*.unit.ts", "src/**/*.service.ts.disabled",
+    "src/*-checks/**", "src/*-db-checks/**", "src/phase*/**", "src/r[0-9]*/**", "src/integration-checks/**"
+  ]
+}

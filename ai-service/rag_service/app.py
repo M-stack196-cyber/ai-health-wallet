@@ -37,11 +37,14 @@ def create_app(token):
                 if type(data) is not dict or data.get('schema_version')!=1 or type(data.get('schema_version')) is not int or not re.fullmatch('[a-f0-9-]{36}',data.get('request_id','')):raise ValueError()
                 if operation=='chunks' and set(data)=={'schema_version','request_id','text','pages'}:result=chunks(data['text'],data['pages'])
                 elif operation=='embedding' and set(data)=={'schema_version','request_id','question'} and isinstance(data['question'],str) and 0<len(data['question'].encode())<=1000:result={'model':MODEL,'embedding':SyntheticEmbeddings().embed_query(data['question'])}
-                elif operation=='answers' and set(data)=={'schema_version','request_id','question','context_json','context_sha256'}:
+                elif operation=='answers' and set(data) in ({'schema_version','request_id','question','context_json','context_sha256'},{'schema_version','request_id','question','context_json','context_sha256','allowed_document_ids'}):
                     if not isinstance(data['question'],str) or not 0<len(data['question'].encode())<=1000 or not isinstance(data['context_json'],str) or hashlib.sha256(data['context_json'].encode()).hexdigest()!=data['context_sha256']:raise ValueError()
                     records=json.loads(data['context_json'])
                     if type(records) is not list or len(records)>20:raise ValueError()
-                    result=await answer(data['question'],records)
+                    allowed=data.get('allowed_document_ids')
+                    if 'allowed_document_ids' in data and (type(allowed) is not list or not 0<len(allowed)<=20 or len(set(allowed))!=len(allowed) or not all(type(i) is str and re.fullmatch('[a-f0-9-]{36}',i) for i in allowed)):raise ValueError()
+                    result=await answer(data['question'],records,allowed_document_ids=allowed)
+                    if result['status']=='unauthorized':return reply({'error':'OUT_OF_SCOPE'},403)
                     result['context_sha256']=data['context_sha256']
                 else:raise ValueError()
                 return reply({'schema_version':1,'request_id':data['request_id'],**result})

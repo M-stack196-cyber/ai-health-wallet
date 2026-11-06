@@ -4,6 +4,8 @@ import {createGuardianNotificationRoutes} from './guardian-notifications/routes.
 import {createSharingRoutes,type SharingOptions} from './sharing/routes.js';
 import {sharingConfig} from './sharing/config.js';
 import {createRagRoutes,type RagOptions} from './rag/routes.js';
+import {ragClientFromEnvironment} from './rag/client.js';
+import {trustProxyHops} from './config/proxy.js';
 import type {RagDatabase} from './rag/repository.js';
 import {createGuardianRoutes} from "./guardians/routes.js";
 import {createTimelineRoutes} from "./timeline/routes.js";
@@ -26,6 +28,7 @@ import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.
 export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminAuthenticationConfig | null; database?: PatientDatabase; identity?: IdentityOptions;
   documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; rag?:RagOptions; sharing?:SharingOptions; processingApi?: ProcessingApiOptions } = {}) {
   const app = express();
+  const rag: RagOptions = options.rag ?? { client: ragClientFromEnvironment() };
   const auth = options.auth ?? getAuthenticationConfig();
   const identity = options.identity ?? {mailer:configuredSecurityEmail(options.database ?? pool)?.mailer};
   const routes = createPatientRoutes(options.database ?? pool, auth, identity);
@@ -34,7 +37,7 @@ export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminA
     ? (documentConfig.storage ? createS3Storage(documentConfig.storage) : null) : options.documentStorage;
   const documents = createDocumentRoutes(options.documentDatabase ?? options.database ?? pool, auth, documentConfig, storage);
   app.disable("x-powered-by");
-  app.set("trust proxy", false);
+  app.set("trust proxy", trustProxyHops());
   app.use(helmet());
   app.use(cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }));
   app.use(express.json({ limit: "100kb" }));
@@ -58,8 +61,8 @@ export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminA
   const admin = options.admin === undefined ? getAdminAuthenticationConfig() : options.admin ?? undefined;
   if (admin) app.use("/api/v1/admin", noStore, createAdminRoutes(options.database ?? pool, auth, admin));
   app.use("/api/v1",createGuardianNotificationRoutes(options.documentDatabase ?? options.database ?? pool,auth,documentConfig,storage));
-  app.use("/api/v1",createSharingRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,documentConfig,storage,options.sharing??{config:sharingConfig(process.env),mailer:identity.mailer,ragClient:options.rag?.client}));
-  app.use("/api/v1",createRagRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,options.rag));
+  app.use("/api/v1",createSharingRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,documentConfig,storage,options.sharing??{config:sharingConfig(process.env),mailer:identity.mailer,ragClient:rag.client}));
+  app.use("/api/v1",createRagRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,rag));
   app.use("/api/v1", createSummaryRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.summaries));
   app.use("/api/v1", createProcessingRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.processingApi));
   app.use("/api/v1/documents", documents);

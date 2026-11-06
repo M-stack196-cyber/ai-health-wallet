@@ -56,7 +56,7 @@ before(async()=>{
  assert.equal((await stat(socket!)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();try{await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_phase7');}finally{await bootstrap.end();}
  await admin.query('CREATE EXTENSION vector');await admin.query('GRANT USAGE,CREATE ON SCHEMA public TO health_wallet_migrator');fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 598!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,19);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
  const sentinel=randomUUID();
  for(const file of files){if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const sql=await readFile(new URL('../../migrations/'+file,import.meta.url),'utf8');
@@ -212,4 +212,104 @@ test('P7-20 an admin suspending the patient cuts off guardian report links and n
  assert.equal((await admin.query('SELECT status FROM guardian_relationships WHERE id=$1',[g.id])).rows[0].status,'ACTIVE');assert.equal(await eligible(u.id),1);
  const fresh=await security.login(u.id,fixtureHash);assert.ok(fresh);assert.equal((await request('/patients/me/guardian-notifications',await tokens.issue(u.id,fresh.sessionId))).status,200);
  assert.equal((await request('/guardian-notifications/reports',undefined,{token:ref})).status,403,'signing in again does not revive the old link');
+});
+
+// ---- Phase R6: CFG-06 (no clinical approval through Admin or the application) and CFG-07 (indeterminate, never reassuring).
+async function configAdmin(role='config_admin'){
+ const pw='Synthetic admin passphrase 731!',email=randomUUID()+'@example.invalid';await createAdminAccount(admin,p=>createPasswordService(auth).hash(p),{email,fullName:'Synthetic Admin',role,password:pw});
+ const login=await fetch(base+'/admin/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});assert.equal(login.status,200);
+ const token=((await login.json()) as {access_token:string}).access_token;
+ return (path:string,body?:unknown)=>fetch(base+'/admin'+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,...(body===undefined?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>({status:r.status,data:await r.json() as any}));
+}
+const allRuleRows=()=>admin.query('SELECT id,version,definition_sha256,approval_status FROM guardian_serious_rules ORDER BY id,version').then(r=>r.rows);
+const REASSURING=/\b(normal|healthy|reassur\w*|all clear|nothing to worry|no concern|within (?:the )?(?:normal|reference|healthy) range|safe)\b/i;
+
+test('R6-06 admin rule edits and approval-like requests change nothing that decides an alert (CFG-06)',async()=>{
+ const adm=await configAdmin(),before=await allRuleRows();
+ const loose={field:'DEMO_MARKER',units:'demo_units',operator:'gt',bounds:[1],context:{}};
+ const created=await adm('/rules',{rule_id:'ADMIN_EDIT_ATTEMPT',definition:loose});assert.equal(created.status,201);assert.equal(created.data.rule.clinical_approval,'not_clinically_approved');
+ const second=await adm('/rules',{rule_id:'ADMIN_EDIT_ATTEMPT',definition:{...loose,bounds:[0]}});assert.equal(second.data.rule.version,2);assert.equal(second.data.rule.clinical_approval,'not_clinically_approved');
+ // same rule name as the live demo rule, lower threshold: still no effect on what the worker evaluates
+ assert.equal((await adm('/rules',{rule_id:demoRule.id,definition:loose})).status,201);
+ for(const body of [{rule_id:'ADMIN_X_RULE',definition:loose,clinical_approval:'clinically_approved'},{rule_id:'ADMIN_X_RULE',definition:loose,approved:true},{rule_id:'ADMIN_X_RULE',definition:{...loose,status:'clinically_approved'}},
+  {rule_id:'ADMIN_X_RULE',definition:{...loose,approval_status:'clinically_approved'}},{rule_id:'ADMIN_X_RULE',definition:{...loose,clinically_validated:true}},{rule_id:'ADMIN_X_RULE',definition:loose,reviewed_by:'Dr X'},{rule_id:'ADMIN_X_RULE',definition:{...loose,signed_off:true}}]){
+  const r=await adm('/rules',body);assert.equal(r.status,403,JSON.stringify(body).slice(0,80));assert.equal(r.data.error.code,'CLINICAL_APPROVAL_FORBIDDEN');
+ }
+ assert.equal((await admin.query("SELECT count(*)::int n FROM admin_serious_rule_versions WHERE rule_id='ADMIN_X_RULE'")).rows[0].n,0,'refused attempts store nothing');
+ assert.ok((await admin.query("SELECT count(*)::int n FROM admin_audit_events WHERE action='admin.rules.create' AND outcome='denied' AND scope->>'reason'='clinical_approval_not_permitted'")).rows[0].n>=7,'each approval attempt is audited as denied');
+ assert.deepEqual(await allRuleRows(),before,'the table the worker reads is untouched by Admin');
+ assert.equal((await admin.query("SELECT count(*)::int n FROM admin_serious_rule_versions WHERE clinical_approval<>'not_clinically_approved'")).rows[0].n,0);
+ for(const sql of ["UPDATE admin_serious_rule_versions SET clinical_approval='clinically_approved'","UPDATE admin_serious_rule_versions SET definition='{}'","DELETE FROM admin_serious_rule_versions","TRUNCATE admin_serious_rule_versions"])
+  await assert.rejects(admin.query(sql),`append-only even for the owner: ${sql}`);
+ await assert.rejects(admin.query("INSERT INTO admin_serious_rule_versions(rule_id,version,definition,created_by,clinical_approval) VALUES('ADMIN_Z_RULE',1,'{}',(SELECT id FROM admin_accounts LIMIT 1),'clinically_approved')"),'the approval value cannot be supplied');
+ // behaviour: a value that the loose admin version would flag does not alert, because only the configured demo rule runs
+ const u=await user(),g=await guardian(u);await document(u,'Glucose: 90 mg/dL\nDEMO_MARKER: 5 demo_units');await worker().scan(u.id);
+ const results=(await admin.query('SELECT rule_id,rule_version,outcome FROM guardian_rule_results WHERE patient_id=$1',[u.id])).rows;assert.deepEqual(results.map(r=>[r.rule_id,r.rule_version,r.outcome]),[[demoRule.id,'1','NOT_TRIGGERED']]);
+ assert.equal((await jobRows(u.id)).filter(j=>j.kind==='serious_alert').length,0);assert.equal(sentTo(g.email).length,0);
+});
+
+test('R6-07 the application database role can never record a clinical approval; a non-demo row cannot make a rule run (CFG-06)',async()=>{
+ const meta={qualified_approver:'Synthetic Reviewer',approval_reference:'SYN-1'},digest='a'.repeat(64);
+ for(const status of ['clinically_approved','pending_review'])
+  await assert.rejects(db.query(`INSERT INTO guardian_serious_rules(id,version,definition,definition_sha256,approval_status,approval_metadata) VALUES($1,'1','{}',$2,$3,$4)`,['R6_ROLE_'+status.toUpperCase(),digest,status,meta]),(e:any)=>e.code==='42501',status);
+ await db.query(`INSERT INTO guardian_serious_rules(id,version,definition,definition_sha256,approval_status,approval_metadata) VALUES('R6_ROLE_DEMO','1','{}',$1,'non_clinical_demo','{}')`,[digest]);
+ await assert.rejects(db.query("UPDATE guardian_serious_rules SET approval_status='clinically_approved'"),(e:any)=>e.code==='42501');
+ await assert.rejects(db.query("DELETE FROM guardian_serious_rules"),(e:any)=>e.code==='42501');
+ // a clinical-approval row planted by the database owner (outside the application) still cannot start an alert:
+ const planted={...demoRule,id:'PLANTED_CLINICAL_RULE'};
+ await admin.query(`INSERT INTO guardian_serious_rules(id,version,definition,definition_sha256,approval_status,approval_metadata) VALUES($1,$2,$3,$4,'clinically_approved',$5)`,[planted.id,planted.version,planted,notificationDigest(JSON.stringify(planted)),meta]);
+ const u=await user(),g=await guardian(u);await document(u,'DEMO_MARKER: 11 demo_units');
+ await assert.rejects(worker(settings,[planted]).scan(u.id),/Rule version conflict/);
+ assert.equal((await admin.query("SELECT count(*)::int n FROM guardian_rule_results WHERE rule_id='PLANTED_CLINICAL_RULE'")).rows[0].n,0);assert.equal((await jobRows(u.id)).length,0);assert.equal(sentTo(g.email).length,0);
+ assert.deepEqual(await worker().drain(u.id),[]);
+ // the configured rule list itself is restricted to the invented demo marker
+ for(const bad of [{...demoRule,field:'Glucose'},{...demoRule,units:'mg/dL'},{...demoRule,approval:{status:'clinically_approved',notice:'x'}},{...demoRule,id:'lowercase'}])assert.throws(()=>worker(settings,[bad as never]));
+});
+
+test('R6-08 anything uninterpretable is INDETERMINATE and says so; it is never a trigger, never normal and never reassuring (CFG-07)',async()=>{
+ const hostile:Record<string,string>={
+  'comma decimal':'DEMO_MARKER: 11,5 demo_units','scientific notation':'DEMO_MARKER: 1e3 demo_units','qualifier after unit':'DEMO_MARKER: 11 demo_units approx','less-than value':'DEMO_MARKER: <5 demo_units','range value':'DEMO_MARKER: 10-12 demo_units',
+  'lower-case field':'demo_marker: 11 demo_units','space before colon':'DEMO_MARKER : 11 demo_units','no unit':'DEMO_MARKER: 11','upper-case unit':'DEMO_MARKER: 11 DEMO_UNITS','wrong unit':'DEMO_MARKER: 11 mg/dL',
+  'arabic-indic digits':'DEMO_MARKER: ٣٣ demo_units','full-width digits':'DEMO_MARKER: １１ demo_units','conflicting duplicates':'DEMO_MARKER: 5 demo_units\nDEMO_MARKER: 11 demo_units','identical duplicates':'DEMO_MARKER: 11 demo_units\nDEMO_MARKER: 11 demo_units',
+  'unreadable value':'DEMO_MARKER: ??? demo_units','dash only':'DEMO_MARKER: -','plus sign':'DEMO_MARKER: +11 demo_units','trailing dot':'DEMO_MARKER: 11. demo_units','out of supported range':'DEMO_MARKER: 99999999 demo_units','embedded in a sentence':'Note that DEMO_MARKER: 11 demo_units was seen',
+  'zero-width character':'DEMO_MARKER: 11 demo_units​','two values on one line':'DEMO_MARKER: 5 demo_units 11 demo_units','empty':'','unrelated text':'Glucose: 90 mg/dL',
+ };
+ for(const [name,text] of Object.entries(hostile)){const r=evaluateDemoRule(demoRule,text,'pdf_text');assert.equal(r.outcome,'INDETERMINATE',name);assert.equal(r.value,null,name);assert.equal(r.unit,null,name);assert.match(r.explanation,/could not be evaluated reliably\. No serious trigger or reassuring conclusion is inferred\./,name);assert.ok(!REASSURING.test(r.explanation)||/reassuring conclusion is inferred/.test(r.explanation),name);}
+ assert.equal(evaluateDemoRule(demoRule,'DEMO_MARKER: 11 demo_units','ocr').outcome,'INDETERMINATE','unverified OCR is never trusted');assert.equal(evaluateDemoRule(demoRule,'DEMO_MARKER: 11 demo_units','image').reason,'unverified_ocr');
+ assert.equal(evaluateDemoRule(demoRule,'DEMO_MARKER: 11 demo_units','').outcome,'INDETERMINATE','unknown extraction method');
+ const ctx={...demoRule,context:{DEMO_CONTEXT:'fixture'}};
+ for(const [name,text] of Object.entries({'context missing':'DEMO_MARKER: 11 demo_units','context different':'DEMO_MARKER: 11 demo_units\nDEMO_CONTEXT: other','context duplicated':'DEMO_MARKER: 11 demo_units\nDEMO_CONTEXT: fixture\nDEMO_CONTEXT: fixture'}))assert.equal(evaluateDemoRule(ctx,text,'pdf_text').outcome,'INDETERMINATE',name);
+ assert.equal(evaluateDemoRule(ctx,'DEMO_MARKER: 11 demo_units\nDEMO_CONTEXT: fixture','pdf_text').outcome,'TRIGGERED','a clear, complete value still triggers');
+ assert.equal(evaluateDemoRule(demoRule,'  DEMO_MARKER: 10 demo_units  \r\n','pdf_text').outcome,'NOT_TRIGGERED');
+ const quiet=evaluateDemoRule(demoRule,'DEMO_MARKER: 3 demo_units','pdf_text');assert.equal(quiet.outcome,'NOT_TRIGGERED');assert.ok(!REASSURING.test(quiet.explanation.replace(/not a clinical assessment or reassurance/i,'')),'even a clear non-trigger makes no reassuring claim');assert.match(quiet.explanation,/not a clinical assessment or reassurance/);
+ // end to end: stored, visible to the patient as INDETERMINATE with the explicit wording, and nothing is sent
+ const u=await user(),g=await guardian(u);
+ for(const text of ['DEMO_MARKER: 11,5 demo_units','DEMO_MARKER: 5 demo_units\nDEMO_MARKER: 11 demo_units','DEMO_MARKER: ??? demo_units','Glucose: 90 mg/dL'])await document(u,text);
+ await document(u,'DEMO_MARKER: 11 demo_units',true,'ocr');
+ await worker().scan(u.id);
+ const rows=(await admin.query('SELECT outcome,result FROM guardian_rule_results WHERE patient_id=$1',[u.id])).rows;assert.equal(rows.length,5);assert.ok(rows.every(r=>r.outcome==='INDETERMINATE'&&r.result.value===null));
+ const seen=await request('/patients/me/guardian-notifications',u.token);assert.equal(seen.status,200);
+ assert.equal(seen.data.evaluations.length,5);assert.ok(seen.data.evaluations.every((e:any)=>e.outcome==='INDETERMINATE'&&/No serious trigger or reassuring conclusion is inferred/.test(e.result.explanation)));
+ assert.ok(!REASSURING.test(JSON.stringify(seen.data).replace(/No serious trigger or reassuring conclusion is inferred/g,'')),'no reassuring word anywhere in what the patient sees');
+ assert.equal((await jobRows(u.id)).length,0);assert.deepEqual(await worker().drain(u.id),[]);assert.equal(sentTo(g.email).length,0);
+ assert.equal((await admin.query("SELECT count(*)::int n FROM guardian_medical_events WHERE patient_id=$1 AND event IN ('serious_queued','delivered')",[u.id])).rows[0].n,0);
+});
+
+test('R6-09 the indeterminate policy cannot be switched to outbound messaging; a mixed document alerts only on the clear value (CFG-07)',async()=>{
+ const key=randomBytes(32);
+ assert.equal(guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline'},key)!.indeterminate,'persist_only','default never sends');
+ assert.equal(guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline',GUARDIAN_INDETERMINATE_POLICY:'blocked_pending_approval'},key)!.indeterminate,'blocked_pending_approval');
+ for(const policy of ['send_alert','send_generic_alert','notify','reassure','normal','','PERSIST_ONLY','persist_only '])assert.throws(()=>guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline',GUARDIAN_INDETERMINATE_POLICY:policy},key),/not approved/,JSON.stringify(policy));
+ for(const c of [{GUARDIAN_NOTIFICATIONS_MODE:'live'},{GUARDIAN_NOTIFICATIONS_MODE:'production'},{GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline',GUARDIAN_NOTIFICATIONS_ORIGIN:'https://guardian.example.com'},{GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline',GUARDIAN_NOTIFICATIONS_ORIGIN:'http://guardian.example.invalid'}])assert.throws(()=>guardianNotificationConfig(c,key));
+ assert.throws(()=>guardianNotificationConfig({GUARDIAN_NOTIFICATIONS_MODE:'synthetic-offline'}),'needs a reference key');
+ // both policies behave identically at runtime: no outbound message for an indeterminate result
+ for(const indeterminate of ['persist_only','blocked_pending_approval'] as const){
+  const u=await user(),g=await guardian(u),config={...settings,indeterminate};await document(u,'Glucose: 90 mg/dL\nDEMO_MARKER: ?? demo_units');
+  await worker(config).scan(u.id);assert.equal((await jobRows(u.id)).length,0,indeterminate);assert.deepEqual(await worker(config).drain(u.id),[]);assert.equal(sentTo(g.email).length,0,indeterminate);
+  assert.equal((await reader.observe(u.id)).evaluations[0].outcome,'INDETERMINATE');
+ }
+ // one clear document is not weakened by an unclear neighbour, and the unclear one is not turned into an alert
+ const u=await user(),g=await guardian(u);await document(u,'DEMO_MARKER: ??? demo_units');await document(u,'DEMO_MARKER: 11 demo_units');await worker().scan(u.id);
+ const alerts=(await jobRows(u.id)).filter(j=>j.kind==='serious_alert');assert.equal(alerts.length,1);assert.deepEqual(await worker().drain(u.id),['delivered']);
+ const mail=sentTo(g.email);assert.equal(mail.length,1);assert.ok(mail[0].message.text.includes('11 demo_units'));assert.ok(!mail[0].message.text.includes('???'));assert.ok(!REASSURING.test(mail[0].message.text.replace(/does not diagnose, prescribe treatment or replace[^.]*\./i,'')));
 });

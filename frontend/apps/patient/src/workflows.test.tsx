@@ -489,3 +489,63 @@ test.each(["queued", "failed", "completed"])(
       ).toBeTruthy();
   },
 );
+
+// ---- R8: accessibility of the main patient screens (structure only; real devices are NOT covered) ----
+// Every pressable and text field on each screen must have an accessible name and a role, so a screen
+// reader can announce it. This is a React Native test-renderer check, not a TalkBack/VoiceOver test.
+// react-test-renderer ships no types here; this is the small part of its node shape that the check uses.
+type ReactTestInstance = { type: unknown; props: Record<string, any>; findAll: (test: (node: ReactTestInstance) => boolean) => ReactTestInstance[] };
+let inspectedControls = 0;
+function unnamedControls(): string[] {
+  const problems: string[] = [];
+  for (const node of screen.UNSAFE_root.findAll(
+    (n: ReactTestInstance) => typeof n.type === "string" && (n.props.onPress || n.props.onChangeText),
+  )) {
+    const p = node.props;
+    inspectedControls++;
+    const name = p.accessibilityLabel ?? p["aria-label"];
+    const role = p.accessibilityRole ?? p.role;
+    if (p.onPress && !role) problems.push("pressable without role");
+    if (!name && p.onPress) {
+      const text = JSON.stringify(node.findAll((c: ReactTestInstance) => typeof c.props.children === "string").map((c: ReactTestInstance) => c.props.children));
+      if (text === "[]") problems.push("pressable without a name");
+    }
+    if (p.onChangeText && !name && !p.placeholder) problems.push("text field without a name");
+  }
+  return problems;
+}
+test("R8-MOBILE-A11Y every control on sign-in, account, library, upload, timeline, RAG, sharing and profile screens has a role and a name", async () => {
+  const seen: Record<string, string[]> = {};
+  const session = new PatientSession(
+    { baseUrl: "", fetch: (async () => new Response("{}", { status: 200 })) as typeof fetch },
+    { read: async () => null, write: async () => {}, remove: async () => {} },
+  );
+  const auth = render(<Auth session={session} onLogin={jest.fn()} />);
+  seen["sign in"] = unnamedControls();
+  for (const label of ["Verify email", "Forgot password", "Create account"]) {
+    const button = screen.queryByRole("button", { name: label });
+    if (!button) continue;
+    fireEvent.press(button);
+    seen[label] = unnamedControls();
+  }
+  auth.unmount();
+  const panels: [string, React.ReactElement, string?][] = [
+    ["library", <RecordsPanel {...context()} />, "selected.pdf"],
+    ["upload", <UploadPanel {...context()} onUploaded={jest.fn()} />],
+    ["timeline", <TimelinePanel {...context({ timeline: jest.fn(async () => ({ entries: [], pagination: { has_more: false } })) })} />],
+    ["rag", <RagPanel {...context({ ask: jest.fn() })} />],
+    ["sharing", <SharingPanel {...context()} />, "0 records selected (maximum 20)"],
+    ["profile", <ProfilePanel {...context()} />],
+  ];
+  for (const [name, element, ready] of panels) {
+    const view = render(element);
+    if (ready) await screen.findByText(ready);
+    seen[name] = unnamedControls();
+    view.unmount();
+  }
+  const bad = Object.entries(seen).filter(([, problems]) => problems.length);
+  expect(bad).toEqual([]);
+  expect(Object.keys(seen).length).toBeGreaterThanOrEqual(6);
+  expect(inspectedControls).toBeGreaterThanOrEqual(10);
+  console.log("R8_MOBILE_A11Y screens=" + Object.keys(seen).join(",") + " controls=" + inspectedControls);
+});

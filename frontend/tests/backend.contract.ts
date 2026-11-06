@@ -224,7 +224,7 @@ before(async () => {
   )
     .filter((f) => f.endsWith(".sql"))
     .sort();
-  assert.equal(files.length, 19);
+  assert.equal(files.length, 21);
   for (const file of files) {
     if (file.startsWith("0005"))
       await admin.query(
@@ -656,6 +656,55 @@ test("P8-API-05 source deletion and account suspension invalidate current backen
     (e) => e instanceof ApiError && e.status === 401,
   );
   assert.equal(u.client.authorized, false);
+});
+test("R8-PERF-01 real-backend response times for the main patient and doctor calls are measured (synthetic data, local disposable database)", async () => {
+  // CFG-10 has no approved numeric latency value in the repository, so nothing here is compared
+  // with a threshold. Every call must succeed; the measured figures are printed and optionally saved.
+  const u = await user(),
+    api = patientApi(u.client),
+    selected = await document(u);
+  await summary(u, selected.id);
+  const ragClient = createRagClient({
+      provider: "synthetic-offline",
+      url: ocrUrl + "/internal/v1/rag/",
+      token: serviceToken,
+    }),
+    rag = createRagService(db, u.id, ragClient, async () => {});
+  await rag.index(selected.id);
+  const d = await doctor(api, [selected.id], "qr_code");
+  const runs = 20;
+  const calls: Record<string, () => Promise<unknown>> = {
+    "patient profile": () => api.profile(),
+    "patient records list": () => api.records({ limit: 20 }),
+    "patient timeline": () => api.timeline(),
+    "patient summary": () => api.summary(selected.id),
+    "patient original file": () => api.original(selected.id),
+    "patient RAG question": () => api.ask("What is the Glucose value?"),
+    "doctor records list": () => d.api.records(),
+    "doctor original file": () => d.api.file(selected.id),
+    "doctor summary": () => d.api.summary(selected.id),
+    "doctor RAG question": () => d.api.ask("What is the Glucose value?"),
+  };
+  const report: Record<string, { runs: number; p50_ms: number; p95_ms: number; max_ms: number }> = {};
+  for (const [name, call] of Object.entries(calls)) {
+    await call(); // one warm-up call, not measured
+    const times: number[] = [];
+    for (let i = 0; i < runs; i++) {
+      const start = performance.now();
+      await call();
+      times.push(performance.now() - start);
+    }
+    times.sort((a, b) => a - b);
+    const at = (q: number) => Math.round(times[Math.min(times.length - 1, Math.ceil(q * times.length) - 1)] * 10) / 10;
+    report[name] = { runs, p50_ms: at(0.5), p95_ms: at(0.95), max_ms: at(1) };
+  }
+  assert.equal(Object.keys(report).length, Object.keys(calls).length);
+  console.log("R8_PERF " + JSON.stringify(report));
+  if (process.env.R8_PERF_OUT) await writeFile(process.env.R8_PERF_OUT, JSON.stringify(report, null, 2), { mode: 0o600 });
+  // End the doctor session the way the product does (revoke), so no session timer keeps the process alive.
+  await api.revoke(d.grant.grant.id);
+  await assert.rejects(d.api.records(), (e) => e instanceof ApiError && e.status === 403);
+  await u.client.logout();
 });
 test("P8-API-06 real Chrome doctor flow through Vite proxy to actual backend/DB/email OTP and revocation", async () => {
   const { chromium, expect } = await import("@playwright/test");

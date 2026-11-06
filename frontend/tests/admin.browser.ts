@@ -1,3 +1,4 @@
+import { scanAccessibility } from "./a11y.ts";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
@@ -1249,4 +1250,34 @@ test("P9-ADMIN-WEB-10 the new screens fit a laptop, take keyboard focus, keep no
   await expect(rejected.page.getByText("Your session is no longer valid. Sign in again.")).toBeVisible();
   await expect(rejected.page.getByRole("heading", { name: "Operational settings" })).toHaveCount(0);
   await rejected.context.close();
+});
+
+test("R8-ADMIN-WEB-01 admin dashboard: sign-in and every screen pass the accessibility checks", async () => {
+  const { page, context } = await setup({ viewport: { width: 1280, height: 720 } });
+  const summary: Record<string, unknown> = {};
+  const problems: string[] = [];
+  const signin = await scanAccessibility(page);
+  summary["sign-in"] = { checked: signin.checked, lowestContrast: signin.lowestContrast };
+  problems.push(...signin.issues.map((x) => "sign-in: " + x));
+  await signIn(page);
+  await expect(page.getByRole("heading", { name: "Patient accounts" })).toBeVisible();
+  const first = await scanAccessibility(page);
+  summary["Patient accounts"] = { checked: first.checked, lowestContrast: first.lowestContrast };
+  problems.push(...first.issues.map((x) => "Patient accounts: " + x));
+  const screens: [string, string][] = [
+    ["Processing", "Document processing"], ["Guardians", "Guardian relationships"], ["Share grants", "Doctor share grants"],
+    ["Deliveries", "Email and notification delivery"], ["Settings", "Operational settings"], ["Serious rules", "Serious-finding rules"],
+    ["System health", "System health"], ["Audit log", "Audit log"],
+  ];
+  for (const [item, heading] of screens) {
+    await go(page, item);
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    await expect(page.getByText("Loading…")).toHaveCount(0);
+    const result = await scanAccessibility(page);
+    summary[item] = { checked: result.checked, lowestContrast: result.lowestContrast };
+    problems.push(...result.issues.map((x) => item + ": " + x));
+  }
+  console.log("R8_A11Y_ADMIN " + JSON.stringify(summary));
+  await context.close();
+  assert.deepEqual(problems, []);
 });

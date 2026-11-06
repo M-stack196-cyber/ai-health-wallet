@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import type { PoolClient } from "pg";
 import { getMigrationDatabaseConfig } from "../config/env.js";
 import { migrationPool } from "./migration-pool.js";
+import { migrationTargetProblem } from "./migration-target.js";
 
 // One project-specific session lock serializes tracking bootstrap and execution.
 export const MIGRATION_LOCK = [1095260232, 1400] as const;
@@ -22,10 +23,8 @@ interface AppliedMigration {
 }
 
 export function assertDedicatedDatabase(): void {
-  const config = getMigrationDatabaseConfig();
-  if (config.host !== "127.0.0.1" || config.port !== 5433 || config.database !== "ai_health_wallet") {
-    throw new MigrationError("Database tools require the dedicated local ai_health_wallet database on 127.0.0.1:5433.");
-  }
+  const problem = migrationTargetProblem(getMigrationDatabaseConfig());
+  if (problem) throw new MigrationError("Migration target refused: " + problem + ".");
 }
 
 export async function loadMigrations(): Promise<Migration[]> {

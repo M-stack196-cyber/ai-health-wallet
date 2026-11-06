@@ -2,6 +2,9 @@ import {randomUUID} from 'node:crypto';
 import {ApiError} from '../http/errors.js';
 export const embeddingModel='synthetic-hash-32-v1',chunkerVersion='lc-recursive-600-80-v1';
 export const insufficient='The available health records do not contain enough information to answer this question.';
+// M08-007: fixed wording, never generated. Wording has no clinical approval (CFG-06 does not apply to it, but it is not clinically reviewed).
+export const safetyNoticeId='non_diagnostic_v1';
+export const safetyNotice='This service does not diagnose or give medical advice about symptoms. Symptoms should be assessed by a qualified health professional; seek urgent medical care if they are severe or sudden.';
 export const ragUnavailable=()=>new ApiError(503,'RAG_UNAVAILABLE','Record questions are temporarily unavailable.');
 export function validateVector(v:unknown):number[]{
  if(!Array.isArray(v)||v.length!==32||v.some(x=>typeof x!=='number'||!Number.isFinite(x)||Math.abs(x)>1)||!v.some(x=>x!==0))throw ragUnavailable();return v;
@@ -21,4 +24,11 @@ export function createRagClient(config:{provider:string;url:string;token:string}
    return value;
   }catch{throw ragUnavailable();}
  }};
+}
+
+/** Builds the private RAG client from deployment settings; absent settings mean "not available", partial or odd ones refuse to start. */
+export function ragClientFromEnvironment(env:NodeJS.ProcessEnv=process.env){
+ if(!env.RAG_SERVICE_URL)return undefined;
+ if(env.RAG_PROVIDER!=='synthetic-offline')throw Error('Invalid private RAG configuration.');
+ return createRagClient({provider:'synthetic-offline',url:env.RAG_SERVICE_URL,token:env.RAG_SERVICE_TOKEN??''});
 }

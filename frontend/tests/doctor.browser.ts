@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { createServer } from "node:net";
 import { spawn } from "node:child_process";
 import { chromium, expect, type Page } from "@playwright/test";
+import { scanAccessibility } from "./a11y.ts";
 let browser: Awaited<ReturnType<typeof chromium.launch>>,
   vite: ReturnType<typeof spawn>;
 let origin = "";
@@ -384,4 +385,34 @@ test("P8-WEB-06 responsive entry and workspace have no horizontal overflow", asy
     fullPage: true,
   });
   await context.close();
+});
+
+test("R8-WEB-01 doctor web: entry, identity gate and workspace pass the accessibility checks on a laptop and a phone-width screen", async () => {
+  const { page, context } = await setup();
+  const report: Record<string, unknown> = {};
+  const problems: string[] = [];
+  const note = (label: string, r: { issues: string[] }) => problems.push(...r.issues.map((x) => label + ": " + x));
+  for (const [label, size] of [["laptop", { width: 1440, height: 1000 }], ["phone", { width: 390, height: 844 }]] as const) {
+    await page.setViewportSize(size);
+    const entry = await scanAccessibility(page);
+    report[label + " entry"] = entry;
+    assert.deepEqual(entry.issues, [], label + " entry screen");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await identify(page);
+  const gate = await scanAccessibility(page);
+  report["identity gate"] = gate;
+  note("identity gate", gate);
+  await page.getByLabel("Complete email verification code").fill("complete.synthetic-code");
+  await page.getByRole("button", { name: /Verify & open/ }).click();
+  await expect(page.getByText("selected-lab.pdf", { exact: true })).toBeVisible();
+  for (const [label, size] of [["laptop", { width: 1440, height: 1000 }], ["phone", { width: 390, height: 844 }]] as const) {
+    await page.setViewportSize(size);
+    const workspace = await scanAccessibility(page);
+    report[label + " workspace"] = workspace;
+    note(label + " workspace", workspace);
+  }
+  console.log("R8_A11Y_DOCTOR " + JSON.stringify(Object.fromEntries(Object.entries(report).map(([k, v]) => [k, { checked: (v as any).checked, lowestContrast: (v as any).lowestContrast }]))));
+  await context.close();
+  assert.deepEqual(problems, []);
 });

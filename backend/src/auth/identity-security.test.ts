@@ -39,7 +39,7 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_identity_phase1');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,19);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
  if(process.env.IDENTITY_TEST_SCHEMA_FILE){
   assert.equal(process.env.IDENTITY_TEST_SCHEMA_FILE,socket+'/development-schema.dump');
   const restored=spawnSync('/usr/bin/pg_restore',['--no-owner','--no-privileges','--exit-on-error','--host='+socket,'--port=55481','--username='+userInfo().username,'--dbname=hw_identity_phase1',process.env.IDENTITY_TEST_SCHEMA_FILE],{encoding:'utf8',timeout:30000});
@@ -131,7 +131,9 @@ test('authenticated password change rejects wrong/weak inputs and invalidates al
  for(const s of [a,b]){assert.equal((await request('/patients/me',undefined,s.access_token)).status,401);assert.equal((await request('/auth/refresh',{refresh_token:s.refresh_token})).status,401);}await login(u.email,replacement);
 });
 test('suspended/deleted/restricted/revoked accounts deny login/access/refresh; reactivation does not resurrect sessions',async()=>{
- for(const status of ['suspended','deletion_pending','deletion_restricted','deleted','revoked']){const u=await registered(),s=await login(u.email);await admin.query('UPDATE patients SET account_status=$2 WHERE id=$1',[u.id,status]);assert.equal((await request('/auth/login',{email:u.email,password})).status,401);assert.equal((await request('/patients/me',undefined,s.access_token)).status,401);assert.equal((await request('/auth/refresh',{refresh_token:s.refresh_token})).status,401);await admin.query("UPDATE patients SET account_status='active' WHERE id=$1",[u.id]);assert.equal((await request('/patients/me',undefined,s.access_token)).status,401);}
+ for(const status of ['suspended','deletion_pending','deletion_restricted','deleted','revoked']){const u=await registered(),s=await login(u.email);await admin.query('UPDATE patients SET account_status=$2 WHERE id=$1',[u.id,status]);assert.equal((await request('/auth/login',{email:u.email,password})).status,401);assert.equal((await request('/patients/me',undefined,s.access_token)).status,401);assert.equal((await request('/auth/refresh',{refresh_token:s.refresh_token})).status,401);// R2: deletion states are one-way; the database refuses to reactivate them.
+if(['deletion_pending','deletion_restricted','deleted'].includes(status))await assert.rejects(admin.query("UPDATE patients SET account_status='active' WHERE id=$1",[u.id]),(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code==='23514');
+else await admin.query("UPDATE patients SET account_status='active' WHERE id=$1",[u.id]);assert.equal((await request('/patients/me',undefined,s.access_token)).status,401);}
 });
 test('cross-patient profile/document isolation and current authorization cover file, processing and summary paths',async()=>{
  const u=await registered(),v=await registered(),a=await login(u.email),b=await login(v.email),id=await doc(u.id);

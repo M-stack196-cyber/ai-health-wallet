@@ -33,7 +33,7 @@ export function createSharingRoutes(db:RagDatabase,auth:AuthenticationConfig,doc
  const name=(value:any,max=120)=>{if(typeof value!=='string'||!value.trim()||value.length>max||/[\u0000-\u001f\u007f]/.test(value))throw new ApiError(400,'INVALID_SHARE_INPUT','Doctor identity is invalid.');return value.trim();};
  const empty:RequestHandler=(req,_res,next)=>{if(Object.keys(fields(req.body,[])).length)throw shareDenied();next();};
  const token=(value:any)=>{if(typeof value!=='string'||value.length>160)throw shareDenied();return value;};
- async function rate(req:Request,kind:string,subject:string,max:number){for(const [i,key] of [rateHash(auth.jwtKey,kind+':ip',req.ip??'unknown'),rateHash(auth.jwtKey,kind+':subject',subject)].entries())if(!await security.rate(key,i===0?Math.max(max,100):max,3600))throw new ApiError(429,'SHARING_RATE_LIMITED','Too many sharing attempts. Try again later.');}
+ async function rate(req:Request,kind:string,subject:string,max:number,windowSeconds=3600){for(const [i,key] of [rateHash(auth.jwtKey,kind+':ip',req.ip??'unknown'),rateHash(auth.jwtKey,kind+':subject',subject)].entries())if(!await security.rate(key,i===0?Math.max(max,100):max,windowSeconds))throw new ApiError(429,'SHARING_RATE_LIMITED','Too many sharing attempts. Try again later.');}
  r.post('/sharing/grants',patient,ready,rejectQueryParameters,requireJson,async(req,res)=>{
   const b=fields(req.body,['document_ids','share_type','doctor_email']);if(!Array.isArray(b.document_ids)||!b.document_ids.length||b.document_ids.length>20||new Set(b.document_ids).size!==b.document_ids.length||!['qr_code','unique_link'].includes(b.share_type))throw new ApiError(400,'INVALID_SHARE_SELECTION','Select exact records and a sharing type.');
   const ids=b.document_ids.map((id:any)=>documentId(id)),recipient=b.doctor_email===undefined?undefined:email(b.doctor_email);
@@ -73,6 +73,7 @@ export function createSharingRoutes(db:RagDatabase,auth:AuthenticationConfig,doc
   entries.sort((a,b)=>a.date.localeCompare(b.date));await resolve(res)();res.json({success:true,scope:'selected_records_only',entries,limitations:['Only existing summaries of selected accessible records are shown. Missing summaries remain unavailable.']});
  });
  doctor.post('/rag/queries',rejectQueryParameters,requireJson,async(req,res)=>{
+  await rate(req,'doctor_rag',scope(res).sessionHash,30,60);
   const b=fields(req.body,['question','category']);if(typeof b.question!=='string'||!b.question.trim()||Buffer.byteLength(b.question)>1000||/[\u0000-\u001f\u007f\ud800-\udfff]/u.test(b.question)||b.category!==undefined&&!['lab_report','prescription','other_medical_document'].includes(b.category))throw new ApiError(400,'INVALID_RAG_INPUT','Invalid record question.');if(!options.ragClient)throw unavailable();const s=scope(res);
   const result=await createRagService(db,s.patientId,options.ragClient,async()=>{await resolve(res)();},{grantId:s.grantId,sessionHash:s.sessionHash,permittedDocumentIds:s.permittedDocumentIds}).query(b.question,b.category,AbortSignal.timeout(30000));await resolve(res)();res.json({success:true,result});
  });

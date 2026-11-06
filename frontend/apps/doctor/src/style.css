@@ -124,7 +124,7 @@ button.quiet:hover {
   font-size: 10px;
   letter-spacing: 2px;
   font-weight: 750;
-  color: #658077;
+  color: #4f655b;
 }
 .intro h1 {
   font-family: Georgia, serif;
@@ -140,7 +140,7 @@ button.quiet:hover {
 }
 .intro > p {
   max-width: 400px;
-  color: #6d7d75;
+  color: #4f655b;
   font-size: 16px;
 }
 .principles {
@@ -154,7 +154,7 @@ button.quiet:hover {
   gap: 22px;
 }
 .principles b {
-  color: #8fa69b;
+  color: #4f655b;
   font-size: 11px;
 }
 .entry-card {
@@ -175,7 +175,7 @@ h3 {
   font-weight: 600;
 }
 .muted {
-  color: #6c7b74;
+  color: #4f655b;
   font-size: 13px;
 }
 form label {
@@ -212,7 +212,7 @@ form > button {
   border-top: 1px solid #e6ece5;
   margin-top: 26px;
   padding-top: 20px;
-  color: #7c8a80;
+  color: #4f655b;
   font-size: 11px;
 }
 .notice {
@@ -225,7 +225,7 @@ form > button {
 }
 footer {
   border-top: 1px solid #dfe7df;
-  color: #7d8d82;
+  color: #4f655b;
   font-size: 11px;
   text-align: center;
   padding: 22px;
@@ -268,11 +268,11 @@ nav button {
 }
 .access-card p {
   font-size: 11px;
-  color: #6d7e70;
+  color: #4f655b;
 }
 .access-card small {
   font-size: 10px;
-  color: #6d7e70;
+  color: #4f655b;
 }
 .dot {
   display: inline-block;
@@ -306,7 +306,7 @@ nav button {
 .scope-tag {
   white-space: nowrap;
   background: #e7eee7;
-  color: #56775e;
+  color: #3f5e47;
   border-radius: 20px;
   padding: 7px 12px;
   font-size: 10px;
@@ -365,7 +365,7 @@ nav button {
   font-size: 10px;
   background: #edf3e6;
   border: 1px solid #dce7d2;
-  color: #6e8a5d;
+  color: #466338;
   padding: 13px 9px;
   border-radius: 8px;
   min-width: 44px;
@@ -380,7 +380,7 @@ nav button {
   display: block;
   font-size: 11px;
   font-weight: 400;
-  color: #829082;
+  color: #4f655b;
   margin-top: 4px;
 }
 .record-date {
@@ -391,12 +391,12 @@ nav button {
 .empty {
   text-align: center;
   padding: 60px 24px;
-  color: #6d8275;
+  color: #4f655b;
   font-size: 13px;
 }
 .empty > span {
   font-size: 36px;
-  color: #a5b7a4;
+  color: #4f655b;
 }
 .detail {
   padding: 26px;
@@ -416,7 +416,7 @@ dl {
   font-size: 13px;
 }
 dt {
-  color: #7a8c7e;
+  color: #4f655b;
 }
 dd {
   margin: 0;
@@ -457,7 +457,7 @@ iframe {
 }
 .timeline-event time {
   font-size: 12px;
-  color: #6d8171;
+  color: #4f655b;
 }
 .timeline-event h3 {
   margin-top: 0;

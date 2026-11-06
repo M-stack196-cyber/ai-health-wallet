@@ -1,0 +1,52 @@
+# Build context for infrastructure/staging/*.Dockerfile (context = repository root).
+# Nothing secret, local or generated may enter an image.
+**/.env
+**/.env.*
+!**/.env.example
+**/.aws
+**/.ssh
+**/.private-evidence
+.private-evidence
+**/credentials
+**/secrets
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.dump
+**/*.sql.gz
+.git
+**/node_modules
+**/dist
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/coverage
+**/*.log
+mobile
+web
+# Only the two contract files the summary service loads at start-up; benchmark and evaluation material stay out.
+shared/*
+!shared/medical-summary
+shared/medical-summary/*
+!shared/medical-summary/v1.schema.json
+!shared/medical-summary/glossary-v1.json
+docs
+frontend/tests
+# The native patient app is not built here; npm workspaces still need its package.json to resolve the lockfile.
+frontend/apps/patient/*
+!frontend/apps/patient/package.json
+infrastructure/baseline
+infrastructure/identity
+infrastructure/processing-delivery
+infrastructure/requirements
+infrastructure/stage-b
+infrastructure/summary-db
+ai-service/tests
+ai-service/tests_ocr
+ai-service/tests_rag
+ai-service/summary_benchmark
+ai-service/summary_evaluation
+ai-service/tools

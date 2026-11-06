@@ -130,6 +130,13 @@ def create_app(config):
                         "structured": {"content_trust": "untrusted_document_data", "tools": versions, "pages": pages, "date_suggestion": suggestion,
                                        "category_suggestion": {"value": category, "confidence": 50} if category else None}}
         task = asyncio.create_task(work())
+        def release(_finished):
+            # Free the admission slot when the work has really ended (temporary files and subprocesses cleaned up).
+            # Doing this in the request's finally block leaked the slot: after a client cancel the awaits there are
+            # cancelled again and the decrement was skipped.
+            nonlocal active
+            active -= 1
+        task.add_done_callback(release)
         async def disconnect():
             while not task.done():
                 await asyncio.sleep(0.1)
@@ -151,9 +158,8 @@ def create_app(config):
         finally:
             if monitor:
                 monitor.cancel()
-                await asyncio.gather(monitor, return_exceptions=True)
             if not task.done():
                 task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-            active -= 1
+            # Shielded so a repeated cancel cannot abandon the wait; the slot is released by the done callback above.
+            await asyncio.shield(asyncio.gather(*([monitor] if monitor else []), task, return_exceptions=True))
     return app

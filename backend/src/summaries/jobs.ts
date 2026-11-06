@@ -21,10 +21,12 @@ const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const live=`j.id=$1 AND j.patient_id=$2 AND j.lease_token=$3 AND j.state='running' AND j.lease_expires_at>clock_timestamp() AND j.attempt_deadline_at>clock_timestamp()`;
 const current=`EXISTS(SELECT 1 FROM public.summary_source_snapshots s WHERE s.id=j.snapshot_id AND s.patient_id=j.patient_id AND public.summary_source_current(s))`;
 
+// Real OCR confidence is a fractional mean, but the canonical encoder accepts safe integers only; fractions are hashed as their text.
+const integerSafe=(value:unknown):unknown=>JSON.parse(JSON.stringify(value),(_key,v)=>typeof v==='number'&&!Number.isSafeInteger(v)?String(v):v);
 function snapshotSource(s:SummarySnapshot):SummaryInputV1['source'] {
  const e=validateExtraction({text:s.extracted_text,method:s.source_metadata.method,extractor:s.source_metadata.extractor,source:s.source_metadata.source});
  return {text:e.text,text_sha256:hash(e.text),original_sha256:s.source_metadata.source.sha256,
-  metadata_sha256:hash(canonicalSummaryJson(e.metadata)),processing_attempt:s.processing_attempt,extraction_status:'completed',
+  metadata_sha256:hash(canonicalSummaryJson(integerSafe(e.metadata))),processing_attempt:s.processing_attempt,extraction_status:'completed',
   method:s.source_metadata.method,page_count:s.source_metadata.source.pageCount};
 }
 

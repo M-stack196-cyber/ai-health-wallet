@@ -10,7 +10,7 @@ import {
 } from "react-native";
 export const palette = {
   ink: "#23453b",
-  muted: "#6b7f72",
+  muted: "#566a5e",
   green: "#226b59",
   background: "#f4f7f1",
   line: "#dce5d8",

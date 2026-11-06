@@ -30,7 +30,7 @@ button.secondary { background: white; color: #196c5c; border-color: #c8d8d1; }
 button.secondary:hover { background: #eef5f2; }
 button.danger { background: #a63a2f; }
 button.danger:hover { background: #862d24; }
-button.link { background: none; color: #196c5c; border: 0; padding: 2px 0; text-decoration: underline; font-weight: 600; text-align: left; }
+button.link { min-width: 24px; min-height: 24px; background: none; color: #196c5c; border: 0; padding: 2px 0; text-decoration: underline; font-weight: 600; text-align: left; }
 button.link:hover { background: none; color: #0f4a3d; }
 
 .shell { min-height: 100vh; }
@@ -54,7 +54,7 @@ button.link:hover { background: none; color: #0f4a3d; }
 .login { display: grid; place-items: center; padding: 64px 20px; }
 .login-card { width: min(440px, 100%); background: white; border: 1px solid #dbe6e0; border-radius: 16px; padding: 32px; box-shadow: 0 8px 28px rgba(24, 59, 54, 0.06); }
 .login-card form { margin-top: 16px; display: grid; gap: 14px; }
-.eyebrow { font-size: 12px; letter-spacing: 2px; color: #6a8a80; font-weight: 700; }
+.eyebrow { font-size: 12px; letter-spacing: 2px; color: #4d6a61; font-weight: 700; }
 
 .workspace { max-width: 1280px; margin: 0 auto; padding: 24px 28px 64px; }
 .screen > .muted:first-of-type { margin: 0 0 16px; }
@@ -97,7 +97,7 @@ button.link:hover { background: none; color: #0f4a3d; }
 .cards { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 0; margin: 0 0 8px; }
 .cards li { background: white; border: 1px solid #dbe6e0; border-radius: 12px; padding: 12px 14px; display: grid; }
 .cards b { font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.cards span { font-size: 13px; color: #5b756d; text-transform: capitalize; }
+.cards span { font-size: 13px; color: #465f56; text-transform: capitalize; }
 .cards .alert-card { border-color: #e3a79e; background: #fbebe8; }
 
 

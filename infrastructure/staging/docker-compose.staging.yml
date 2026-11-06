@@ -1,0 +1,139 @@
+# Disposable single-node staging (us-east-1). One host, Docker Compose, NO database container:
+# PostgreSQL is an external RDS instance and storage is a private S3 bucket (both owner-provisioned, not yet created).
+# Nothing here is production. Required inputs are variables with ":?" so a missing value stops the stack.
+name: hw-staging
+
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 256
+  logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+
+services:
+  api:
+    <<: *hardened
+    image: ${HW_API_IMAGE:?image reference required}
+    mem_limit: 1g
+    cpus: 1.0
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=128m"]
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-2}          # nginx + the TLS terminator in front of it; must match the real chain
+      AWS_REGION: us-east-1
+      DOCUMENT_STORAGE_ENABLED: "true"
+      S3_BUCKET: ${S3_BUCKET:?private bucket name required}
+      S3_BUCKET_OWNER_ACCOUNT_ID: ${AWS_ACCOUNT_ID:?approved AWS account id required}
+      S3_DOCUMENT_PREFIX: medical-documents/
+      S3_ENCRYPTION: aws:kms
+      S3_KMS_KEY_ARN: ${S3_KMS_KEY_ARN:?KMS key arn required}
+      DB_HOST: ${RDS_ENDPOINT:?RDS endpoint required}
+      DB_PORT: "5432"
+      DB_NAME: ai_health_wallet_staging
+      DB_USER: health_wallet_app
+      DB_SSL_CA_FILE: /etc/ssl/rds/global-bundle.pem
+      DB_PASSWORD_FILE: /run/secrets/db_app_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      ADMIN_JWT_SECRET_FILE: /run/secrets/admin_jwt_secret
+      FRONTEND_ORIGIN: ${DOCTOR_ORIGIN:?doctor web origin required}
+      SHARING_PUBLIC_ORIGIN: ${DOCTOR_ORIGIN:?doctor web origin required}
+      # Synthetic-only modes. Real email, AI, OCR processing and clinical alerts stay switched off.
+      AUTH_SECURITY_EMAIL_MODE: disabled
+      GUARDIAN_NOTIFICATIONS_MODE: disabled
+      PROCESSING_SERVICE_ENABLED: "false"
+      PROCESSING_OPERATIONAL_ENABLED: "false"
+      SUMMARY_EXECUTOR_ENABLED: "false"
+      RAG_PROVIDER: synthetic-offline
+      RAG_SERVICE_URL: http://127.0.0.1:8013/internal/v1/rag/
+      RAG_SERVICE_TOKEN_FILE: /run/secrets/rag_service_token
+    secrets: [db_app_password, jwt_secret, admin_jwt_secret, rag_service_token]
+    volumes:
+      - ${RDS_CA_BUNDLE:?path to the RDS CA bundle required}:/etc/ssl/rds/global-bundle.pem:ro
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # The Python services share the API's network namespace: the Node client only accepts 127.0.0.1, and they listen only there.
+  rag:
+    <<: *hardened
+    image: ${HW_AI_IMAGE:?image reference required}
+    network_mode: "service:api"
+    depends_on: [api]
+    mem_limit: 512m
+    cpus: 0.5
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    command: ["python", "-m", "rag_service.entry"]
+    environment:
+      RAG_PROVIDER: synthetic-offline
+      RAG_SERVICE_PORT: "8013"
+      RAG_SERVICE_TOKEN_FILE: /run/secrets/rag_service_token
+    secrets: [rag_service_token]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket;socket.create_connection(('127.0.0.1',8013),2).close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Optional services, off by default: processing and AI summaries are disabled for staging (owner decision, CFG-01 unapproved).
+  summary:
+    <<: *hardened
+    profiles: ["optional"]
+    image: ${HW_AI_IMAGE:?image reference required}
+    network_mode: "service:api"
+    depends_on: [api]
+    mem_limit: 512m
+    cpus: 0.5
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    command: ["python", "-m", "summary_service.entry"]
+    environment: { SUMMARY_PROVIDER: synthetic-offline, SUMMARY_SERVICE_PORT: "8012", SUMMARY_SERVICE_TOKEN_FILE: /run/secrets/summary_service_token }
+    secrets: [summary_service_token]
+
+  ocr:
+    <<: *hardened
+    profiles: ["optional"]
+    image: ${HW_AI_IMAGE:?image reference required}
+    network_mode: "service:api"
+    depends_on: [api]
+    mem_limit: 768m
+    cpus: 1.0
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=256m"]
+    command: ["python", "-m", "ocr_service.entry"]
+    environment: { OCR_SERVICE_PORT: "8011", OCR_SERVICE_TOKEN_FILE: /run/secrets/ocr_service_token }
+    secrets: [ocr_service_token]
+
+  web:
+    <<: *hardened
+    image: ${HW_WEB_IMAGE:?image reference required}
+    depends_on: [api]
+    mem_limit: 128m
+    cpus: 0.25
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m", "/var/cache/nginx:rw,noexec,nosuid,size=32m"]
+    ports:
+      # Loopback only. The TLS terminator on the host (or a load balancer) is the only public entry; admin should be IP-restricted there.
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+networks:
+  edge: { driver: bridge }
+
+# File-based secrets: created by the operator on the host (mode 0400, never in git, never in an environment file).
+secrets:
+  db_app_password:       { file: "${SECRETS_DIR:?secrets directory required}/db_app_password" }
+  jwt_secret:            { file: "${SECRETS_DIR:?secrets directory required}/jwt_secret" }
+  admin_jwt_secret:      { file: "${SECRETS_DIR:?secrets directory required}/admin_jwt_secret" }
+  rag_service_token:     { file: "${SECRETS_DIR:?secrets directory required}/rag_service_token" }
+  summary_service_token: { file: "${SECRETS_DIR:?secrets directory required}/summary_service_token" }
+  ocr_service_token:     { file: "${SECRETS_DIR:?secrets directory required}/ocr_service_token" }

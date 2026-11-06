@@ -1,8 +1,9 @@
-import {Router} from 'express';
-import {rateLimit} from 'express-rate-limit';
+import {Router,type RequestHandler} from 'express';
 import type {AuthenticationConfig} from '../config/auth.js';
 import {requirePatient,assertCurrentPatient,patientIdentity,requireJson,rejectQueryParameters,rejectRequestBody} from '../auth/middleware.js';
 import {createTokenService} from '../auth/tokens.js';
+import {createSecurityRepository,rateHash} from '../auth/security-repository.js';
+import {getSecurityPolicy} from '../auth/security-policy.js';
 import {ApiError} from '../http/errors.js';
 import {documentId} from '../documents/validation.js';
 import {createDocumentRepository} from '../documents/repository.js';
@@ -14,7 +15,11 @@ import {createRagService} from './service.js';
 export interface RagOptions {client?:ReturnType<typeof createRagClient>;}
 export function createRagRoutes(db:RagDatabase,auth:AuthenticationConfig,options:RagOptions={}){
  const r=Router();r.use((_req,res,next)=>{res.set('Cache-Control','no-store');next();});
- const patient=requirePatient(createTokenService(auth),db),limit=rateLimit({windowMs:60000,limit:30,keyGenerator:req=>patientIdentity(req),standardHeaders:'draft-8',legacyHeaders:false});
+ const patient=requirePatient(createTokenService(auth),db),security=createSecurityRepository(db,getSecurityPolicy());
+ // Stored by hash in the database, so the limit survives restarts and is shared by every API instance.
+ const limit:RequestHandler=async(req,_res,next)=>{
+  if(!await security.rate(rateHash(auth.jwtKey,'rag:patient',patientIdentity(req)),30,60))throw new ApiError(429,'RATE_LIMITED','Too many record questions. Try again later.');next();
+ };
  const input=()=>new ApiError(400,'INVALID_RAG_INPUT','Invalid record question request.');
  const wrap=(fn:(req:any,signal:AbortSignal)=>Promise<unknown>)=>async(req:any,res:any)=>{
   if(!options.client)throw ragUnavailable();const controller=new AbortController(),end=setTimeout(()=>controller.abort(),30000),closed=()=>{if(!res.writableFinished)controller.abort();};res.once('close',closed);

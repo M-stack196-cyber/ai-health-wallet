@@ -10,6 +10,7 @@ import {createPasswordService} from './passwords.js';
 import {createTokenService} from './tokens.js';
 import {createSecurityRepository,rateHash,type ChallengePurpose,type SessionIdentity} from './security-repository.js';
 import {getSecurityPolicy,type SecurityPolicy} from './security-policy.js';
+import {createDeletionRepository} from '../deletion/repository.js';
 
 /** Transport receives secrets only in memory. It must not log payloads or persist plaintext.
  * No real email provider or live sends are enabled by default. */
@@ -34,7 +35,7 @@ function identity(req:Request):SessionIdentity {
 }
 export function createPatientRoutes(database:PatientDatabase,config:AuthenticationConfig,options:IdentityOptions={}) {
  const patients=createPatientRepository(database),passwords=createPasswordService(config),tokens=createTokenService(config);
- const policy=options.policy??getSecurityPolicy(),security=createSecurityRepository(database,policy);
+ const policy=options.policy??getSecurityPolicy(),security=createSecurityRepository(database,policy),deletion=createDeletionRepository(database);
  const auth=Router(),profile=Router();
  const limiter=rateLimit({windowMs:config.rateLimitWindowMs,limit:config.rateLimitMax,standardHeaders:'draft-8',legacyHeaders:false,
   validate:{xForwardedForHeader:false},message:{success:false,error:{code:'RATE_LIMITED',message:'Too many authentication attempts. Try again later.'}}});
@@ -116,6 +117,16 @@ export function createPatientRoutes(database:PatientDatabase,config:Authenticati
  profile.get('/me',rejectRequestBody,async(req,res)=>res.json({success:true,patient:await patients.get(patientIdentity(req))}));
  profile.patch('/me',requireJson,async(req,res)=>{
   const changes=validateProfilePatch(req.body);res.json({success:true,patient:await patients.update(patientIdentity(req),changes)});
+ });
+ profile.post('/me/deletion-request',requireJson,async(req,res)=>{
+  const input=fields(req.body,['current_password','confirmation']);await rate(req,'account-deletion',patientIdentity(req));
+  const current=password(input.current_password,false);
+  if(input.confirmation!=='DELETE_MY_ACCOUNT')throw new ApiError(400,'CONFIRMATION_REQUIRED','Confirmation text is missing or incorrect.');
+  const p=await patients.get(patientIdentity(req)),credentials=await patients.credentials(p.email);
+  if(!credentials||!await passwords.verify(current,credentials.password_hash))throw denied();
+  const result=await deletion.request(identity(req),credentials.password_hash);if(!result)throw denied();
+  // Honest outcome: access is ended now; nothing has been physically deleted yet.
+  res.status(202).json({success:true,deletion_request:result,access_revoked:true,physical_deletion:'not_performed'});
  });
  return {auth,profile};
 }

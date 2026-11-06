@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { readFileSync } from "node:fs";
 
 // The API loads runtime credentials only. Migration secrets are loaded on demand.
 config({ path: new URL("../../.env", import.meta.url), quiet: true });
@@ -14,6 +15,20 @@ function required(name: string): string {
   const value = process.env[name];
   if (!value || !value.trim()) throw new DatabaseConfigurationError(name + " is required.");
   return value;
+}
+
+/** TLS for the database link. A database on another machine always needs a CA file and full certificate verification. */
+export function databaseTls(host: string, env: NodeJS.ProcessEnv = process.env) {
+  const local = host.startsWith("/") || ["127.0.0.1", "::1", "localhost"].includes(host);
+  const file = env.DB_SSL_CA_FILE;
+  if (!file) {
+    if (local) return undefined;
+    throw new DatabaseConfigurationError("DB_SSL_CA_FILE is required for a database that is not on this machine.");
+  }
+  let pem: string;
+  try { pem = readFileSync(file, "utf8"); } catch { throw new DatabaseConfigurationError("DB_SSL_CA_FILE cannot be read."); }
+  if (!/-----BEGIN CERTIFICATE-----[\s\S]+-----END CERTIFICATE-----/.test(pem)) throw new DatabaseConfigurationError("DB_SSL_CA_FILE must contain PEM certificates.");
+  return { ca: pem, rejectUnauthorized: true, minVersion: "TLSv1.2" as const };
 }
 
 function connectionSettings() {
@@ -34,7 +49,8 @@ export function getDatabaseConfig() {
   if (user !== "health_wallet_app") {
     throw new DatabaseConfigurationError("DB_USER must be the restricted health_wallet_app role.");
   }
-  return { ...settings, user, password };
+  const ssl = databaseTls(settings.host);
+  return { ...settings, user, password, ...(ssl ? { ssl } : {}) };
 }
 
 export function getMigrationDatabaseConfig() {
@@ -45,5 +61,6 @@ export function getMigrationDatabaseConfig() {
   if (user !== "health_wallet_migrator") {
     throw new DatabaseConfigurationError("MIGRATION_DB_USER must be the dedicated health_wallet_migrator role.");
   }
-  return { ...settings, user, password };
+  const ssl = databaseTls(settings.host);
+  return { ...settings, user, password, ...(ssl ? { ssl } : {}) };
 }

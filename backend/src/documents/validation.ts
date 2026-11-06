@@ -1,5 +1,6 @@
 import { basename, extname } from "node:path";
 import { ApiError } from "../http/errors.js";
+import { safeDisplayText } from "../http/text.js";
 
 export const categories = ["lab_report", "prescription", "other_medical_document"] as const;
 export type Category = typeof categories[number];
@@ -16,7 +17,7 @@ function object(input: unknown, allowed: string[]): Record<string, unknown> {
 function text(value: unknown): string {
   if (typeof value !== "string") invalid();
   const valueTrimmed = value.trim();
-  if (!valueTrimmed || [...valueTrimmed].length > 120 || /[\u0000-\u001f\u007f-\u009f]/.test(valueTrimmed)) invalid();
+  if (!valueTrimmed || [...valueTrimmed].length > 120 || !safeDisplayText(valueTrimmed)) invalid();
   return valueTrimmed;
 }
 export function calendarDate(value: unknown): string {

@@ -13,6 +13,11 @@ INSUFFICIENT='The available health records do not contain enough information to 
 POLICY='patient-records-rag-v1'
 PROVIDER={'provider':'synthetic-offline','model':'exact-evidence-selector','revision':'1','policy':POLICY}
 
+# M08-007: symptom questions get a fixed, non-diagnostic notice. Node repeats this check and must agree.
+SAFETY_NOTICE='non_diagnostic_v1'
+SYMPTOM=re.compile(r'\b(symptom\w*|pain\w*|aches?|aching|fever\w*|cough\w*|nausea\w*|vomit\w*|dizz\w*|headache\w*|rash\w*|swell\w*|bleed\w*|breath\w*|fatigue\w*|hurt\w*)\b',re.I)
+def symptom_related(question):return bool(SYMPTOM.search(question))
+
 def topic(question):
     if re.search(r'\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b',question,re.I):return None
     if re.search(r'\bglucose\b',question,re.I):return 'glucose'
@@ -61,6 +66,11 @@ def build_graph(provider=None,retriever_factory=None):
     g.add_edge('context','generate');g.add_edge('validate',END)
     return g.compile()
 
-async def answer(question,records,authorized=True,provider=None,retriever_factory=None):
+async def answer(question,records,authorized=True,provider=None,retriever_factory=None,allowed_document_ids=None):
+    # Defence in depth for doctor grants: Node declares the permitted documents and every evidence record must carry one of them.
+    if allowed_document_ids is not None:
+        allowed=set(allowed_document_ids)
+        authorized=authorized and all(type(r.get('document_id')) is str and r['document_id'] in allowed for r in records)
     state=await build_graph(provider,retriever_factory).ainvoke({'authorized':authorized,'question':question,'records':records},config={'callbacks':[],'recursion_limit':12})
-    return {'status':state['status'],'selected':state.get('selected',[]) if state['status']=='answered' else [],'provenance':PROVIDER}
+    return {'status':state['status'],'selected':state.get('selected',[]) if state['status']=='answered' else [],'provenance':PROVIDER,
+            'safety_notice':SAFETY_NOTICE if symptom_related(question) else None}
