@@ -16,7 +16,8 @@
     "test:contracts": "node ../infrastructure/identity/run.mjs --execute-isolated --phase8",
     "test:browser": "node --import tsx --test tests/doctor.browser.ts tests/admin.browser.ts",
     "test:r8-quality": "node --import tsx --test tests/r8.quality.ts",
-    "r8:test": "npm run typecheck && npm test && npm run test:mobile && npm run test:r8-quality && npm run test:browser && npm run test:contracts"
+    "r8:test": "npm run typecheck && npm test && npm run test:mobile && npm run test:r8-quality && npm run test:browser && npm run test:contracts",
+    "test:patient-web": "node --import tsx --test tests/patient.web.browser.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

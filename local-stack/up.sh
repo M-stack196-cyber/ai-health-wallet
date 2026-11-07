@@ -44,7 +44,16 @@ say "Waiting for health checks..."
 wait_http backend http://127.0.0.1:5000/api/v1/health 60
 wait_http mailbox http://127.0.0.1:8026/messages 30
 wait_http doctor http://127.0.0.1:5173/ 60
-if [ "$LIGHT" = 0 ]; then wait_http admin http://127.0.0.1:5174/ 60; wait_http patient http://127.0.0.1:8081/ 240; fi
+if [ "$LIGHT" = 0 ]; then wait_http admin http://127.0.0.1:5174/ 60; wait_http "patient (bundle served)" http://127.0.0.1:8081/ 240; fi
+# A port that answers is not proof that a page draws. Open each web app in headless Chrome (skipped, with a note, if Chrome is missing).
+if [ -x /usr/bin/google-chrome ]; then
+  say "Render checks (headless Chrome)"
+  node "$REPO/local-stack/check-web.mjs" http://127.0.0.1:5173 "Shared with care" || say "  WARNING: doctor web did not render"
+  if [ "$LIGHT" = 0 ]; then
+    node "$REPO/local-stack/check-web.mjs" http://127.0.0.1:5174 "Sign in" || say "  WARNING: admin web did not render"
+    node "$REPO/local-stack/check-web.mjs" http://localhost:8081 "Welcome back" || say "  WARNING: patient web did not render"
+  fi
+else say "  (render checks skipped: /usr/bin/google-chrome not found)"; fi
 for n in ocr summary rag worker; do alive "$n" && say "  $n running" || say "  WARNING: $n is not running. See $LOGS/$n.log"; done
 cat <<DONE
 
