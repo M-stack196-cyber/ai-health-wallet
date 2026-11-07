@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
-# Starts the whole local demo stack. Usage: ./local-stack/up.sh [--light]
-#   --light  skips the admin web and the patient web preview (the two heaviest parts) to save memory.
+# Starts the whole local demo stack. Usage: ./local-stack/up.sh [--light] [--with-patient-web]
+#   --light              skips the admin web to save memory.
+#   --with-patient-web   also starts the Expo web preview of the patient app (a development aid, OFF by default). A new patient web
+#                        application is a PRD v2.0 section 2.2 non-goal unless separately approved; that approval is pending. On this
+#                        branch there is no web adapter, so the preview is expected to show a blank page (the render check will warn).
 # Local development only. Synthetic data only. Loopback only. Nothing here talks to AWS, a real mailbox or a real AI model.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-LIGHT=0; [ "${1:-}" = "--light" ] && LIGHT=1
+LIGHT=0; PATIENT_WEB=0
+for arg in "$@"; do
+  case "$arg" in
+    --light) LIGHT=1 ;;
+    --with-patient-web) PATIENT_WEB=1 ;;
+    *) die "Unknown option: $arg (use --light and/or --with-patient-web)" ;;
+  esac
+done
 load_env
 [ "${NODE_ENV:-}" = "development" ] || die "NODE_ENV must be development."
 mkdir -p "$PGDIR/sock" "$FILES" "$LOGS" "$RUN"; chmod 700 "$PGDIR" "$PGDIR/sock" "$FILES"
@@ -38,29 +48,35 @@ say "4/4 Web apps"
 start doctor "$REPO/frontend/apps/doctor" npx vite --host 127.0.0.1 --port 5173 --strictPort
 if [ "$LIGHT" = 0 ]; then
   start admin "$REPO/frontend/apps/admin" npx vite --host 127.0.0.1 --port 5174 --strictPort
+fi
+if [ "$PATIENT_WEB" = 1 ]; then
+  say "  patient web preview requested: development aid only, awaiting supervisor approval; expected blank without the web adapter"
   start patient "$REPO/frontend/apps/patient" env CI=1 EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:5000 npx expo start --web --localhost --port 8081
 fi
 say "Waiting for health checks..."
 wait_http backend http://127.0.0.1:5000/api/v1/health 60
 wait_http mailbox http://127.0.0.1:8026/messages 30
 wait_http doctor http://127.0.0.1:5173/ 60
-if [ "$LIGHT" = 0 ]; then wait_http admin http://127.0.0.1:5174/ 60; wait_http "patient (bundle served)" http://127.0.0.1:8081/ 240; fi
+if [ "$LIGHT" = 0 ]; then wait_http admin http://127.0.0.1:5174/ 60; fi
+if [ "$PATIENT_WEB" = 1 ]; then wait_http "patient (bundle served)" http://127.0.0.1:8081/ 240; fi
 # A port that answers is not proof that a page draws. Open each web app in headless Chrome (skipped, with a note, if Chrome is missing).
 if [ -x /usr/bin/google-chrome ]; then
   say "Render checks (headless Chrome)"
   node "$REPO/local-stack/check-web.mjs" http://127.0.0.1:5173 "Shared with care" || say "  WARNING: doctor web did not render"
   if [ "$LIGHT" = 0 ]; then
     node "$REPO/local-stack/check-web.mjs" http://127.0.0.1:5174 "Sign in" || say "  WARNING: admin web did not render"
-    node "$REPO/local-stack/check-web.mjs" http://localhost:8081 "Welcome back" || say "  WARNING: patient web did not render"
+  fi
+  if [ "$PATIENT_WEB" = 1 ]; then
+    node "$REPO/local-stack/check-web.mjs" http://localhost:8081 "Welcome back" || say "  WARNING: patient web preview did not render (expected without the web adapter)"
   fi
 else say "  (render checks skipped: /usr/bin/google-chrome not found)"; fi
 for n in ocr summary rag worker; do alive "$n" && say "  $n running" || say "  WARNING: $n is not running. See $LOGS/$n.log"; done
 cat <<DONE
 
 The stack is up (synthetic data only).
-  Patient app (web preview)  http://localhost:8081 $( [ "$LIGHT" = 1 ] && echo "(not started: --light)")
   Doctor web                 http://127.0.0.1:5173
   Admin web                  http://127.0.0.1:5174 $( [ "$LIGHT" = 1 ] && echo "(not started: --light)")
+  Patient web preview        $( [ "$PATIENT_WEB" = 1 ] && echo "http://localhost:8081 (development aid, awaiting supervisor approval; blank without the adapter)" || echo "not started (opt in with --with-patient-web; awaiting supervisor approval)")
   Backend API                http://127.0.0.1:5000/api/v1/health
   Synthetic mailbox          http://127.0.0.1:8026/messages   (verification and doctor codes appear here)
 Next: ./local-stack/seed-demo.sh     Stop: ./local-stack/down.sh
