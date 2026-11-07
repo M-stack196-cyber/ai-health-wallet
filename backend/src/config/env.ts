@@ -2,7 +2,8 @@ import { config } from "dotenv";
 import { readFileSync } from "node:fs";
 
 // The API loads runtime credentials only. Migration secrets are loaded on demand.
-config({ path: new URL("../../.env", import.meta.url), quiet: true });
+// The local demo stack (HW_LOCAL_STACK=1) uses only its own generated environment, never backend/.env.
+if (process.env.HW_LOCAL_STACK !== "1") config({ path: new URL("../../.env", import.meta.url), quiet: true });
 
 export class DatabaseConfigurationError extends Error {
   constructor(message: string) {
@@ -54,7 +55,7 @@ export function getDatabaseConfig() {
 }
 
 export function getMigrationDatabaseConfig() {
-  config({ path: new URL("../../.env.migrations", import.meta.url), quiet: true });
+  if (process.env.HW_LOCAL_STACK !== "1") config({ path: new URL("../../.env.migrations", import.meta.url), quiet: true });
   const settings = connectionSettings();
   const user = required("MIGRATION_DB_USER");
   const password = required("MIGRATION_DB_PASSWORD");

@@ -59,6 +59,7 @@
     "phase6:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase6",
     "phase7:test": "node ../infrastructure/identity/run.mjs --execute-isolated --phase7",
     "admin:create": "tsx src/admin/bootstrap-entry.ts",
+    "local-stack:test": "tsx --test src/local-stack/*.test.ts",
     "r2:test": "node ../infrastructure/identity/run.mjs --execute-isolated --r2",
     "staging:check-env": "tsx src/stage-c/staging-environment-entry.ts",
     "r9:trace:test": "tsx --test src/r9/traceability.test.ts",

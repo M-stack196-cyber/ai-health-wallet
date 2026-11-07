@@ -21,6 +21,8 @@ import type { PatientDatabase } from "./patients/repository.js";
 import { getDocumentConfig, type DocumentConfig } from "./config/documents.js";
 import { createDocumentRoutes } from "./documents/routes.js";
 import { createS3Storage, type DocumentStorage } from "./documents/storage.js";
+import { corsOriginCheck } from "./http/origins.js";
+import { createLocalStorage } from "./documents/local-storage.js";
 
 import {createProcessingRoutes,type ProcessingApiOptions} from "./processing/api.js";
 import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.js";
@@ -34,12 +36,12 @@ export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminA
   const routes = createPatientRoutes(options.database ?? pool, auth, identity);
   const documentConfig = options.documentConfig ?? getDocumentConfig();
   const storage = options.documentStorage === undefined
-    ? (documentConfig.storage ? createS3Storage(documentConfig.storage) : null) : options.documentStorage;
+    ? (documentConfig.storage ? createS3Storage(documentConfig.storage) : documentConfig.localStorage ? createLocalStorage(documentConfig.localStorage) : null) : options.documentStorage;
   const documents = createDocumentRoutes(options.documentDatabase ?? options.database ?? pool, auth, documentConfig, storage);
   app.disable("x-powered-by");
   app.set("trust proxy", trustProxyHops());
   app.use(helmet());
-  app.use(cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }));
+  app.use(cors({ origin: corsOriginCheck() }));
   app.use(express.json({ limit: "100kb" }));
 
   app.get("/api/v1/health", (_req, res) => {

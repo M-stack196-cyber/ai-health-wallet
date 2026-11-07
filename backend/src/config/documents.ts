@@ -1,4 +1,5 @@
 import "./env.js";
+import { localStorageConfig, LocalStorageRefused, type LocalStorageConfig } from "../documents/local-storage.js";
 
 export class DocumentConfigurationError extends Error {}
 export interface S3StorageConfig {
@@ -19,6 +20,8 @@ export interface DocumentConfig {
   downloadExpirySeconds: number;
   uploadRateLimitMax: number;
   storage: S3StorageConfig | null;
+  // Local development folder storage (synthetic files only; never S3). Null unless explicitly requested and allowed.
+  localStorage?: LocalStorageConfig | null;
 }
 export function getDocumentConfig(): DocumentConfig {
   const integer = (key: string, fallback: number, min: number, max: number) => {
@@ -32,6 +35,9 @@ export function getDocumentConfig(): DocumentConfig {
   const enabled = process.env.DOCUMENT_STORAGE_ENABLED ?? "false";
   if (enabled !== "true" && enabled !== "false") throw new DocumentConfigurationError("DOCUMENT_STORAGE_ENABLED must be true or false.");
   let storage: S3StorageConfig | null = null;
+  let localStorage: LocalStorageConfig | null = null;
+  try { localStorage = localStorageConfig(process.env); }
+  catch (error) { throw new DocumentConfigurationError(error instanceof LocalStorageRefused ? error.message : "Local file storage configuration is invalid."); }
   if (enabled === "true") {
     const region = process.env.AWS_REGION ?? "";
     const bucket = process.env.S3_BUCKET ?? "";
@@ -60,5 +66,6 @@ export function getDocumentConfig(): DocumentConfig {
     downloadExpirySeconds: integer("DOCUMENT_DOWNLOAD_EXPIRY_SECONDS", 60, 30, 300),
     uploadRateLimitMax: integer("DOCUMENT_UPLOAD_RATE_LIMIT_MAX", 20, 1, 100),
     storage,
+    localStorage,
   };
 }
