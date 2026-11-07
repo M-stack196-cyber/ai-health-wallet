@@ -40,6 +40,7 @@ import {
   type Page,
   type MedicalDocument,
   type Guardian,
+  type DeletionRequestResult,
   type Timeline,
   type Summary,
   type History,
@@ -83,6 +84,12 @@ export function patientApi(client: ApiClient) {
       client.request(root + "/patients/me/guardian/resend", "POST", {}),
     removeGuardian: () =>
       client.request(root + "/patients/me/guardian", "DELETE"),
+    requestAccountDeletion: (current_password: string, confirmation: string) =>
+      client.request<DeletionRequestResult>(
+        root + "/patients/me/deletion-request",
+        "POST",
+        { current_password, confirmation },
+      ),
     records: (filters: Filters = {}) =>
       client.request<Page>(root + "/documents" + filterQuery(filters)),
     record: (documentId: string) =>

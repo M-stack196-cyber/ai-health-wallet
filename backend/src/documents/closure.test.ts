@@ -37,7 +37,7 @@ before(async()=>{
  try{await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_m03_closure');}finally{await bootstrap.end();}
  await admin.query('GRANT USAGE,CREATE ON SCHEMA public TO health_wallet_migrator');
  fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 498!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,22);
  for(const file of files){
   if(file.startsWith('0010'))await admin.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
@@ -177,6 +177,13 @@ test('M03-28 account restriction during original acquisition denies content befo
  const u=await user(),r=await upload(u);assert.equal(r.status,201);
  acquisitionHook=async()=>{await db.query("UPDATE patients SET account_status='deletion_restricted' WHERE id=$1",[u.id]);};
  try{const denied=await request('/documents/'+r.data.document.id+'/download',u.token);assert.equal(denied.status,401);assert.equal(JSON.stringify(denied.data).includes('%PDF'),false);}finally{acquisitionHook=undefined;}
+});
+test('M03-30 revoking only the session during original acquisition denies content before streaming',async()=>{
+ const u=await user(),r=await upload(u);assert.equal(r.status,201);
+ acquisitionHook=async()=>{await admin.query('UPDATE patient_auth_sessions SET revoked_at=clock_timestamp() WHERE id=$1',[u.who.sessionId]);};
+ try{const denied=await request('/documents/'+r.data.document.id+'/download',u.token);assert.equal(denied.status,401);assert.equal(JSON.stringify(denied.data).includes('%PDF'),false);}finally{acquisitionHook=undefined;}
+ // Only the session ended: the account itself is still active, so this proves the second check reads the session.
+ assert.equal((await admin.query('SELECT account_status FROM patients WHERE id=$1',[u.id])).rows[0].account_status,'active');
 });
 test('M03-29 retry rate budget is bounded and unknown legacy source integrity cannot be queued',async()=>{
  const u=await user(),r=await upload(u);assert.equal(r.status,201);for(let i=0;i<5;i++)assert.equal((await request('/documents/'+r.data.document.id+'/retries',u.token,{})).status,409);

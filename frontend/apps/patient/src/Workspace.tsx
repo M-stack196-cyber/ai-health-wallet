@@ -9,6 +9,7 @@ import {
   patientApi,
   ApiError,
   categories,
+  DELETION_CONFIRMATION,
   medicalNotice,
   safeMessage,
   InputError,
@@ -17,6 +18,7 @@ import {
   grantState,
   type Profile,
   type Guardian,
+  type DeletionRequestResult,
   type MedicalDocument,
   type Category,
   type Processing,
@@ -170,7 +172,7 @@ function confirm(title: string, message: string, action: () => void) {
     { text: "Confirm", style: "destructive", onPress: action },
   ]);
 }
-export function ProfilePanel({ api, run, busy }: Context) {
+export function ProfilePanel({ api, run, busy, session }: Context) {
   const [profile, setProfile] = useState<Profile>(),
     [guardian, setGuardian] = useState<Guardian>(),
     [name, setName] = useState(""),
@@ -317,17 +319,114 @@ export function ProfilePanel({ api, run, busy }: Context) {
           onPress={() => void run(loadGuardian)}
         />
       </Card>
-      <Card>
-        <Text style={styles.eyebrow}>PRIVACY & ACCOUNT</Text>
-        <BodyText>Account deletion requests are not available yet.</BodyText>
-        <BodyText muted>
-          The approved account-deletion backend and retention policy are
-          pending. No deletion request has been submitted. Individual document
-          access can be removed from the record library; original-file erasure
-          is not claimed.
-        </BodyText>
-      </Card>
+      <DeletionRequestCard api={api} session={session} run={run} busy={busy} />
     </>
+  );
+}
+function DeletionRequestCard({
+  api,
+  session,
+  run,
+  busy,
+}: Pick<Context, "api" | "session" | "run" | "busy">) {
+  const [open, setOpen] = useState(false),
+    [password, setPassword] = useState(""),
+    [confirmation, setConfirmation] = useState(""),
+    [result, setResult] = useState<DeletionRequestResult>();
+  if (result)
+    return (
+      <Card>
+        <Text style={styles.eyebrow}>DELETION REQUESTED</Text>
+        <BodyText>
+          Your request was received. Access to this account has ended: every
+          sign-in, doctor share and guardian link was stopped.
+        </BodyText>
+        <BodyText muted>
+          Nothing has been permanently deleted yet. The rules for how long data
+          is kept and when it is erased are still waiting for a legal decision.
+          {result.deletion_request.state === "blocked_legal_hold"
+            ? " A legal hold is active, so deletion stays blocked until it is released."
+            : ""}
+        </BodyText>
+        <Button
+          title="Sign out"
+          onPress={() =>
+            void session.logout().catch(() => {
+              session.clear();
+            })
+          }
+        />
+      </Card>
+    );
+  const ready = password.length > 0 && confirmation === DELETION_CONFIRMATION;
+  return (
+    <Card>
+      <Text style={styles.eyebrow}>PRIVACY & ACCOUNT</Text>
+      <BodyText>Request account deletion</BodyText>
+      <BodyText muted>
+        If you continue, your access ends right away: you are signed out
+        everywhere, doctor shares stop and your guardian link is removed. You
+        cannot undo this from the app. Nothing is permanently deleted yet,
+        because the deletion and retention rules are still waiting for a legal
+        decision. Individual document access can be removed from the record
+        library.
+      </BodyText>
+      {!open ? (
+        <Button
+          title="Start deletion request"
+          secondary
+          disabled={busy}
+          onPress={() => setOpen(true)}
+        />
+      ) : (
+        <>
+          <Field
+            label="Current password"
+            value={password}
+            onChange={setPassword}
+            secret
+          />
+          <Field
+            label={"Type " + DELETION_CONFIRMATION + " to confirm"}
+            value={confirmation}
+            onChange={setConfirmation}
+          />
+          <Button
+            title="Submit deletion request"
+            disabled={busy || !ready}
+            onPress={() =>
+              confirm(
+                "Request account deletion?",
+                "Your access ends immediately. This cannot be undone from the app.",
+                () =>
+                  void run(async () => {
+                    try {
+                      setResult(
+                        await api.requestAccountDeletion(
+                          password,
+                          confirmation,
+                        ),
+                      );
+                    } finally {
+                      setPassword("");
+                    }
+                  }),
+              )
+            }
+          />
+          <Button
+            title="Cancel"
+            secondary
+            disabled={busy}
+            onPress={() => {
+              setOpen(false);
+              setPassword("");
+              setConfirmation("");
+            }}
+          />
+        </>
+      )}
+    </Card>
   );
 }
 export function UploadPanel({

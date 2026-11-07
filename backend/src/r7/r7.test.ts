@@ -177,7 +177,7 @@ let backupDir='',backupFile='',seeded:{emails:string[];names:string[]}={emails:[
 before(async()=>{
  if(!(await owner.query("SELECT 1 FROM pg_roles WHERE rolname='health_wallet_app'")).rows.length){await owner.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await owner.query('CREATE ROLE health_wallet_migrator NOLOGIN');}
  for(const name of ['hw_r7_source','hw_r7_target_restore','hw_r7_second_restore','hw_r7_live'])await owner.query('CREATE DATABASE '+name);
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,22);
  const c=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'hw_r7_source'});await c.connect();
  try{
   await c.query('CREATE EXTENSION IF NOT EXISTS vector');
@@ -201,7 +201,7 @@ test('R7-07 backup: consistent snapshot, owner-only files, a manifest with count
  backupFile=out.file;const manifestFile=backupFile.replace(/\.dump$/,'.manifest.json');
  assert.equal((await stat(backupDir+'/nested/out')).mode&0o777,0o700);assert.equal((await stat(backupFile)).mode&0o777,0o600);assert.equal((await stat(manifestFile)).mode&0o777,0o600);
  assert.deepEqual((await readdir(backupDir+'/nested/out')).sort(),[backupFile.split('/').pop(),manifestFile.split('/').pop()].sort(),'no partial file is left behind');
- const m=JSON.parse(await text(manifestFile));assert.equal(m.format,1);assert.equal(m.encrypted,false,'the file is not encrypted: it must be stored only on encrypted storage');assert.equal(m.ledger.length,21);assert.ok(m.tables.patients.rows>=25&&m.tables.patients.rls===false);assert.ok(Object.values<any>(m.tables).some(t=>t.rls===true),'row-level security state is recorded');
+ const m=JSON.parse(await text(manifestFile));assert.equal(m.format,1);assert.equal(m.encrypted,false,'the file is not encrypted: it must be stored only on encrypted storage');assert.equal(m.ledger.length,22);assert.ok(m.tables.patients.rows>=25&&m.tables.patients.rls===false);assert.ok(Object.values<any>(m.tables).some(t=>t.rls===true),'row-level security state is recorded');
  assert.ok(m.policies>0&&m.appGrants>0&&m.extensions.includes('vector'));assert.match(m.sha256,/^[a-f0-9]{64}$/);assert.equal(m.sha256,(await sh('sha256sum',[backupFile])).stdout.split(' ')[0]);
  const raw=await text(manifestFile);for(const secret of [...seeded.emails,...seeded.names,'argon2id',socket,userInfo().username])assert.ok(!raw.includes(secret)&&!r.stdout.includes(secret),'the manifest and output carry no personal data, hash, socket path or account name');
  // the counts are a snapshot: never more than the source holds afterwards, never fewer than the seeded rows (a full check follows in the restore drill)
@@ -213,7 +213,7 @@ test('R7-07 backup: consistent snapshot, owner-only files, a manifest with count
 
 test('R7-08 restore drill: a disaster is recovered into a fresh database and verified against the manifest, then the application role still has its limits',async()=>{
  const started=Date.now(),r=await cli(['restore','--backup',backupFile],dbEnv('hw_r7_target_restore'));
- assert.equal(r.code,0,r.stdout+r.stderr);const out=JSON.parse(r.stdout);assert.equal(out.ok,true,JSON.stringify(out.problems));assert.deepEqual(out.problems,[]);assert.equal(out.migrations,21);assert.ok(out.rows>=25);
+ assert.equal(r.code,0,r.stdout+r.stderr);const out=JSON.parse(r.stdout);assert.equal(out.ok,true,JSON.stringify(out.problems));assert.deepEqual(out.problems,[]);assert.equal(out.migrations,22);assert.ok(out.rows>=25);
  const observedMs=Date.now()-started;assert.ok(observedMs<180000,'observed recovery time on a tiny synthetic database: '+observedMs+' ms (not an approved RTO)');
  // exact equality with the source as it was at the snapshot
  const m=JSON.parse(await text(backupFile.replace(/\.dump$/,'.manifest.json')));
@@ -283,7 +283,7 @@ dockerTest('R7-11 the three images build from the repository, run as non-root wi
   assert.equal(found.stdout.trim(),'',name+': unexpected files in the image:\n'+found.stdout);
  }
  const api=await sh('docker',['run','--rm','--entrypoint','sh',tag('api'),'-c','ls /app/backend/migrations | wc -l; id -u; test ! -e /app/backend/src && echo no-source; ls /app/backend/dist | head -3']);
- const lines=api.stdout.trim().split('\n');assert.equal(lines[0].trim(),'21','all migrations ship');assert.notEqual(lines[1].trim(),'0');assert.ok(api.stdout.includes('no-source'));
+ const lines=api.stdout.trim().split('\n');assert.equal(lines[0].trim(),'22','all migrations ship');assert.notEqual(lines[1].trim(),'0');assert.ok(api.stdout.includes('no-source'));
  const tests=await sh('docker',['run','--rm','--entrypoint','sh',tag('api'),'-c',"find /app/backend/dist \\( -name '*.test.js' -o -name '*.check.js' -o -type d -name 'phase*' -o -type d -name 'r[0-9]*' \\) | head -3"]);assert.equal(tests.stdout.trim(),'','no test code in the API image');
  const ai=await sh('docker',['run','--rm','--entrypoint','python',tag('ai'),'-c','import rag_service.app,summary_service.app,ocr_service.app,sys;print("imports-ok")']);assert.match(ai.stdout,/imports-ok/,ai.stderr.slice(-400));
  const tess=await sh('docker',['run','--rm','--entrypoint','sh',tag('ai'),'-c','tesseract --version | head -1; pdftoppm -v 2>&1 | head -1']);assert.match(tess.stdout,/tesseract/i);

@@ -224,7 +224,7 @@ before(async () => {
   )
     .filter((f) => f.endsWith(".sql"))
     .sort();
-  assert.equal(files.length, 21);
+  assert.equal(files.length, 22);
   for (const file of files) {
     if (file.startsWith("0005"))
       await admin.query(

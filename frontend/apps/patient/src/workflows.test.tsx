@@ -173,7 +173,7 @@ test("registration sends approved fields and requires verification before login"
   expect(session.authorized).toBe(false);
 }, 15_000);
 test.each(["NONE", "PENDING", "ACTIVE", "REVOKED", "EXPIRED"])(
-  "guardian %s is explicit and account deletion is truthfully unavailable",
+  "guardian %s is explicit and account deletion is a guarded, truthful request",
   async (status) => {
     const c = context({
       guardian: jest.fn(async () => ({
@@ -182,9 +182,11 @@ test.each(["NONE", "PENDING", "ACTIVE", "REVOKED", "EXPIRED"])(
     });
     render(<ProfilePanel {...c} />);
     await screen.findByText("Status: " + status);
+    expect(screen.getByText("Request account deletion")).toBeTruthy();
     expect(
-      screen.getByText("Account deletion requests are not available yet."),
+      screen.getByRole("button", { name: "Start deletion request" }),
     ).toBeTruthy();
+    expect(screen.queryByText(/not available yet/)).toBeNull();
     expect(
       screen.getByRole("button", {
         name: ["ACTIVE", "PENDING"].includes(status)
@@ -194,6 +196,107 @@ test.each(["NONE", "PENDING", "ACTIVE", "REVOKED", "EXPIRED"])(
     ).toBeTruthy();
   },
 );
+describe("account deletion request", () => {
+  const deletion = (state = "policy_pending") =>
+    jest.fn(async () => ({
+      success: true,
+      deletion_request: {
+        id: "r",
+        state,
+        requested_at: "2026-01-01T00:00:00Z",
+      },
+      access_revoked: true,
+      physical_deletion: "not_performed",
+    }));
+  function open(c: ReturnType<typeof context>) {
+    jest
+      .spyOn(Alert, "alert")
+      .mockImplementation((_t, _m, buttons) =>
+        buttons?.find((b) => b.text === "Confirm")?.onPress?.(),
+      );
+    render(<ProfilePanel {...c} />);
+    return screen.findByText("Status: NONE").then(() => {
+      fireEvent.press(
+        screen.getByRole("button", { name: "Start deletion request" }),
+      );
+    });
+  }
+  test("submit needs the password and the exact confirmation, then sends them once", async () => {
+    const requestAccountDeletion = deletion();
+    const c = context({ requestAccountDeletion });
+    await open(c);
+    const submit = () =>
+      screen.getByRole("button", { name: "Submit deletion request" });
+    expect(submit().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.changeText(
+      screen.getByLabelText("Current password"),
+      "Synthetic passphrase 42!",
+    );
+    fireEvent.changeText(
+      screen.getByLabelText("Type DELETE_MY_ACCOUNT to confirm"),
+      "delete my account",
+    );
+    expect(submit().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.changeText(
+      screen.getByLabelText("Type DELETE_MY_ACCOUNT to confirm"),
+      "DELETE_MY_ACCOUNT",
+    );
+    expect(submit().props.accessibilityState?.disabled).toBeFalsy();
+    fireEvent.press(submit());
+    await screen.findByText("DELETION REQUESTED");
+    expect(requestAccountDeletion).toHaveBeenCalledTimes(1);
+    expect(requestAccountDeletion).toHaveBeenCalledWith(
+      "Synthetic passphrase 42!",
+      "DELETE_MY_ACCOUNT",
+    );
+    expect(screen.getByText(/Nothing has been permanently deleted yet/)).toBeTruthy();
+    expect(screen.queryByText(/30/)).toBeNull();
+    expect(screen.queryByText(/legal hold is active/)).toBeNull();
+  });
+  test("a legal hold is explained and sign out uses the session", async () => {
+    const logout = jest.fn(async () => {});
+    const c = {
+      ...context({ requestAccountDeletion: deletion("blocked_legal_hold") }),
+      session: { logout, clear: jest.fn() } as unknown as PatientSession,
+    };
+    await open(c);
+    fireEvent.changeText(screen.getByLabelText("Current password"), "p");
+    fireEvent.changeText(
+      screen.getByLabelText("Type DELETE_MY_ACCOUNT to confirm"),
+      "DELETE_MY_ACCOUNT",
+    );
+    fireEvent.press(
+      screen.getByRole("button", { name: "Submit deletion request" }),
+    );
+    await screen.findByText(/legal hold is active/);
+    fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+  });
+  test("a refused request shows a safe message, keeps the form and does not claim success", async () => {
+    const requestAccountDeletion = jest.fn(async () => {
+      throw new Error("raw driver detail secret-host");
+    });
+    const c = {
+      ...context({ requestAccountDeletion }),
+      run: async (fn: () => Promise<void>) => {
+        await fn().catch(() => {});
+      },
+    };
+    await open(c);
+    fireEvent.changeText(screen.getByLabelText("Current password"), "wrong");
+    fireEvent.changeText(
+      screen.getByLabelText("Type DELETE_MY_ACCOUNT to confirm"),
+      "DELETE_MY_ACCOUNT",
+    );
+    fireEvent.press(
+      screen.getByRole("button", { name: "Submit deletion request" }),
+    );
+    await waitFor(() => expect(requestAccountDeletion).toHaveBeenCalled());
+    expect(screen.queryByText("DELETION REQUESTED")).toBeNull();
+    expect(screen.getByLabelText("Current password").props.value).toBe("");
+    expect(screen.queryByText(/secret-host/)).toBeNull();
+  });
+});
 test("guardian replace and remove require confirmation and use lifecycle API", async () => {
   const c = context({
     guardian: jest.fn(async () => ({

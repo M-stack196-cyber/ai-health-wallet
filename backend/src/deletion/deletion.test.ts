@@ -14,6 +14,7 @@ import {errorHandler} from '../http/errors.js';
 import type {AdminAuthenticationConfig} from '../admin/config.js';
 import {createAdminRoutes} from '../admin/routes.js';
 import {createAdminAccount} from '../admin/bootstrap.js';
+import {assertPhysicalDeletionAllowed,runPhysicalDeletion,PhysicalDeletionBlockedError} from './purge-gate.js';
 
 // Plain PostgreSQL 16 in a disposable, test-owned Unix socket. Synthetic data only.
 const socket=process.env.IDENTITY_TEST_SOCKET;
@@ -34,7 +35,7 @@ before(async()=>{
  assert.equal((await stat(socket)).mode&0o777,0o700);assert.equal(await readFile(socket+'/phase1-owned','utf8'),'identity-security-v1\n');
  const bootstrap=new pg.Client({host:socket,port:55481,user:userInfo().username,database:'postgres'});await bootstrap.connect();
  try {await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_r2_deletion');}finally{await bootstrap.end();}
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,22);
  for(const f of files){
   if(f.startsWith('0010'))await owner.query('CREATE EXTENSION IF NOT EXISTS vector');
   if(f.startsWith('0005'))await owner.query('GRANT USAGE ON SCHEMA public TO health_wallet_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
@@ -214,4 +215,82 @@ test('R2-10 the migration is additive, uses public names and grants the applicat
  assert.deepEqual(await priv('patient_legal_holds'),['SELECT']);
  assert.deepEqual(await priv('patient_deletion_requests'),['INSERT','SELECT']);
  assert.deepEqual(await priv('patient_deletion_audit'),['INSERT','SELECT']);
+});
+
+test('R2-11 the database refuses physical deletion while the policy is pending, for the application role and the owner role',async()=>{
+ for(const pool of [db,owner])await assert.rejects(pool.query('SELECT public.assert_physical_deletion_allowed()'),sqlState('55000'));
+ const policy=(await owner.query('SELECT status,approved,retention_days_placeholder,retention_label FROM public.deletion_policy')).rows;
+ assert.deepEqual(policy,[{status:'policy_pending',approved:false,retention_days_placeholder:30,retention_label:'placeholder_not_approved'}]);
+});
+
+test('R2-12 nobody can approve the policy through the application: no write rights, and the table itself forbids an approved state',async()=>{
+ for(const sql of ["UPDATE public.deletion_policy SET approved=true","UPDATE public.deletion_policy SET retention_days_placeholder=1","DELETE FROM public.deletion_policy","INSERT INTO public.deletion_policy(singleton) VALUES(false)"])
+  await assert.rejects(db.query(sql),sqlState('42501'));
+ for(const sql of ["UPDATE public.deletion_policy SET approved=true","UPDATE public.deletion_policy SET status='approved'","UPDATE public.deletion_policy SET retention_label='approved'","UPDATE public.deletion_policy SET retention_days_placeholder=0"])
+  await assert.rejects(owner.query(sql),sqlState('23514'));
+ await assert.rejects(owner.query('INSERT INTO public.deletion_policy DEFAULT VALUES'),sqlState('23505'));
+ assert.equal((await owner.query('SELECT count(*)::int n FROM public.deletion_policy')).rows[0].n,1);
+});
+
+test('R2-13 the physical-deletion code path cannot run while the policy is pending, and it fails closed',async()=>{
+ let ran=0;const action=async()=>{ran++;return 'deleted';};
+ await assert.rejects(runPhysicalDeletion(db,action),PhysicalDeletionBlockedError);
+ await assert.rejects(assertPhysicalDeletionAllowed(db),PhysicalDeletionBlockedError);
+ // Fail closed: a broken or unreachable database also blocks, with no raw driver error leaking out.
+ const broken={async query():Promise<never>{throw Object.assign(Error('connect ECONNREFUSED secret-host'),{code:'ECONNREFUSED'});}};
+ await assert.rejects(runPhysicalDeletion(broken,action),(e:unknown)=>e instanceof PhysicalDeletionBlockedError&&!String((e as Error).message).includes('secret-host'));
+ assert.equal(ran,0,'the deletion action must never start while the policy is pending');
+ // The TypeScript side has no approval of its own: it only runs the action when the database function itself returns without error.
+ const approvedLater={async query(){return {rows:[]};}};
+ assert.equal(await runPhysicalDeletion(approvedLater as never,action),'deleted');assert.equal(ran,1);
+});
+
+test('R2-14 a deletion request leaves the gate closed and no source code deletes patient records',async()=>{
+ const p=await livePatient();assert.equal((await request(p.access)).status,202);
+ await assert.rejects(runPhysicalDeletion(db,async()=>{throw Error('must not run');}),PhysicalDeletionBlockedError);
+ assert.equal((await owner.query('SELECT state FROM public.patient_deletion_requests WHERE patient_id=$1',[p.id])).rows[0].state,'policy_pending');
+ const gate=await readFile(new URL('./purge-gate.ts',import.meta.url),'utf8');
+ assert.ok(!/\b(DELETE\s+FROM|DROP\s+TABLE|TRUNCATE|\.remove\()/i.test(gate),'the gate itself deletes nothing');
+ const walk=async(dir:URL):Promise<string[]>=>{const out:string[]=[];for(const e of await readdir(dir,{withFileTypes:true})){const u=new URL(e.name+(e.isDirectory()?'/':''),dir);if(e.isDirectory())out.push(...await walk(u));else if(e.name.endsWith('.ts')&&!/\.test\.ts$/.test(e.name)&&!/check|canary/.test(e.name))out.push(u.pathname);}return out;};
+ const offenders:string[]=[];
+ for(const f of await walk(new URL('../',import.meta.url)))if(/DELETE\s+FROM\s+public\.(patients|medical_|document|extract|summar|report|rag_|guardian_|patient_deletion)/i.test(await readFile(f,'utf8')))offenders.push(f);
+ assert.deepEqual(offenders,[]);
+});
+
+test('R2-15 a deletion request ends guardian links and cancels waiting guardian jobs; another patient guardian is untouched',async()=>{
+ const p=await livePatient(),other=await livePatient();
+ const hex=()=>randomBytes(32).toString('hex');
+ const seed=async(patient:string,status:'ACTIVE'|'PENDING')=>{
+  const c=await owner.connect();
+  try {
+   await c.query("SET session_replication_role = replica"); // seed fixtures only; the app code under test runs with all triggers on
+   const id=randomUUID(),challenge=randomUUID();
+   if(status==='ACTIVE')await c.query("INSERT INTO public.patient_auth_challenges(id,patient_id,purpose,token_hash,expires_at,consumed_at) VALUES($1,$2,'guardian_invitation',$3,clock_timestamp()+interval '1 day',clock_timestamp())",[challenge,patient,hex()]);
+   await c.query("INSERT INTO public.guardian_relationships(id,patient_id,email,status,invitation_id,accepted_at) VALUES($1,$2,$3,$4,$5,$6)",
+    [id,patient,'guardian-'+id+'@example.invalid',status,status==='ACTIVE'?challenge:null,status==='ACTIVE'?new Date():null]);
+   await c.query("INSERT INTO public.guardian_medical_jobs(id,patient_id,relationship_id,recipient_hash,patient_security_version,kind,policy_sha256,not_before,max_attempts) VALUES($1,$2,$3,$4,1,'serious_alert',$5,clock_timestamp()+interval '1 hour',3)",[randomUUID(),patient,id,hex(),hex()]);
+   return id;
+  } finally {await c.query("SET session_replication_role = DEFAULT");c.release();}
+ };
+ const g=await seed(p.id,'ACTIVE'),og=await seed(other.id,'ACTIVE');
+ const r=await request(p.access);assert.equal(r.status,202);
+ const link=async(id:string)=>(await owner.query('SELECT status,revoked_at FROM public.guardian_relationships WHERE id=$1',[id])).rows[0];
+ assert.equal((await link(g)).status,'REVOKED');assert.notEqual((await link(g)).revoked_at,null);
+ assert.equal((await link(og)).status,'ACTIVE');
+ assert.equal((await owner.query("SELECT state FROM public.guardian_medical_jobs WHERE relationship_id=$1",[g])).rows[0].state,'cancelled');
+ assert.equal((await owner.query("SELECT state FROM public.guardian_medical_jobs WHERE relationship_id=$1",[og])).rows[0].state,'pending');
+ assert.equal((await owner.query("SELECT count(*)::int n FROM public.guardian_lifecycle_events WHERE relationship_id=$1 AND event='revoked'",[g])).rows[0].n,1);
+ assert.equal((await owner.query('SELECT guardian_links_revoked FROM public.patient_deletion_requests WHERE patient_id=$1',[p.id])).rows[0].guardian_links_revoked,1);
+ assert.equal((await owner.query('SELECT count(*)::int n FROM public.guardian_communication_eligibility WHERE patient_id=$1',[p.id])).rows[0].n,0);
+ assert.equal((await owner.query('SELECT count(*)::int n FROM public.guardian_relationships WHERE id=$1',[g])).rows[0].n,1);
+});
+
+test('R2-16 migration 0022 is additive, keeps the policy table read-only for the application role and records the 30-day value as a placeholder',async()=>{
+ const sql=await readFile(new URL('../../migrations/0022_deletion_policy_gate.sql',import.meta.url),'utf8');
+ assert.ok(!/\bDROP\s+(TABLE|COLUMN)\b|\bTRUNCATE\b|\bDELETE\s+FROM\b/i.test(sql),'the migration deletes nothing');
+ assert.ok(/clock_timestamp\(\)/.test(sql)&&/public\.deletion_policy/.test(sql)&&/placeholder/i.test(sql));
+ const priv=(await owner.query(`SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee='health_wallet_app' AND table_name='deletion_policy' ORDER BY 1`)).rows.map(r=>r.privilege_type);
+ assert.deepEqual(priv,['SELECT']);
+ const exec=(await owner.query(`SELECT has_function_privilege('health_wallet_app','public.assert_physical_deletion_allowed()','EXECUTE') a,has_function_privilege('public','public.assert_physical_deletion_allowed()','EXECUTE') b`)).rows[0];
+ assert.deepEqual(exec,{a:true,b:false});
 });

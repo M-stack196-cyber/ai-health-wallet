@@ -84,7 +84,7 @@ before(async()=>{
  try{await bootstrap.query('CREATE ROLE health_wallet_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE');await bootstrap.query('CREATE ROLE health_wallet_migrator NOLOGIN');await bootstrap.query('CREATE DATABASE hw_r5_email');}finally{await bootstrap.end();}
  await admin.query('CREATE EXTENSION vector');
  fixtureHash=await createPasswordService(auth).hash('Synthetic fixture passphrase 598!');
- const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,21);
+ const files=(await readdir(new URL('../../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();assert.equal(files.length,22);
  for(const file of files){if(file.startsWith('0005'))await admin.query('GRANT USAGE ON SCHEMA public TO health_wallet_app;GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO health_wallet_app');
   const c=await admin.connect();try{await c.query('BEGIN');await c.query(await readFile(new URL('../../migrations/'+file,import.meta.url),'utf8'));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
  sandboxServer.listen(0,'127.0.0.1');await once(sandboxServer,'listening');sandboxBase='http://127.0.0.1:'+(sandboxServer.address() as any).port;

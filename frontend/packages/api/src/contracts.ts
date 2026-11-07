@@ -64,6 +64,14 @@ export interface Timeline {
   entries: TimelineEntry[];
   pagination: Page["pagination"];
 }
+// Account deletion request (R2). Access ends now; nothing is physically deleted yet.
+export const DELETION_CONFIRMATION = "DELETE_MY_ACCOUNT";
+export interface DeletionRequestResult {
+  success: boolean;
+  deletion_request: { id: string; state: "policy_pending" | "blocked_legal_hold"; requested_at: string };
+  access_revoked: boolean;
+  physical_deletion: "not_performed";
+}
 export interface Guardian {
   id?: string;
   email: string | null;

@@ -236,6 +236,23 @@ test("safe QR/link references, category/filter encoding, exact selected scope an
   });
   session.clear();
 });
+test("account deletion request posts only the password and the exact confirmation to the patient route", async () => {
+  const calls: { url: string; method: string; body: unknown }[] = [];
+  const session = new DoctorSession({
+    baseUrl: "",
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), method: init?.method ?? "GET", body: init?.body });
+      return json({ success: true, deletion_request: { id: "r", state: "policy_pending", requested_at: "x" }, access_revoked: true, physical_deletion: "not_performed" });
+    },
+  });
+  session.authorize("token", new Date(Date.now() + 60000).toISOString());
+  const result = await patientApi(session).requestAccountDeletion("pw", "DELETE_MY_ACCOUNT");
+  assert.equal(result.physical_deletion, "not_performed");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, "POST");
+  assert.ok(calls[0].url.endsWith("/api/v1/patients/me/deletion-request"));
+  assert.deepEqual(JSON.parse(String(calls[0].body)), { current_password: "pw", confirmation: "DELETE_MY_ACCOUNT" });
+});
 test("central API contracts cover auth, guardian, document lifecycle, summaries, timeline, RAG and grants", async () => {
   const calls: { url: string; method: string; body: unknown }[] = [];
   const session = new DoctorSession({

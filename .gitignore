@@ -49,3 +49,7 @@ playwright-report/
 /.aws/
 
 /ai-service/venv/
+
+# Expo local generated state (device history, packager info); never commit.
+.expo/
+.expo-shared/

@@ -65,7 +65,7 @@ test("R8-BUILD-02 mobile app settings: secure storage, HTTPS-only API, screen-ca
   const app = join(frontend, "apps/patient");
   const config = JSON.parse(readFileSync(join(app, "app.json"), "utf8")).expo;
   assert.equal(config.android.allowBackup, false, "Android backup must stay off");
-  assert.deepEqual(config.platforms.sort(), ["android", "ios"]);
+  assert.deepEqual(config.platforms.sort(), ["android", "ios", "web"]);
   assert.ok(config.plugins.includes("expo-secure-store"));
   assert.equal(config.updates.enabled, false, "over-the-air updates stay off");
   const platform = readFileSync(join(app, "src/platform.ts"), "utf8");

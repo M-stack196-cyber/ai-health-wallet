@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": ["android", "ios"],
+    "platforms": ["android", "ios", "web"],
     "ios": {
       "bundleIdentifier": "org.healthwallet.patient.dev",
       "supportsTablet": true

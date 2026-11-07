@@ -29,8 +29,16 @@ export function createDeletionRepository(db:PatientDatabase) {
      INSERT INTO public.doctor_share_events(grant_id,event) SELECT id,'revoked' FROM revoked RETURNING 1) SELECT count(*)::int AS n FROM revoked`,[p.id])).rows[0].n;
     const doctorSessions=(await c.query<{n:number}>(`WITH revoked AS (UPDATE public.doctor_share_sessions SET revoked_at=clock_timestamp()
      WHERE patient_id=$1 AND revoked_at IS NULL RETURNING id) SELECT count(*)::int AS n FROM revoked`,[p.id])).rows[0].n;
-    const row=(await c.query<DeletionRequestResult>(`INSERT INTO public.patient_deletion_requests(patient_id,state,sessions_revoked,grants_revoked,doctor_sessions_revoked)
-     VALUES($1,$2,$3,$4,$5) RETURNING id,state,requested_at`,[p.id,state,sessions,grants,doctorSessions])).rows[0];
+    // Guardian links end too (pending invitations were already consumed with the other challenges above). Waiting guardian
+    // jobs are cancelled; a job already running re-checks eligibility, which needs an active patient, so it cannot hand off.
+    const guardianLinks=(await c.query<{n:number}>(`WITH revoked AS (UPDATE public.guardian_relationships SET status='REVOKED',revoked_at=clock_timestamp(),
+     updated_at=clock_timestamp() WHERE patient_id=$1 AND status IN ('PENDING','ACTIVE') RETURNING id), logged AS (
+     INSERT INTO public.guardian_lifecycle_events(patient_id,relationship_id,event) SELECT $1,id,'revoked' FROM revoked RETURNING 1)
+     SELECT count(*)::int AS n FROM revoked`,[p.id])).rows[0].n;
+    await c.query('UPDATE public.patients SET pending_guardian_email=NULL WHERE id=$1',[p.id]);
+    await c.query("UPDATE public.guardian_medical_jobs SET state='cancelled' WHERE patient_id=$1 AND state IN ('pending','retry_wait')",[p.id]);
+    const row=(await c.query<DeletionRequestResult>(`INSERT INTO public.patient_deletion_requests(patient_id,state,sessions_revoked,grants_revoked,doctor_sessions_revoked,guardian_links_revoked)
+     VALUES($1,$2,$3,$4,$5,$6) RETURNING id,state,requested_at`,[p.id,state,sessions,grants,doctorSessions,guardianLinks])).rows[0];
     for(const event of held?['requested','access_revoked','legal_hold_blocked']:['requested','access_revoked'])
      await c.query('INSERT INTO public.patient_deletion_audit(request_id,patient_id,event) VALUES($1,$2,$3)',[row.id,p.id,event]);
     return row;
