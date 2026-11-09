@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -47,9 +48,10 @@ export const styles = StyleSheet.create({
   input: {
     backgroundColor: "#fbfdf9",
     borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 9,
-    padding: 13,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     color: palette.ink,
     minHeight: 48,
   },
@@ -61,13 +63,14 @@ export const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: palette.green,
-    borderRadius: 9,
-    padding: 14,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     minHeight: 48,
     justifyContent: "center",
     alignItems: "center",
   },
-  buttonText: { fontWeight: "600", fontSize: 13, color: "#fff" },
+  buttonText: { fontWeight: "700", fontSize: 14, color: "#fff" },
   secondary: { backgroundColor: "#e8f0e5" },
   secondaryText: { color: palette.green },
   notice: {
@@ -77,6 +80,38 @@ export const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
   },
+  authContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 22,
+    paddingBottom: 45,
+  },
+  authWrap: { width: "100%", maxWidth: 480, alignSelf: "center", gap: 20 },
+  authCard: {
+    backgroundColor: palette.paper,
+    borderRadius: 16,
+    padding: 32,
+    gap: 14,
+    ...(Platform.OS === "web"
+      ? ({ boxShadow: "0 4px 16px rgba(0,0,0,0.08)" } as object)
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+        }),
+  },
+  authHeader: { gap: 6, marginBottom: 4 },
+  linkBar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    columnGap: 18,
+    rowGap: 8,
+  },
+  fieldError: { fontSize: 12, lineHeight: 18, color: "#b3261e", marginTop: 6 },
+  link: { fontSize: 13, fontWeight: "600", color: palette.green },
   divider: {
     borderBottomWidth: 1,
     borderColor: palette.line,
@@ -85,6 +120,34 @@ export const styles = StyleSheet.create({
   },
   selected: { borderColor: palette.green, borderWidth: 2 },
 });
+export function TextLink({
+  title,
+  onPress,
+  disabled = false,
+}: {
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled }}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={8}
+      style={(state) => [
+        disabled && { opacity: 0.5 },
+        (state as { hovered?: boolean }).hovered && {
+          textDecorationLine: "underline" as const,
+        },
+      ]}
+    >
+      <Text style={styles.link}>{title}</Text>
+    </Pressable>
+  );
+}
 export function Card({ children }: { children: ReactNode }) {
   return <View style={styles.card}>{children}</View>;
 }
@@ -115,9 +178,15 @@ export function Button({
       accessibilityState={{ disabled }}
       onPress={onPress}
       disabled={disabled}
-      style={[
+      style={(state) => [
         styles.button,
         secondary && styles.secondary,
+        // Hover (web) and press feedback for the primary button.
+        !secondary &&
+          !disabled &&
+          ((state as { hovered?: boolean }).hovered || state.pressed) && {
+            backgroundColor: "#1b5646",
+          },
         disabled && { opacity: 0.5 },
       ]}
     >
@@ -134,6 +203,7 @@ export function Field({
   secret = false,
   keyboard = "default",
   multiline = false,
+  error = "",
 }: {
   label: string;
   value: string;
@@ -141,6 +211,7 @@ export function Field({
   secret?: boolean;
   keyboard?: KeyboardTypeOptions;
   multiline?: boolean;
+  error?: string;
 }) {
   return (
     <View>
@@ -159,6 +230,11 @@ export function Field({
           multiline && { minHeight: 100, textAlignVertical: "top" },
         ]}
       />
+      {!!error && (
+        <Text accessibilityLiveRegion="polite" style={styles.fieldError}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 }

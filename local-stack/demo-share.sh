@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
 # Creates a REAL doctor share for the Doctor Web Portal demo, through the normal patient API (no database writes by hand).
-# Usage: ./local-stack/demo-share.sh [--print]
+# Usage: ./local-stack/demo-share.sh [--print] [--file /absolute/path/to/report.pdf]
+#   --file   upload this file instead of the built-in sample (a PDF, JPG, JPEG or PNG up to 5 MB). SYNTHETIC FILES ONLY: this stack
+#            must never receive real patient data. A generator is in scripts/generate_synthetic_report.py.
 #   It registers a new synthetic patient, verifies the email through the synthetic mailbox, uploads the sample digital report,
 #   waits for processing, indexes the record for questions (RAG), and creates a link share bound to doctor-demo@example.invalid with the patient's own session.
 #   The share link is a bearer token, so it is written to an owner-only file; --print also shows it in this terminal.
 # Needs the stack running (./local-stack/up.sh) and the sample files (./local-stack/seed-demo.sh). Local, synthetic data only.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-PRINT=0
-for arg in "$@"; do
-  case "$arg" in
-    --print) PRINT=1 ;;
-    *) die "Unknown option: $arg (use --print)" ;;
+PRINT=0; FILE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --print) PRINT=1; shift ;;
+    --file) [ $# -ge 2 ] || die "--file needs a path"; FILE="$2"; shift 2 ;;
+    --file=*) FILE="${1#--file=}"; shift ;;
+    *) die "Unknown option: $1 (use --print and/or --file PATH)" ;;
   esac
 done
 load_env
 [ "${NODE_ENV:-}" = "development" ] && [ "${HW_LOCAL_STACK:-}" = "1" ] || die "Local stack environment required."
 DOCTOR_EMAIL="doctor-demo@example.invalid"
-SAMPLE="$HW_STACK_HOME/samples/sample-digital-report.pdf"
-[ -f "$SAMPLE" ] || die "Sample file missing. Run ./local-stack/seed-demo.sh first."
+if [ -n "$FILE" ]; then
+  case "$FILE" in "~"*) FILE="$HOME${FILE#"~"}" ;; esac
+  [ -f "$FILE" ] || die "File not found (or not a regular file): $FILE"
+  [ -r "$FILE" ] || die "File is not readable: $FILE"
+  case "$(printf '%s' "${FILE##*.}" | tr 'A-Z' 'a-z')" in pdf|jpg|jpeg|png) ;; *) die "Only .pdf, .jpg, .jpeg or .png files can be uploaded." ;; esac
+  [ "$(stat -c %s "$FILE")" -le 5242880 ] || die "File is larger than 5 MB (the upload limit)."
+  say "Using your file: $FILE  (synthetic files only; this stack must never receive real patient data)"
+  SAMPLE="$(readlink -f "$FILE")"
+else
+  SAMPLE="$HW_STACK_HOME/samples/sample-digital-report.pdf"
+  [ -f "$SAMPLE" ] || die "Sample file missing. Run ./local-stack/seed-demo.sh first."
+fi
 curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:5000/api/v1/health || die "The backend is not running. Run ./local-stack/up.sh first."
 curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8026/messages || die "The synthetic mailbox is not running. Run ./local-stack/up.sh first."
 OUT="$RUN/demo-share.txt"
@@ -74,9 +88,12 @@ boundary = uuid.uuid4().hex
 pdf = open(sample, "rb").read()
 parts = [("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n" % (boundary, k, v)).encode()
          for k, v in (("category", "lab_report"), ("hospital_name", "Synthetic Hospital"), ("document_date", "2026-02-03"))]
-parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"sample-digital-report.pdf\"\r\nContent-Type: application/pdf\r\n\r\n" % boundary).encode() + pdf + b"\r\n")
+extension = os.path.splitext(sample)[1].lower().lstrip(".")
+mime = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}[extension]
+filename = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(sample))[:100] or "report." + extension
+parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\nContent-Type: %s\r\n\r\n" % (boundary, filename, mime)).encode() + pdf + b"\r\n")
 parts.append(("--%s--\r\n" % boundary).encode())
-status, raw = call("/documents", token=access, form=(b"".join(parts), "multipart/form-data; boundary=" + boundary)); step("sample report uploaded", status)
+status, raw = call("/documents", token=access, form=(b"".join(parts), "multipart/form-data; boundary=" + boundary)); step("report uploaded", status)
 document = payload(raw)["document"]["id"]
 
 state = ""
@@ -104,9 +121,9 @@ url, expires = share["share_url"], share["grant"]["expires_at"]
 descriptor = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 with os.fdopen(descriptor, "w") as handle:
     handle.write("SYNTHETIC DEMO SHARE (local only; the link is a bearer token, keep this file private)\n"
-                 "doctor email : " + doctor + "\npatient email: " + patient + "\nexpires      : " + expires + "\nshare link   : " + url + "\n")
+                 "doctor email : " + doctor + "\ndocument id  : " + document + "\nchunks       : " + str(indexed) + "\npatient email: " + patient + "\nexpires      : " + expires + "\nshare link   : " + url + "\n")
 os.chmod(out, 0o600)
-print("\nDone. The share is bound to " + doctor + " and expires " + expires + ".")
+print("\nDone.\n  doctor email : " + doctor + "\n  document id  : " + document + "\n  indexed chunks: " + str(indexed) + "\n  expires      : " + expires)
 print("Share link saved to the owner-only file: " + out)
 if show: print("Share link: " + url)
 print("""

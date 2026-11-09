@@ -5,7 +5,11 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": ["android", "ios", "web"],
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
     "ios": {
       "bundleIdentifier": "org.healthwallet.patient.dev",
       "supportsTablet": true
@@ -14,7 +18,13 @@
       "package": "org.healthwallet.patient.dev",
       "allowBackup": false
     },
-    "plugins": ["expo-secure-store", "expo-document-picker"],
-    "updates": { "enabled": false }
+    "plugins": [
+      "expo-secure-store",
+      "expo-document-picker",
+      "expo-sharing"
+    ],
+    "updates": {
+      "enabled": false
+    }
   }
 }

@@ -29,6 +29,20 @@ export class ApiError extends Error {
     );
   }
 }
+/** FormData detection that also works when the object comes from another realm or a polyfill. */
+function isFormData(body: unknown): body is FormData {
+  if (
+    typeof FormData === "undefined" ||
+    body === null ||
+    typeof body !== "object"
+  )
+    return false;
+  return (
+    body instanceof FormData ||
+    (body.constructor?.name === "FormData" &&
+      typeof (body as { append?: unknown }).append === "function")
+  );
+}
 export interface SecureStorage {
   read(): Promise<string | null>;
   write(value: string): Promise<void>;
@@ -97,9 +111,12 @@ export class ApiClient {
         if (!this.token) throw new ApiError(401, "SESSION_REQUIRED");
         headers.Authorization = "Bearer " + this.token;
       }
-      const multipart =
-        typeof FormData !== "undefined" && body instanceof FormData;
-      if (body !== undefined && !multipart)
+      const multipart = isFormData(body);
+      if (multipart) {
+        // Let the platform set "multipart/form-data; boundary=..." itself; a hand-set value drops the boundary.
+        delete headers["Content-Type"];
+        delete headers["content-type"];
+      } else if (body !== undefined)
         headers["Content-Type"] = "application/json";
       const response = await this.transport(this.baseUrl + path, {
         method,
@@ -124,8 +141,7 @@ export class ApiClient {
         } catch {
           /* no server details */
         }
-        if (protectedRequest && this.endsSession(response.status))
-          this.clear();
+        if (protectedRequest && this.endsSession(response.status)) this.clear();
         throw new ApiError(response.status, code);
       }
       const result = binary ? await response.blob() : await response.json();
@@ -327,8 +343,7 @@ export class AdminSession extends ApiClient {
 
 export function adminMessage(error: unknown): string {
   if (error instanceof InputError) return error.message;
-  if (!(error instanceof ApiError))
-    return "Something went wrong. Try again.";
+  if (!(error instanceof ApiError)) return "Something went wrong. Try again.";
   switch (error.code) {
     case "INVALID_CREDENTIALS":
       return "Sign-in failed. Check your email and password.";

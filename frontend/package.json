@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit -p packages/api && tsc --noEmit -p apps/doctor && tsc --noEmit -p apps/admin && tsc --noEmit -p apps/patient",
+    "build": "npm run build:patient && npm run build:doctor && npm run build:admin",
     "build:doctor": "npm run build -w @health-wallet/doctor",
     "build:admin": "npm run build -w @health-wallet/admin",
     "build:patient": "npm run build -w @health-wallet/patient",

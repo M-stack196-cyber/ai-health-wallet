@@ -8,6 +8,10 @@ const { pool, closeDatabasePool } = await import("../database/pool.js");
 const { sourceCatalogue } = await import("../summaries/catalogue.js");
 if (process.env.SUMMARY_PROVIDER !== "synthetic-offline") throw new Error("Offline summary configuration required.");
 const app = createApp({ summaries: { enabled: true, database: pool, catalogue: sourceCatalogue } });
-const server = app.listen(Number(process.env.PORT || 5000), "127.0.0.1", () => console.log("Local demo API on http://127.0.0.1:" + (process.env.PORT || 5000)));
+// Development only (the guard above refuses anything else). Default 0.0.0.0 so a phone on the same Wi-Fi can reach it;
+// set HOST=127.0.0.1 to keep it on this machine only.
+const host = process.env.HOST || "0.0.0.0";
+const port = Number(process.env.PORT || 5000);
+const server = app.listen(port, host, () => console.log("Local demo API listening on " + host + ":" + port));
 const stop = () => { server.closeAllConnections(); server.close(() => void closeDatabasePool().finally(() => process.exit(0))); };
 process.once("SIGINT", stop); process.once("SIGTERM", stop);

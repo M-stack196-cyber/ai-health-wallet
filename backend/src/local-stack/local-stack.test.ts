@@ -135,8 +135,8 @@ test("LS-11 origins: production keeps the single FRONTEND_ORIGIN; local mode all
   const local = allowedOrigins({ NODE_ENV: "development", FRONTEND_ORIGIN: "http://127.0.0.1:5173" });
   for (const o of LOCAL_WEB_ORIGINS) assert.ok(local.includes(o));
   assert.ok(!local.some(o => o.includes("*")), "no wildcards");
-  assert.ok(LOCAL_WEB_ORIGINS.every(o => /^http:\/\/(127\.0\.0\.1|localhost):\d{4}$/.test(o)), "loopback only");
-  assert.equal(LOCAL_WEB_ORIGINS.length, 4);
+  assert.ok(LOCAL_WEB_ORIGINS.every(o => /^http:\/\/(127\.0\.0\.1|localhost|192\.168\.18\.18):\d{4}$/.test(o)), "loopback or the one named dev LAN address only");
+  assert.equal(LOCAL_WEB_ORIGINS.length, 5);
 });
 test("LS-12 over real HTTP: listed origins get CORS headers; non-listed or non-loopback origins do not (local and production)", async () => {
   const serve = async (env: NodeJS.ProcessEnv) => {

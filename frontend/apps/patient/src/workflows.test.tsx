@@ -153,7 +153,7 @@ test("registration sends approved fields and requires verification before login"
   );
   fireEvent.changeText(screen.getByLabelText("Full name"), "Synthetic User");
   fireEvent.changeText(
-    screen.getByLabelText("Date of birth (YYYY-MM-DD)"),
+    screen.getByLabelText("Date of birth (e.g. 2026-11-09 or 9/11/2026)"),
     "2000-01-01",
   );
   fireEvent.changeText(

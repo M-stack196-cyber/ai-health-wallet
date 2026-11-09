@@ -1,10 +1,11 @@
 // Browser origins allowed to call the API. Production (any NODE_ENV other than development/local) keeps the single FRONTEND_ORIGIN.
-// In local development only, the three local web apps are allowed by an exact list. No wildcards, no patterns, no environment-supplied list.
+// In local development only, the local web apps are allowed by an exact list. No wildcards, no patterns, no environment-supplied list.
 export const LOCAL_WEB_ORIGINS: readonly string[] = Object.freeze([
   "http://127.0.0.1:5173",  // doctor web (Vite)
   "http://127.0.0.1:5174",  // admin web (Vite)
   "http://localhost:8081",  // patient app web preview (Expo)
   "http://127.0.0.1:8081",  // patient app web preview (Expo, loopback IP)
+  "http://192.168.18.18:8081", // patient app web preview opened through this dev machine's LAN address
 ]);
 export function localMode(env: NodeJS.ProcessEnv): boolean { return env.NODE_ENV === "development" || env.NODE_ENV === "local"; }
 export function allowedOrigins(env: NodeJS.ProcessEnv): readonly string[] {

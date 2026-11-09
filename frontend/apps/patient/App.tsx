@@ -20,14 +20,15 @@ import {
 import { createSession, clearFiles } from "./src/platform";
 import {
   Button,
-  Card,
   Field,
   BodyText,
   Notice,
   Choices,
+  TextLink,
   styles,
 } from "./src/ui";
 import { PatientWorkspace } from "./src/Workspace";
+import { checkDate } from "./src/dates";
 export default function App({
   session: provided,
 }: {
@@ -156,6 +157,7 @@ export function Auth({
     [password, setPassword] = useState(""),
     [fullName, setFullName] = useState(""),
     [dob, setDob] = useState(""),
+    [dobError, setDobError] = useState(""),
     [sex, setSex] = useState(""),
     [phone, setPhone] = useState(""),
     [guardian, setGuardian] = useState(""),
@@ -179,6 +181,7 @@ export function Auth({
   }
   const switchMode = (m: string) => {
     setMode(m);
+    setDobError("");
     setPassword("");
     setToken("");
     setMessage("");
@@ -190,11 +193,14 @@ export function Auth({
         setPassword("");
         onLogin();
       } else if (mode === "Register") {
+        const birth = checkDate(dob, "birth");
+        setDobError(birth.error);
+        if (birth.error) return;
         const input: Registration = {
           full_name: fullName,
           email,
           password,
-          ...(dob ? { date_of_birth: dob } : {}),
+          ...(dob ? { date_of_birth: birth.value } : {}),
           ...(sex ? { sex_gender: sex } : {}),
           ...(phone ? { phone_number: phone } : {}),
           ...(guardian ? { pending_guardian_email: guardian } : {}),
@@ -230,141 +236,152 @@ export function Auth({
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.body}
+      contentContainerStyle={styles.authContent}
     >
-      <Text style={styles.brand}>✚ healthwallet</Text>
-      <Text style={styles.eyebrow}>YOUR RECORDS. YOUR CONTROL.</Text>
-      <Text style={styles.title}>
-        {mode === "Sign in" ? "Welcome back." : mode}
-      </Text>
-      <BodyText muted>
-        Keep your medical records together and share only what you choose.
-      </BodyText>
-      <Card>
-        {(mode === "Sign in" ||
-          mode === "Register" ||
-          mode === "Recover password") && (
-          <Field
-            label="Email"
-            value={email}
-            onChange={setEmail}
-            keyboard="email-address"
-          />
-        )}
-        {mode === "Register" && (
-          <>
-            <Field label="Full name" value={fullName} onChange={setFullName} />
-            <Field
-              label="Date of birth (YYYY-MM-DD)"
-              value={dob}
-              onChange={setDob}
-            />
-            <Choices
-              label="Sex / gender (optional)"
-              value={sex}
-              values={{
-                female: "Female",
-                male: "Male",
-                other: "Other",
-                prefer_not_to_say: "Prefer not to say",
-              }}
-              onChange={setSex}
-            />
-            <Field
-              label="Phone (optional)"
-              value={phone}
-              onChange={setPhone}
-              keyboard="phone-pad"
-            />
-            <Field
-              label="Guardian email (optional)"
-              value={guardian}
-              onChange={setGuardian}
-              keyboard="email-address"
-            />
-          </>
-        )}
-        {(mode === "Verify email" || mode === "Reset password") && (
-          <>
-            <Field
-              label="Complete code from email"
-              value={token}
-              onChange={setToken}
-              secret
-            />
+      <View style={styles.authWrap}>
+        <View style={styles.authCard}>
+          <View style={styles.authHeader}>
+            <Text style={styles.brand}>✚ healthwallet</Text>
+            <Text style={styles.eyebrow}>YOUR RECORDS. YOUR CONTROL.</Text>
+            <Text style={styles.title}>
+              {mode === "Sign in" ? "Welcome back." : mode}
+            </Text>
             <BodyText muted>
-              Paste the full token supplied by the email. Expired or invalid
-              codes require a new email.
+              Keep your medical records together and share only what you choose.
             </BodyText>
-          </>
-        )}
-        {(mode === "Sign in" ||
-          mode === "Register" ||
-          mode === "Reset password") && (
-          <>
+          </View>
+          {(mode === "Sign in" ||
+            mode === "Register" ||
+            mode === "Recover password") && (
             <Field
-              label={mode === "Reset password" ? "New password" : "Password"}
-              value={password}
-              onChange={setPassword}
-              secret
-            />
-            {mode !== "Sign in" && (
-              <BodyText muted>
-                Use at least 15 characters. Your password is never trimmed.
-              </BodyText>
-            )}
-          </>
-        )}
-        <Button
-          title={mode === "Recover password" ? "Send recovery email" : mode}
-          disabled={busy}
-          onPress={() => void submit()}
-        />
-        {mode === "Verify email" && (
-          <>
-            <Field
-              label="Email for resend"
+              label="Email"
               value={email}
               onChange={setEmail}
               keyboard="email-address"
             />
-            <Button
-              title="Resend verification email"
-              secondary
-              disabled={busy}
-              onPress={() =>
-                void run(async () => {
-                  await api.resend(email);
-                  setMessage(
-                    "If eligible, an email will be sent. Wait before requesting another.",
-                  );
-                })
-              }
-            />
-          </>
-        )}
-        <Notice message={message} busy={busy} />
-      </Card>
-      <View style={styles.row}>
-        {[
-          "Sign in",
-          "Register",
-          "Verify email",
-          "Recover password",
-          "Reset password",
-        ]
-          .filter((m) => m !== mode)
-          .map((m) => (
-            <Button
-              key={m}
-              title={m}
-              secondary
-              disabled={busy}
-              onPress={() => switchMode(m)}
-            />
-          ))}
+          )}
+          {mode === "Register" && (
+            <>
+              <Field
+                label="Full name"
+                value={fullName}
+                onChange={setFullName}
+              />
+              <Field
+                label="Date of birth (e.g. 2026-11-09 or 9/11/2026)"
+                value={dob}
+                onChange={(v) => {
+                  setDob(v);
+                  setDobError("");
+                }}
+                error={dobError}
+              />
+              <Choices
+                label="Sex / gender (optional)"
+                value={sex}
+                values={{
+                  female: "Female",
+                  male: "Male",
+                  other: "Other",
+                  prefer_not_to_say: "Prefer not to say",
+                }}
+                onChange={setSex}
+              />
+              <Field
+                label="Phone (optional)"
+                value={phone}
+                onChange={setPhone}
+                keyboard="phone-pad"
+              />
+              <Field
+                label="Guardian email (optional)"
+                value={guardian}
+                onChange={setGuardian}
+                keyboard="email-address"
+              />
+            </>
+          )}
+          {(mode === "Verify email" || mode === "Reset password") && (
+            <>
+              <Field
+                label="Complete code from email"
+                value={token}
+                onChange={setToken}
+                secret
+              />
+              <BodyText muted>
+                Paste the full token supplied by the email. Expired or invalid
+                codes require a new email.
+              </BodyText>
+            </>
+          )}
+          {(mode === "Sign in" ||
+            mode === "Register" ||
+            mode === "Reset password") && (
+            <>
+              <Field
+                label={mode === "Reset password" ? "New password" : "Password"}
+                value={password}
+                onChange={setPassword}
+                secret
+              />
+              {mode !== "Sign in" && (
+                <BodyText muted>
+                  Use at least 15 characters. Your password is never trimmed.
+                </BodyText>
+              )}
+            </>
+          )}
+          <Button
+            title={mode === "Recover password" ? "Send recovery email" : mode}
+            disabled={busy}
+            onPress={() => void submit()}
+          />
+          {mode === "Verify email" && (
+            <>
+              <Field
+                label="Email for resend"
+                value={email}
+                onChange={setEmail}
+                keyboard="email-address"
+              />
+              <Button
+                title="Resend verification email"
+                secondary
+                disabled={busy}
+                onPress={() =>
+                  void run(async () => {
+                    await api.resend(email);
+                    setMessage(
+                      "If eligible, an email will be sent. Wait before requesting another.",
+                    );
+                  })
+                }
+              />
+            </>
+          )}
+          <Notice message={message} busy={busy} />
+        </View>
+        <View style={styles.linkBar}>
+          {[
+            "Sign in",
+            "Register",
+            "Verify email",
+            "Recover password",
+            "Reset password",
+          ]
+            .filter((m) => m !== mode)
+            .map((m) => (
+              <TextLink
+                key={m}
+                title={m}
+                disabled={busy}
+                onPress={() => switchMode(m)}
+              />
+            ))}
+        </View>
+        <BodyText muted>{medicalNotice}</BodyText>
       </View>
-      <BodyText muted>{medicalNotice}</BodyText>
     </ScrollView>
   );
 }

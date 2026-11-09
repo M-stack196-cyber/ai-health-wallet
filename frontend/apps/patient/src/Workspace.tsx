@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type ReactNode } from "react";
-import { Alert, ScrollView, Share, Text, View } from "react-native";
+import { Alert, Platform, ScrollView, Share, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
@@ -30,6 +30,7 @@ import {
   type CreatedGrant,
 } from "@health-wallet/api";
 import { presentOriginal, pickedForm } from "./platform";
+import { normalizeDate, checkDate } from "./dates";
 import { Button, Card, Field, BodyText, Notice, Choices, styles } from "./ui";
 export function PatientWorkspace({ session }: { session: PatientSession }) {
   const [tab, setTab] = useState("Records");
@@ -114,6 +115,16 @@ type Context = {
   setMessage: (s: string) => void;
   live: () => boolean;
 };
+// Picked files are copied to a cache folder on native only; on web there is nothing on disk to delete.
+function discardPicked(uri: string) {
+  if (Platform.OS === "web") {
+    // Release the browser's temporary blob: URL for the picked file.
+    if (uri.startsWith("blob:")) URL.revokeObjectURL(uri);
+    return;
+  }
+  const f = new File(uri);
+  if (f.exists) f.delete();
+}
 function Panel({
   session,
   children,
@@ -177,6 +188,7 @@ export function ProfilePanel({ api, run, busy, session }: Context) {
     [guardian, setGuardian] = useState<Guardian>(),
     [name, setName] = useState(""),
     [dob, setDob] = useState(""),
+    [dobError, setDobError] = useState(""),
     [phone, setPhone] = useState(""),
     [sex, setSex] = useState(""),
     [guardianEmail, setGuardianEmail] = useState("");
@@ -201,9 +213,13 @@ export function ProfilePanel({ api, run, busy, session }: Context) {
         )}
         <Field label="Full name" value={name} onChange={setName} />
         <Field
-          label="Date of birth (YYYY-MM-DD)"
+          label="Date of birth (e.g. 2026-11-09 or 9/11/2026)"
           value={dob}
-          onChange={setDob}
+          onChange={(v) => {
+            setDob(v);
+            setDobError("");
+          }}
+          error={dobError}
         />
         <Field
           label="Phone (optional)"
@@ -226,20 +242,23 @@ export function ProfilePanel({ api, run, busy, session }: Context) {
         <Button
           title="Save profile"
           disabled={busy || !profile}
-          onPress={() =>
+          onPress={() => {
+            const birth = checkDate(dob, "birth");
+            setDobError(birth.error);
+            if (birth.error) return;
             void run(async () => {
               setProfile(
                 (
                   await api.updateProfile({
                     full_name: name,
-                    date_of_birth: dob || null,
+                    date_of_birth: birth.value || null,
                     phone_number: phone || null,
                     sex_gender: sex || null,
                   })
                 ).patient,
               );
-            }, "Profile updated.")
-          }
+            }, "Profile updated.");
+          }}
         />
       </Card>
       <Card>
@@ -439,7 +458,8 @@ export function UploadPanel({
   const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset>(),
     [category, setCategory] = useState<Category>("lab_report"),
     [hospital, setHospital] = useState(""),
-    [date, setDate] = useState("");
+    [date, setDate] = useState(""),
+    [dateError, setDateError] = useState("");
   async function pick() {
     const result = await DocumentPicker.getDocumentAsync({
       type: ["application/pdf", "image/jpeg", "image/png"],
@@ -449,18 +469,15 @@ export function UploadPanel({
     if (result.canceled) return;
     const next = result.assets[0];
     if (!live()) {
-      new File(next.uri).delete();
+      discardPicked(next.uri);
       return;
     }
     try {
       validateFile(next.name, next.mimeType ?? "");
-      if (asset) {
-        const previous = new File(asset.uri);
-        if (previous.exists) previous.delete();
-      }
+      if (asset) discardPicked(asset.uri);
       setAsset(next);
     } catch (e) {
-      new File(next.uri).delete();
+      discardPicked(next.uri);
       throw e;
     }
   }
@@ -468,10 +485,7 @@ export function UploadPanel({
   assetRef.current = asset;
   useEffect(
     () => () => {
-      if (assetRef.current) {
-        const f = new File(assetRef.current.uri);
-        if (f.exists) f.delete();
-      }
+      if (assetRef.current) discardPicked(assetRef.current.uri);
     },
     [],
   );
@@ -479,11 +493,15 @@ export function UploadPanel({
     if (!asset) throw new InputError("Choose a file first.");
     validateFile(asset.name, asset.mimeType ?? "");
     if (!hospital.trim()) throw new InputError("Enter the hospital name.");
+    // Checked before sending; the message is shown under the date field, not in the banner.
+    const checked = checkDate(date, "document");
+    setDateError(checked.error);
+    if (checked.error) return;
     await api.upload(
-      pickedForm(asset, {
+      await pickedForm(asset, {
         category,
         hospital_name: hospital.trim(),
-        ...(date ? { document_date: date } : {}),
+        ...(checked.value ? { document_date: checked.value } : {}),
       }),
     );
     if (live()) onUploaded();
@@ -515,9 +533,13 @@ export function UploadPanel({
       />
       <Field label="Hospital name" value={hospital} onChange={setHospital} />
       <Field
-        label="Document date (YYYY-MM-DD, optional)"
+        label="Document date (e.g. 2026-11-09 or 9/11/2026, optional)"
         value={date}
-        onChange={setDate}
+        onChange={(v) => {
+          setDate(v);
+          setDateError("");
+        }}
+        error={dateError}
       />
       <Button
         title={busy ? "Uploading / validating…" : "Upload original"}
@@ -547,8 +569,8 @@ export function RecordsPanel(context: Context) {
       offset: append ? records.length : 0,
       category: (category as Category) || undefined,
       hospital: hospital || undefined,
-      uploaded_from: from || undefined,
-      uploaded_to: to || undefined,
+      uploaded_from: normalizeDate(from) || undefined,
+      uploaded_to: normalizeDate(to) || undefined,
     });
     if (live()) {
       setRecords(append ? [...records, ...r.documents] : r.documents);
@@ -578,11 +600,15 @@ export function RecordsPanel(context: Context) {
           onChange={setHospital}
         />
         <Field
-          label="Uploaded from (YYYY-MM-DD)"
+          label="Uploaded from (e.g. 2026-11-09)"
           value={from}
           onChange={setFrom}
         />
-        <Field label="Uploaded to (YYYY-MM-DD)" value={to} onChange={setTo} />
+        <Field
+          label="Uploaded to (e.g. 2026-11-09)"
+          value={to}
+          onChange={setTo}
+        />
         <Button
           title="Apply filters / refresh"
           secondary
@@ -657,6 +683,7 @@ export function RecordDetail({
     [job, setJob] = useState<{ id: string; status: string }>(),
     [hospital, setHospital] = useState(d.hospital_name),
     [date, setDate] = useState(d.document_date ?? ""),
+    [dateError, setDateError] = useState(""),
     [category, setCategory] = useState<Category>(d.category),
     [removed, setRemoved] = useState(false);
   useEffect(() => {
@@ -739,24 +766,31 @@ export function RecordDetail({
       />
       <Field label="Hospital name" value={hospital} onChange={setHospital} />
       <Field
-        label="Document date (YYYY-MM-DD, optional)"
+        label="Document date (e.g. 2026-11-09 or 9/11/2026, optional)"
         value={date}
-        onChange={setDate}
+        onChange={(v) => {
+          setDate(v);
+          setDateError("");
+        }}
+        error={dateError}
       />
       <Button
         title="Save document metadata"
         secondary
         disabled={busy}
-        onPress={() =>
+        onPress={() => {
+          const checked = checkDate(date, "document");
+          setDateError(checked.error);
+          if (checked.error) return;
           void run(async () => {
             await api.metadata(d.id, {
               category,
               hospital_name: hospital,
-              document_date: date || null,
+              document_date: checked.value || null,
             });
             setSummary(undefined);
-          }, "Metadata updated. Refresh the record library for current dates.")
-        }
+          }, "Metadata updated. Refresh the record library for current dates.");
+        }}
       />
       <Button
         title="Load report summary"
