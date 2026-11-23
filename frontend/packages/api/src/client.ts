@@ -102,7 +102,9 @@ export class ApiClient {
     const epoch = this.epoch,
       controller = new AbortController();
     this.controllers.add(controller);
-    const deadline = setTimeout(() => controller.abort(), this.timeoutMs);
+    const multipart = isFormData(body);
+    const timeout = multipart ? Math.max(this.timeoutMs, 120000) : this.timeoutMs;
+    const deadline = setTimeout(() => controller.abort(), timeout);
     try {
       const headers: Record<string, string> = {
         Accept: binary ? "*/*" : "application/json",
@@ -111,7 +113,54 @@ export class ApiClient {
         if (!this.token) throw new ApiError(401, "SESSION_REQUIRED");
         headers.Authorization = "Bearer " + this.token;
       }
-      const multipart = isFormData(body);
+      if (multipart && typeof XMLHttpRequest !== "undefined") {
+        return await new Promise<T>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open(method, this.baseUrl + path, true);
+          xhr.timeout = timeout;
+          for (const [k, v] of Object.entries(headers)) {
+            xhr.setRequestHeader(k, v);
+          }
+          const onAbort = () => xhr.abort();
+          controller.signal.addEventListener("abort", onAbort, { once: true });
+          xhr.onload = () => {
+            controller.signal.removeEventListener("abort", onAbort);
+            if (epoch !== this.epoch) {
+              reject(new ApiError(401, "SESSION_CHANGED"));
+              return;
+            }
+            if (xhr.status < 200 || xhr.status >= 300) {
+              console.error("[XHR 4XX BODY]", xhr.status, xhr.responseText);
+              let code = "REQUEST_FAILED";
+              try {
+                const data = JSON.parse(xhr.responseText);
+                if (typeof data?.error?.code === "string") code = data.error.code;
+              } catch {
+                /* no server details */
+              }
+              if (protectedRequest && this.endsSession(xhr.status)) this.clear();
+              reject(new ApiError(xhr.status, code));
+              return;
+            }
+            try {
+              resolve(JSON.parse(xhr.responseText) as T);
+            } catch (e) {
+              reject(e);
+            }
+          };
+          xhr.onerror = () => {
+            controller.signal.removeEventListener("abort", onAbort);
+            console.error("[RAW XHR UPLOAD ERROR]", xhr.status, xhr.responseText);
+            reject(new ApiError(0, "NETWORK_ERROR"));
+          };
+          xhr.ontimeout = () => {
+            controller.signal.removeEventListener("abort", onAbort);
+            console.error("[RAW XHR UPLOAD TIMEOUT]");
+            reject(new ApiError(0, "NETWORK_ERROR"));
+          };
+          xhr.send(body as FormData);
+        });
+      }
       if (multipart) {
         // Let the platform set "multipart/form-data; boundary=..." itself; a hand-set value drops the boundary.
         delete headers["Content-Type"];
@@ -148,6 +197,7 @@ export class ApiClient {
       if (epoch !== this.epoch) throw new ApiError(401, "SESSION_CHANGED");
       return result as T;
     } catch (error) {
+      console.error("[RAW API ERROR]", path, error);
       if (error instanceof ApiError) throw error;
       throw new ApiError(0, "NETWORK_ERROR");
     } finally {
