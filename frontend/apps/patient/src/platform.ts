@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { File, Paths, Directory } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import * as ImageManipulator from "expo-image-manipulator";
 import {
   PatientSession,
   InputError,
@@ -162,12 +163,57 @@ export async function pickedForm(
       blob.type === type ? blob : new Blob([blob], { type }),
       asset.name,
     );
-  } else
+  } else {
+    let uri = asset.uri;
+    let name = asset.name || "report.jpg";
+    const lower = name.toLowerCase();
+    let isPdf =
+      asset.mimeType === "application/pdf" || lower.endsWith(".pdf");
+
+    try {
+      const localFile = new File(uri);
+      if (localFile.exists) {
+        const header = await localFile.bytes();
+        if (
+          header.length >= 5 &&
+          header[0] === 0x25 &&
+          header[1] === 0x50 &&
+          header[2] === 0x44 &&
+          header[3] === 0x46 &&
+          header[4] === 0x2d
+        ) {
+          isPdf = true;
+        } else if (header.length >= 4) {
+          isPdf = false;
+        }
+      }
+    } catch {
+      /* fall back to mimeType/extension */
+    }
+
+    let uploadType = isPdf ? "application/pdf" : "image/jpeg";
+    if (isPdf) {
+      if (!lower.endsWith(".pdf")) {
+        name = name.replace(/\.[^.]+$/, "") + ".pdf";
+      }
+    } else {
+      // Normalize mobile photos/screenshots to a clean JPEG well within the server's 16 MP & strict sharp limits
+      const normalized = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 2200 } }],
+        { compress: 0.88, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      uri = normalized.uri;
+      name = name.replace(/\.[^.]+$/, "") + ".jpg";
+      uploadType = "image/jpeg";
+    }
+
     form.append("file", {
-      uri: asset.uri,
-      name: asset.name,
-      type: asset.mimeType,
+      uri,
+      name,
+      type: uploadType,
     } as unknown as Blob);
+  }
   form.append("category", metadata.category);
   form.append("hospital_name", metadata.hospital_name);
   if (metadata.document_date)

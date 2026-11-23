@@ -490,21 +490,26 @@ export function UploadPanel({
     [],
   );
   async function upload() {
-    if (!asset) throw new InputError("Choose a file first.");
-    validateFile(asset.name, asset.mimeType ?? "");
-    if (!hospital.trim()) throw new InputError("Enter the hospital name.");
-    // Checked before sending; the message is shown under the date field, not in the banner.
-    const checked = checkDate(date, "document");
-    setDateError(checked.error);
-    if (checked.error) return;
-    await api.upload(
-      await pickedForm(asset, {
-        category,
-        hospital_name: hospital.trim(),
-        ...(checked.value ? { document_date: checked.value } : {}),
-      }),
-    );
-    if (live()) onUploaded();
+    try {
+      if (!asset) throw new InputError("Choose a file first.");
+      validateFile(asset.name, asset.mimeType ?? "");
+      if (!hospital.trim()) throw new InputError("Enter the hospital name.");
+      // Checked before sending; the message is shown under the date field, not in the banner.
+      const checked = checkDate(date, "document");
+      setDateError(checked.error);
+      if (checked.error) return;
+      await api.upload(
+        await pickedForm(asset, {
+          category,
+          hospital_name: hospital.trim(),
+          ...(checked.value ? { document_date: checked.value } : {}),
+        }),
+      );
+      if (live()) onUploaded();
+    } catch (err) {
+      console.error("[UPLOAD DEBUG ERROR]", err);
+      throw err;
+    }
   }
   return (
     <Card>
