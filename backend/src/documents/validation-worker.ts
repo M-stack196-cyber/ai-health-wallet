@@ -12,18 +12,20 @@ let valid = false;
 try {
   const bytes = await readFile(path);
   if (type === "pdf") {
-    if (!/^%PDF-[12]\.\d/.test(bytes.subarray(0, 8).toString("ascii"))
-        || !/%%EOF\s*$/.test(bytes.subarray(-1024).toString("latin1"))) throw new Error();
-    const start = /startxref\s+(\d+)\s+%%EOF\s*$/.exec(bytes.subarray(-1024).toString("latin1"));
+    if (!/^%PDF-[12]\.\d/.test(bytes.subarray(0, 8).toString("ascii"))) throw new Error();
+    const tail = bytes.subarray(-2048).toString("latin1");
+    const eofIndex = tail.lastIndexOf("%%EOF");
+    if (eofIndex === -1) throw new Error();
+    const start = /startxref\s+(\d+)\b/.exec(tail.slice(Math.max(0, eofIndex - 64), eofIndex));
     const offset = start ? Number(start[1]) : -1;
     if (!Number.isSafeInteger(offset) || offset < 8 || offset >= bytes.length) throw new Error();
     const xref = bytes.subarray(offset, offset + 1024).toString("latin1");
     if (!xref.startsWith("xref") && !(/^\d+\s+\d+\s+obj\b/.test(xref) && /\/Type\s*\/XRef\b/.test(xref.split("stream")[0]))) throw new Error();
     const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const task = getDocument({ data: new Uint8Array(bytes), verbosity: 0, stopAtErrors: true,
+    const task = getDocument({ data: new Uint8Array(bytes), verbosity: 0, stopAtErrors: false,
       useSystemFonts: false, disableFontFace: true, useWorkerFetch: false,
       isOffscreenCanvasSupported: false, isImageDecoderSupported: false, enableXfa: false,
-      maxImageSize: maxImagePixels });
+      maxImageSize: Math.max(maxImagePixels, 36000000) });
     try {
       const pdf = await task.promise;
       if (pdf.numPages < 1 || pdf.numPages > maxPdfPages || (await pdf.getJSActions())?.size || (await pdf.getAttachments())?.size) throw new Error();
@@ -33,7 +35,7 @@ try {
         if ((await page.getJSActions())?.size) throw new Error();
         const list = await page.getOperatorList();
         operators += list.fnArray.length;
-        if (operators > 200000) throw new Error();
+        if (operators > 500000) throw new Error();
         page.cleanup();
       }
       valid = true;
