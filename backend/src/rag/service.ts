@@ -27,7 +27,9 @@ export function createRagService(db:RagDatabase,patient:string,client:ReturnType
   await authorize();signal?.throwIfAborted();return {document_id:id,indexed_chunks:await repo.index(s,chunks,chunkerVersion),chunker:chunkerVersion,embedding_model:'synthetic-hash-32-v1',mode:'synthetic-offline'};
  },
  async query(question:string,category?:string,signal?:AbortSignal){
-  await authorize();const embedded=await client.call('embedding',{question},signal),rows=await repo.retrieve(validateVector(embedded.embedding),category);
+  await authorize();
+  for(const docId of await repo.unindexedDocumentIds(category)){try{await this.index(docId,signal);}catch{}}
+  const embedded=await client.call('embedding',{question},signal),rows=await repo.retrieve(validateVector(embedded.embedding),category);
   // Refuse oversized evidence sets rather than silently suppress contradictions.
   const records:Record<string,any>[]=[],sources:Record<string,any>[]=[];const seen=new Set<string>();const topic=recordTopic(question);
   if(rows.length<=20)for(const row of rows){

@@ -12,6 +12,16 @@ export function createRagRepository(db:RagDatabase,patient:string,doctor?:Doctor
  }
  return {
  snapshot:(id:string)=>snapshots.captureSnapshot(id),
+ async unindexedDocumentIds(category?:string){
+  return (await db.query<{id:string}>(`SELECT d.id FROM medical_documents d
+   JOIN extracted_medical_text e ON e.document_id=d.id AND e.patient_id=d.patient_id AND e.processing_status='completed'
+   WHERE d.patient_id=$1 AND d.deleted_at IS NULL AND ($2::text IS NULL OR d.category=$2) AND ($3::uuid[] IS NULL OR d.id=ANY($3::uuid[]))
+   AND NOT EXISTS (
+    SELECT 1 FROM rag_chunk_embeddings r
+    JOIN summary_source_snapshots s ON s.id=r.snapshot_id AND s.document_id=r.document_id AND s.patient_id=r.patient_id
+    WHERE r.document_id=d.id AND r.patient_id=$1 AND r.model_key=$4 AND r.dimensions=32 AND public.summary_source_current(s)
+   ) ORDER BY d.uploaded_at DESC LIMIT 20`,[patient,category??null,doctor?[...doctor.permittedDocumentIds]:null,embeddingModel])).rows.map(r=>r.id);
+ },
  async pages(s:SummarySnapshot){
   const r=(await db.query('SELECT structured_content FROM document_processing_results WHERE document_id=$1 AND patient_id=$2 AND attempt=$3 AND lease_token=$4',[s.document_id,patient,s.processing_attempt,s.processing_claim_token])).rows[0];
   const pages=r?.structured_content?.pages?.map((p:any)=>({page:p.page,text:p.text}));
@@ -37,7 +47,7 @@ export function createRagRepository(db:RagDatabase,patient:string,doctor?:Doctor
    JOIN medical_documents d ON (d.id,d.patient_id)=(c.document_id,c.patient_id)
    WHERE e.patient_id=$1 AND c.patient_id=$1 AND e.model_key=$2 AND e.dimensions=32 AND public.summary_source_current(s)
    AND ($3::text IS NULL OR d.category=$3) AND ($5::uuid[] IS NULL OR d.id=ANY($5::uuid[])))
-   SELECT *,embedding <=> $4::vector AS distance FROM authorized ORDER BY embedding <=> $4::vector,document_id,chunk_order LIMIT 21`,[patient,embeddingModel,category??null,JSON.stringify(vector),doctor?[...doctor.permittedDocumentIds]:null])).rows);
+   SELECT *,embedding <=> $4::vector AS distance FROM authorized ORDER BY embedding <=> $4::vector,document_id,chunk_order LIMIT 20`,[patient,embeddingModel,category??null,JSON.stringify(vector),doctor?[...doctor.permittedDocumentIds]:null])).rows);
  },
  async save(id:string,question:string,result:Record<string,any>,sources:Record<string,any>[]){
   return tx(async c=>{
