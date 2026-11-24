@@ -26,6 +26,7 @@ import { createLocalStorage } from "./documents/local-storage.js";
 
 import {createProcessingRoutes,type ProcessingApiOptions} from "./processing/api.js";
 import { createSummaryRoutes, type SummaryApiOptions } from "./summaries/routes.js";
+import { sourceCatalogue } from "./summaries/catalogue.js";
 
 export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminAuthenticationConfig | null; database?: PatientDatabase; identity?: IdentityOptions;
   documentConfig?: DocumentConfig; documentStorage?: DocumentStorage | null; documentDatabase?: PatientDatabase; summaries?: SummaryApiOptions; rag?:RagOptions; sharing?:SharingOptions; processingApi?: ProcessingApiOptions } = {}) {
@@ -65,7 +66,9 @@ export function createApp(options: { auth?: AuthenticationConfig; admin?: AdminA
   app.use("/api/v1",createGuardianNotificationRoutes(options.documentDatabase ?? options.database ?? pool,auth,documentConfig,storage));
   app.use("/api/v1",createSharingRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,documentConfig,storage,options.sharing??{config:sharingConfig(process.env),mailer:identity.mailer,ragClient:rag.client}));
   app.use("/api/v1",createRagRoutes((options.documentDatabase ?? options.database ?? pool) as RagDatabase,auth,rag));
-  app.use("/api/v1", createSummaryRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.summaries));
+  const summaryDb = options.documentDatabase ?? options.database ?? pool;
+  const summaries = options.summaries ?? (process.env.SUMMARY_SERVICE_URL ? { enabled: true, database: summaryDb as unknown as SummaryApiOptions["database"], catalogue: sourceCatalogue } : undefined);
+  app.use("/api/v1", createSummaryRoutes(summaryDb, auth, summaries));
   app.use("/api/v1", createProcessingRoutes(options.documentDatabase ?? options.database ?? pool, auth, options.processingApi));
   app.use("/api/v1/documents", documents);
   app.use("/api/v1/timeline",createTimelineRoutes(options.documentDatabase ?? options.database ?? pool,auth));
