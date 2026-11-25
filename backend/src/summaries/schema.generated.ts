@@ -267,14 +267,23 @@ export const SCHEMA = {
           "type": "array",
           "items": {
             "enum": [
+              "chloride",
+              "creatinine",
               "glucose",
+              "hematocrit",
               "hemoglobin",
+              "lab_measurement",
               "ocr",
-              "reference_range"
+              "platelets",
+              "potassium",
+              "rbc",
+              "reference_range",
+              "sodium",
+              "wbc"
             ]
           },
           "minItems": 0,
-          "maxItems": 4,
+          "maxItems": 13,
           "uniqueItems": true
         },
         "measurement": {
@@ -511,14 +520,23 @@ export const SCHEMA = {
           "type": "array",
           "items": {
             "enum": [
+              "chloride",
+              "creatinine",
               "glucose",
+              "hematocrit",
               "hemoglobin",
+              "lab_measurement",
               "ocr",
-              "reference_range"
+              "platelets",
+              "potassium",
+              "rbc",
+              "reference_range",
+              "sodium",
+              "wbc"
             ]
           },
           "minItems": 0,
-          "maxItems": 4,
+          "maxItems": 13,
           "uniqueItems": true
         },
         "uncertainty": {
@@ -565,6 +583,42 @@ export const GLOSSARY = {
     },
     "reference_range": {
       "text": "A reported range is the comparison interval printed in this report. No missing range has been supplied.",
+      "source": null
+    },
+    "hematocrit": {
+      "text": "Hematocrit measures the proportion of red blood cells in the blood. This explanation does not interpret your result.",
+      "source": null
+    },
+    "wbc": {
+      "text": "White blood cells (WBC) are immune cells that help defend the body against infection. This explanation does not interpret your result.",
+      "source": null
+    },
+    "rbc": {
+      "text": "Red blood cells (RBC) carry oxygen from the lungs to tissues throughout the body. This explanation does not interpret your result.",
+      "source": null
+    },
+    "platelets": {
+      "text": "Platelets are blood cell fragments involved in clotting. This explanation does not interpret your result.",
+      "source": null
+    },
+    "creatinine": {
+      "text": "Creatinine is a waste product filtered from the blood by the kidneys. This explanation does not interpret your result.",
+      "source": null
+    },
+    "sodium": {
+      "text": "Sodium is an electrolyte that helps regulate fluid balance and nerve/muscle function. This explanation does not interpret your result.",
+      "source": null
+    },
+    "potassium": {
+      "text": "Potassium is an electrolyte essential for nerve signaling, muscle contraction, and heart rhythm. This explanation does not interpret your result.",
+      "source": null
+    },
+    "chloride": {
+      "text": "Chloride is an electrolyte that helps maintain fluid and acid-base balance. This explanation does not interpret your result.",
+      "source": null
+    },
+    "lab_measurement": {
+      "text": "Laboratory measurements report values printed in your medical document alongside the laboratory's reference interval when available. This explanation does not interpret your result.",
       "source": null
     }
   }

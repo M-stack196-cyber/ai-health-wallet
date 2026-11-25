@@ -14,21 +14,23 @@ import {
   patientApi,
   medicalNotice,
   safeMessage,
-  InputError,
   type Registration,
 } from "@health-wallet/api";
 import { createSession, clearFiles } from "./src/platform";
 import {
+  BrandLogo,
   Button,
   Field,
   BodyText,
   Notice,
   Choices,
   TextLink,
+  palette,
   styles,
 } from "./src/ui";
 import { PatientWorkspace } from "./src/Workspace";
 import { checkDate } from "./src/dates";
+
 export default function App({
   session: provided,
 }: {
@@ -49,6 +51,7 @@ export default function App({
     [active, setActive] = useState(AppState.currentState === "active"),
     [ready, setReady] = useState(false),
     [generation, setGeneration] = useState(0);
+
   useEffect(() => {
     if (!session) {
       setReady(true);
@@ -93,6 +96,7 @@ export default function App({
       void ScreenCapture.allowScreenCaptureAsync().catch(() => {});
     };
   }, [session]);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.screen}>
@@ -130,12 +134,14 @@ export default function App({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                backgroundColor: "#f4f7f1",
+                backgroundColor: palette.background,
                 padding: 24,
                 justifyContent: "center",
+                alignItems: "center",
+                gap: 12,
               }}
             >
-              <Text style={styles.brand}>✚ healthwallet</Text>
+              <BrandLogo />
               <BodyText>Return to the app to continue securely.</BodyText>
             </View>
           )}
@@ -144,6 +150,7 @@ export default function App({
     </SafeAreaProvider>
   );
 }
+
 export function Auth({
   session,
   onLogin,
@@ -165,6 +172,7 @@ export function Auth({
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const locked = useRef(false);
+
   async function run(fn: () => Promise<void>) {
     if (locked.current) return;
     locked.current = true;
@@ -179,6 +187,7 @@ export function Auth({
       setBusy(false);
     }
   }
+
   const switchMode = (m: string) => {
     setMode(m);
     setDobError("");
@@ -186,6 +195,7 @@ export function Auth({
     setToken("");
     setMessage("");
   };
+
   async function submit() {
     await run(async () => {
       if (mode === "Sign in") {
@@ -233,6 +243,7 @@ export function Auth({
       }
     });
   }
+
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -241,8 +252,10 @@ export function Auth({
       <View style={styles.authWrap}>
         <View style={styles.authCard}>
           <View style={styles.authHeader}>
-            <Text style={styles.brand}>✚ healthwallet</Text>
-            <Text style={styles.eyebrow}>YOUR RECORDS. YOUR CONTROL.</Text>
+            <BrandLogo />
+            <Text style={[styles.eyebrow, { marginTop: 8 }]}>
+              YOUR RECORDS. YOUR CONTROL.
+            </Text>
             <Text style={styles.title}>
               {mode === "Sign in" ? "Welcome back." : mode}
             </Text>
@@ -250,6 +263,7 @@ export function Auth({
               Keep your medical records together and share only what you choose.
             </BodyText>
           </View>
+
           {(mode === "Sign in" ||
             mode === "Register" ||
             mode === "Recover password") && (
@@ -258,14 +272,17 @@ export function Auth({
               value={email}
               onChange={setEmail}
               keyboard="email-address"
+              placeholder="name@example.com"
             />
           )}
+
           {mode === "Register" && (
             <>
               <Field
                 label="Full name"
                 value={fullName}
                 onChange={setFullName}
+                placeholder="Muhammad Tayyab Aslam"
               />
               <Field
                 label="Date of birth (e.g. 2026-11-09 or 9/11/2026)"
@@ -274,6 +291,7 @@ export function Auth({
                   setDob(v);
                   setDobError("");
                 }}
+                placeholder="YYYY-MM-DD"
                 error={dobError}
               />
               <Choices
@@ -292,15 +310,18 @@ export function Auth({
                 value={phone}
                 onChange={setPhone}
                 keyboard="phone-pad"
+                placeholder="0300 4412870"
               />
               <Field
                 label="Guardian email (optional)"
                 value={guardian}
                 onChange={setGuardian}
                 keyboard="email-address"
+                placeholder="guardian@example.com"
               />
             </>
           )}
+
           {(mode === "Verify email" || mode === "Reset password") && (
             <>
               <Field
@@ -315,6 +336,7 @@ export function Auth({
               </BodyText>
             </>
           )}
+
           {(mode === "Sign in" ||
             mode === "Register" ||
             mode === "Reset password") && (
@@ -324,6 +346,7 @@ export function Auth({
                 value={password}
                 onChange={setPassword}
                 secret
+                placeholder="•••••••••••••••"
               />
               {mode !== "Sign in" && (
                 <BodyText muted>
@@ -332,11 +355,13 @@ export function Auth({
               )}
             </>
           )}
+
           <Button
             title={mode === "Recover password" ? "Send recovery email" : mode}
             disabled={busy}
             onPress={() => void submit()}
           />
+
           {mode === "Verify email" && (
             <>
               <Field
@@ -360,8 +385,10 @@ export function Auth({
               />
             </>
           )}
+
           <Notice message={message} busy={busy} />
         </View>
+
         <View style={styles.linkBar}>
           {[
             "Sign in",
@@ -380,7 +407,9 @@ export function Auth({
               />
             ))}
         </View>
-        <BodyText muted>{medicalNotice}</BodyText>
+        <Text style={[styles.smallMuted, { textAlign: "center" }]}>
+          {medicalNotice}
+        </Text>
       </View>
     </ScrollView>
   );

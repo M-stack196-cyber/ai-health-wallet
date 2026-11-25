@@ -20,11 +20,34 @@ function text(value: unknown): string {
   if (!valueTrimmed || [...valueTrimmed].length > 120 || !safeDisplayText(valueTrimmed)) invalid();
   return valueTrimmed;
 }
+const MONTH_MAP: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+  apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+  aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+  oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
 export function calendarDate(value: unknown): string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) invalid();
-  const parsed = new Date(value + "T00:00:00Z");
-  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) invalid();
-  return value;
+  if (typeof value !== "string") invalid();
+  const text = value.trim();
+  if (!text) invalid();
+  const check = (y: number, mo: number, d: number): string | null => {
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    if (y >= 1000 && dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d) {
+      return `${String(y)}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+    return null;
+  };
+  const dmyW = /^(\d{1,2})[\s,./-]+([A-Za-z]+)[\s,./-]+(\d{4})$/.exec(text);
+  if (dmyW) { const mo = MONTH_MAP[dmyW[2].toLowerCase()]; const iso = mo ? check(+dmyW[3], mo, +dmyW[1]) : null; if (iso) return iso; invalid(); }
+  const mdyW = /^([A-Za-z]+)[\s,./-]+(\d{1,2})[\s,./-]+(\d{4})$/.exec(text);
+  if (mdyW) { const mo = MONTH_MAP[mdyW[1].toLowerCase()]; const iso = mo ? check(+mdyW[3], mo, +mdyW[2]) : null; if (iso) return iso; invalid(); }
+  const m = /^(\d{1,4})([-/.\s])(\d{1,2})\2(\d{1,4})$/.exec(text);
+  if (!m) invalid();
+  const [, a, sep, b, c] = m;
+  const cands: [number, number, number][] = a.length === 4 && c.length <= 2 ? [[+a, +b, +c]]
+    : c.length === 4 && a.length <= 2 ? (sep === "/" ? [[+c, +a, +b], [+c, +b, +a]] : [[+c, +b, +a], [+c, +a, +b]]) : [];
+  for (const [y, mo, d] of cands) { const iso = check(y, mo, d); if (iso) return iso; }
+  invalid();
 }
 export function metadata(input: unknown, partial = false): DocumentMetadata | MetadataPatch {
   const values = object(input, ["category", "hospital_name", "document_date"]);

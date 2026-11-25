@@ -46,7 +46,7 @@ class Fact(TypedDict):
     polarity: Literal['affirmed', 'negated', 'unknown']
     required: bool
     conflict_group: str | None
-    term_ids: list[Literal['glucose', 'hemoglobin', 'ocr', 'reference_range']]
+    term_ids: list[Literal['chloride', 'creatinine', 'glucose', 'hematocrit', 'hemoglobin', 'lab_measurement', 'ocr', 'platelets', 'potassium', 'rbc', 'reference_range', 'sodium', 'wbc']]
     measurement: Measurement | None
 
 class Source(TypedDict):
@@ -84,7 +84,7 @@ class SummaryOutputV1(TypedDict):
     kind: Literal['medical-summary-output']
     scope: Scope
     reported_findings: list[Fact]
-    educational_explanations: list[Literal['glucose', 'hemoglobin', 'ocr', 'reference_range']]
+    educational_explanations: list[Literal['chloride', 'creatinine', 'glucose', 'hematocrit', 'hemoglobin', 'lab_measurement', 'ocr', 'platelets', 'potassium', 'rbc', 'reference_range', 'sodium', 'wbc']]
     uncertainty: Uncertainty
     catalogue_coverage: Literal['all_catalogued', 'subset']
     provenance: SummaryProvenanceV1

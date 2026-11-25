@@ -103,6 +103,15 @@ function validateFact(f:ReportedFactV1,input:SummaryInputV1){
   for(const id of f.term_ids){
     if(id==='glucose')ensure(/\bglucose\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
     if(id==='hemoglobin')ensure(/\b(?:ha?emoglobin|hgb|hb)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='hematocrit')ensure(/\b(?:hematocrit|haematocrit|hct)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='wbc')ensure(/\b(?:wbc|white\s+blood\s+cells?|leukocytes?)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='rbc')ensure(/\b(?:rbc|red\s+blood\s+cells?|erythrocytes?)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='platelets')ensure(/\b(?:platelets?|plt)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='creatinine')ensure(/\b(?:creatinine|creat)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='sodium')ensure(/\b(?:sodium|na)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='potassium')ensure(/\b(?:potassium|k)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='chloride')ensure(/\b(?:chloride|cl)\b/i.test(f.evidence.quote),'UNSUPPORTED_CLAIM');
+    if(id==='lab_measurement')ensure(f.kind==='measurement','UNSUPPORTED_CLAIM');
     if(id==='reference_range')ensure(m?.reported_range!==null&&m!==null,'UNSUPPORTED_CLAIM');
     if(id==='ocr')ensure(input.source.method!=='pdf_text','UNSUPPORTED_CLAIM');
   }

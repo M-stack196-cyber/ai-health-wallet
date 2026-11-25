@@ -116,6 +116,15 @@ def validate_fact(f,input):
     for term in f['term_ids']:
         if term=='glucose':require(re.search(r'\bglucose\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
         if term=='hemoglobin':require(re.search(r'\b(?:ha?emoglobin|hgb|hb)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='hematocrit':require(re.search(r'\b(?:hematocrit|haematocrit|hct)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='wbc':require(re.search(r'\b(?:wbc|white\s+blood\s+cells?|leukocytes?)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='rbc':require(re.search(r'\b(?:rbc|red\s+blood\s+cells?|erythrocytes?)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='platelets':require(re.search(r'\b(?:platelets?|plt)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='creatinine':require(re.search(r'\b(?:creatinine|creat)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='sodium':require(re.search(r'\b(?:sodium|na)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='potassium':require(re.search(r'\b(?:potassium|k)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='chloride':require(re.search(r'\b(?:chloride|cl)\b',f['evidence']['quote'],re.I),'UNSUPPORTED_CLAIM')
+        if term=='lab_measurement':require(f['kind']=='measurement','UNSUPPORTED_CLAIM')
         if term=='reference_range':require(m is not None and m['reported_range'] is not None,'UNSUPPORTED_CLAIM')
         if term=='ocr':require(input['source']['method']!='pdf_text','UNSUPPORTED_CLAIM')
 @safe

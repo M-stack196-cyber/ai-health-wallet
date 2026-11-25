@@ -7,7 +7,35 @@ import {createRagClient,chunkerVersion,validateVector,insufficient,ragUnavailabl
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 // Identical fail-closed policy to the Python workflow; no document text is used
 // to choose authorization, tools or instructions.
-export function recordTopic(q:string){if(/\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b/i.test(q))return null;if(/\bglucose\b/i.test(q))return 'glucose';if(/\b(hemoglobin|haemoglobin|hgb|hb)\b/i.test(q))return 'hemoglobin';return null;}
+export function recordTopic(q:string){
+  if(/\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b/i.test(q))return null;
+  if(/\b(all|every|full|complete|entire)\b.*\b(results?|tests?|values?|report|records?|labs?|parameters?)\b|\b(what|show|list)\b.*\b(my\s+(?:lab\s+)?(?:results?|tests?|report|values?))\b/i.test(q))return 'all_measurements';
+  if(/\bglucose\b/i.test(q))return 'glucose';
+  if(/\b(hemoglobin|haemoglobin|hgb|hb)\b/i.test(q))return 'hemoglobin';
+  if(/\b(hematocrit|haematocrit|hct)\b/i.test(q))return 'hematocrit';
+  if(/\b(wbc|white\s+blood\s+cells?|leukocytes?)\b/i.test(q))return 'wbc';
+  if(/\b(rbc|red\s+blood\s+cells?|erythrocytes?)\b/i.test(q))return 'rbc';
+  if(/\b(platelets?|plt)\b/i.test(q))return 'platelets';
+  if(/\b(creatinine|creat)\b/i.test(q))return 'creatinine';
+  if(/\b(sodium|na)\b/i.test(q))return 'sodium';
+  if(/\b(potassium|k)\b/i.test(q))return 'potassium';
+  if(/\b(chloride|cl)\b/i.test(q))return 'chloride';
+  if(/\belectrolytes?\b/i.test(q))return 'electrolytes';
+  if(/\b(cbc|complete\s+blood\s+count|blood\s+count)\b/i.test(q))return 'cbc';
+  return 'keyword_match';
+}
+function matchesTopic(topic:string, f:any, q:string):boolean{
+  const tid = f.term_ids[0];
+  if(topic==='all_measurements')return true;
+  if(topic==='electrolytes')return ['sodium','potassium','chloride'].includes(tid);
+  if(topic==='cbc')return ['hemoglobin','hematocrit','wbc','rbc','platelets'].includes(tid);
+  if(topic==='keyword_match'){
+    const label = (f.measurement?.label?.text ?? '').toLowerCase();
+    const words = q.toLowerCase().split(/[^a-z0-9]+/).filter((w:string)=>w.length>=3 && !['what','the','and','for','are','was','were','show','tell','give','list','level','levels','value','values','result','results','test','tests','report','record','records','normal','range'].includes(w));
+    return words.some((w:string)=>label.includes(w));
+  }
+  return tid===topic;
+}
 // Mirrors rag_service.workflow.SYMPTOM; the Python reply must agree or the answer is refused.
 export const symptomRelated=(q:string)=>/\b(symptom\w*|pain\w*|aches?|aching|fever\w*|cough\w*|nausea\w*|vomit\w*|dizz\w*|headache\w*|rash\w*|swell\w*|bleed\w*|breath\w*|fatigue\w*|hurt\w*)\b/i.test(q);
 export function createRagService(db:RagDatabase,patient:string,client:ReturnType<typeof createRagClient>,authorize:()=>Promise<void>,doctor?:DoctorRagScope){
@@ -35,10 +63,10 @@ export function createRagService(db:RagDatabase,patient:string,client:ReturnType
   if(rows.length<=20)for(const row of rows){
    let facts;try{facts=sourceCatalogue({...row,id:row.snapshot_id} as SummarySnapshot);}catch{continue;}
    const approved=[];
-   for(const f of facts){if(f.term_ids[0]!==topic||f.evidence.start_byte<row.start_byte||f.evidence.end_byte>row.end_byte)continue;
+   for(const f of facts){if(!topic||!matchesTopic(topic,f,question)||f.evidence.start_byte<row.start_byte||f.evidence.end_byte>row.end_byte)continue;
     const identity=row.document_id+':'+f.id;if(seen.has(identity))continue;seen.add(identity);
     const citation_id='C'+(sources.length+1),m=f.measurement!;
-    approved.push({citation_id,topic,label:m.label.text,value:m.value?.decimal??null,unit:m.unit?.text??null,quote:f.evidence.quote,uncertain:f.certainty==='ambiguous'});
+    approved.push({citation_id,topic:f.term_ids[0],label:m.label.text,value:m.value?.decimal??null,unit:m.unit?.text??null,reported_range:m.reported_range?.text??null,quote:f.evidence.quote,uncertain:f.certainty==='ambiguous'});
     sources.push({...row,citation_id,quote:f.evidence.quote,start_byte:f.evidence.start_byte,end_byte:f.evidence.end_byte});
    }
    if(approved.length)records.push({text:row.chunk_text,document_id:row.document_id,facts:approved});
@@ -55,7 +83,7 @@ export function createRagService(db:RagDatabase,patient:string,client:ReturnType
   if(!answered&&!['no_records','insufficient'].includes(answer.status))throw ragUnavailable();
   const facts=records.flatMap(r=>r.facts);
   const citations=answered?sources.map(s=>({id:s.citation_id,document_id:s.document_id,document_name:s.original_filename,document_date:s.document_date,upload_date:s.uploaded_at,page:s.page,chunk_reference:s.id,source_reference:s.extraction_id,start_byte:s.start_byte,end_byte:s.end_byte,quote:s.quote})):[];
-  const text=answered?'The records report:\n'+facts.map(f=>'Source-reported '+f.label+': '+(f.value??'unavailable')+(f.unit?' '+f.unit:'; unit unavailable')+'. ['+f.citation_id+']').join('\n')+'\nDifferent source values are preserved separately and have not been reconciled. This is not a diagnosis or treatment recommendation.':insufficient;
+  const text=answered?'The records report:\n'+facts.map(f=>'• '+f.label+': '+(f.value??'unavailable')+(f.unit?' '+f.unit:'; unit unavailable')+(f.reported_range?' (Reference range: '+f.reported_range+')':'')+' ['+f.citation_id+']').join('\n')+'\nDifferent source values are preserved separately and have not been reconciled. This is not a diagnosis or treatment recommendation.':insufficient;
   const shown=symptom?text+'\n\n'+safetyNotice:text;
   const result={status:answered?'answered':'insufficient',answer:shown,...(symptom?{safety_notice:safetyNoticeId}:{}),citations,language:'en',mode:'synthetic-offline',uncertainty:{limited_catalogue:true,ambiguous:facts.some(f=>f.uncertain),missing_values:facts.some(f=>f.value===null)},provenance:{...answer.provenance,embedding_model:'synthetic-hash-32-v1',chunker:chunkerVersion}};
   await authorize();signal?.throwIfAborted();const id=randomUUID();await repo.save(id,question,result,answered?sources:[]);await authorize();

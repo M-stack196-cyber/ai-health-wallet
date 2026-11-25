@@ -113,8 +113,8 @@
             "=",
             "<",
             ">",
-            "≤",
-            "≥"
+            "\u2264",
+            "\u2265"
           ]
         },
         "evidence": {
@@ -266,14 +266,23 @@
           "type": "array",
           "items": {
             "enum": [
+              "chloride",
+              "creatinine",
               "glucose",
+              "hematocrit",
               "hemoglobin",
+              "lab_measurement",
               "ocr",
-              "reference_range"
+              "platelets",
+              "potassium",
+              "rbc",
+              "reference_range",
+              "sodium",
+              "wbc"
             ]
           },
           "minItems": 0,
-          "maxItems": 4,
+          "maxItems": 13,
           "uniqueItems": true
         },
         "measurement": {
@@ -510,14 +519,23 @@
           "type": "array",
           "items": {
             "enum": [
+              "chloride",
+              "creatinine",
               "glucose",
+              "hematocrit",
               "hemoglobin",
+              "lab_measurement",
               "ocr",
-              "reference_range"
+              "platelets",
+              "potassium",
+              "rbc",
+              "reference_range",
+              "sodium",
+              "wbc"
             ]
           },
           "minItems": 0,
-          "maxItems": 4,
+          "maxItems": 13,
           "uniqueItems": true
         },
         "uncertainty": {

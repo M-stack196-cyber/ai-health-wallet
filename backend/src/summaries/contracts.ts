@@ -43,7 +43,7 @@ export interface ReportedFactV1 {
   polarity: "affirmed" | "negated" | "unknown";
   required: boolean;
   conflict_group: string | null;
-  term_ids: ("glucose" | "hemoglobin" | "ocr" | "reference_range")[];
+  term_ids: ("chloride" | "creatinine" | "glucose" | "hematocrit" | "hemoglobin" | "lab_measurement" | "ocr" | "platelets" | "potassium" | "rbc" | "reference_range" | "sodium" | "wbc")[];
   measurement: MeasurementV1 | null;
 }
 export interface SummarySourceV1 {
@@ -81,7 +81,7 @@ export interface SummaryOutputV1 {
   kind: "medical-summary-output";
   scope: SummaryScopeV1;
   reported_findings: (ReportedFactV1)[];
-  educational_explanations: ("glucose" | "hemoglobin" | "ocr" | "reference_range")[];
+  educational_explanations: ("chloride" | "creatinine" | "glucose" | "hematocrit" | "hemoglobin" | "lab_measurement" | "ocr" | "platelets" | "potassium" | "rbc" | "reference_range" | "sodium" | "wbc")[];
   uncertainty: SummaryUncertaintyV1;
   catalogue_coverage: "all_catalogued" | "subset";
   provenance: SummaryProvenanceV1;

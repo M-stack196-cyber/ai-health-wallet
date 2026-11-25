@@ -20,9 +20,32 @@ def symptom_related(question):return bool(SYMPTOM.search(question))
 
 def topic(question):
     if re.search(r'\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b',question,re.I):return None
+    if re.search(r'\b(all|every|full|complete|entire)\b.*\b(results?|tests?|values?|report|records?|labs?|parameters?)\b|\b(what|show|list)\b.*\b(my\s+(?:lab\s+)?(?:results?|tests?|report|values?))\b',question,re.I):return 'all_measurements'
     if re.search(r'\bglucose\b',question,re.I):return 'glucose'
     if re.search(r'\b(hemoglobin|haemoglobin|hgb|hb)\b',question,re.I):return 'hemoglobin'
-    return None
+    if re.search(r'\b(hematocrit|haematocrit|hct)\b',question,re.I):return 'hematocrit'
+    if re.search(r'\b(wbc|white\s+blood\s+cells?|leukocytes?)\b',question,re.I):return 'wbc'
+    if re.search(r'\b(rbc|red\s+blood\s+cells?|erythrocytes?)\b',question,re.I):return 'rbc'
+    if re.search(r'\b(platelets?|plt)\b',question,re.I):return 'platelets'
+    if re.search(r'\b(creatinine|creat)\b',question,re.I):return 'creatinine'
+    if re.search(r'\b(sodium|na)\b',question,re.I):return 'sodium'
+    if re.search(r'\b(potassium|k)\b',question,re.I):return 'potassium'
+    if re.search(r'\b(chloride|cl)\b',question,re.I):return 'chloride'
+    if re.search(r'\belectrolytes?\b',question,re.I):return 'electrolytes'
+    if re.search(r'\b(cbc|complete\s+blood\s+count|blood\s+count)\b',question,re.I):return 'cbc'
+    return 'keyword_match'
+
+def matches_topic(wanted, f, question):
+    tid = f.get('topic')
+    if wanted == 'all_measurements': return True
+    if wanted == 'electrolytes': return tid in ('sodium', 'potassium', 'chloride')
+    if wanted == 'cbc': return tid in ('hemoglobin', 'hematocrit', 'wbc', 'rbc', 'platelets')
+    if wanted == 'keyword_match':
+        label = (f.get('label') or '').lower()
+        stop = {'what','the','and','for','are','was','were','show','tell','give','list','level','levels','value','values','result','results','test','tests','report','record','records','normal','range'}
+        words = [w for w in re.split(r'[^a-z0-9]+', question.lower()) if len(w) >= 3 and w not in stop]
+        return any(w in label for w in words)
+    return tid == wanted
 
 class SyntheticAnswerProvider:
     async def generate(self,facts):return [f['citation_id'] for f in facts]
@@ -47,7 +70,7 @@ def build_graph(provider=None,retriever_factory=None):
         except Exception:return {'status':'retrieval_failed'}
     async def assess(s):
         wanted=topic(s['question'])
-        facts=[f for d in s['docs'] for f in d.metadata['facts'] if f['topic']==wanted] if wanted else []
+        facts=[f for d in s['docs'] for f in d.metadata['facts'] if matches_topic(wanted, f, s['question'])] if wanted else []
         # Duplicate/overlap citations are removed without merging different sources.
         facts=list({f['citation_id']:f for f in facts}.values())
         return {'facts':facts,'status':'ready' if facts else 'insufficient'}
