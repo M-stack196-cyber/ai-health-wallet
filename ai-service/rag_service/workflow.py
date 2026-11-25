@@ -18,67 +18,9 @@ SAFETY_NOTICE='non_diagnostic_v1'
 SYMPTOM=re.compile(r'\b(symptom\w*|pain\w*|aches?|aching|fever\w*|cough\w*|nausea\w*|vomit\w*|dizz\w*|headache\w*|rash\w*|swell\w*|bleed\w*|breath\w*|fatigue\w*|hurt\w*)\b',re.I)
 def symptom_related(question):return bool(SYMPTOM.search(question))
 
-STOP_WORDS={'what','which','where','when','who','whom','whose','why','how','the','and','for','are','was','were','is','am','be','been','being','have','has','had','do','does','did','will','would','shall','should','can','could','may','might','must','show','tell','give','list','find','get','fetch','read','check','see','view','my','me','mine','our','ours','your','yours','his','her','hers','their','theirs','this','that','these','those','from','with','about','into','onto','upon','over','under','between','level','levels','value','values','result','results','test','tests','report','reports','record','records','normal','range','ranges','please','kindly','or','of','in','on','at','to','by','as','an','a'}
-
-ABBREV_MAP={
-    'hb':'hemoglobin','hgb':'hemoglobin','haemoglobin':'hemoglobin',
-    'hct':'hematocrit','haematocrit':'hematocrit','pcv':'hematocrit',
-    'wbc':'wbc','tlc':'wbc','leukocytes':'wbc','leucocytes':'wbc',
-    'rbc':'rbc','erythrocytes':'rbc',
-    'plt':'platelets','platelet':'platelets','platelets':'platelets',
-    'creat':'creatinine','creatinine':'creatinine',
-    'na':'sodium','sodium':'sodium',
-    'k':'potassium','potassium':'potassium',
-    'cl':'chloride','chloride':'chloride',
-    'fbs':'glucose','rbs':'glucose','glucose':'glucose','sugar':'glucose'
-}
-
-def fuzzy_contains(haystack, needle):
-    if not needle:
-        return False
-    if needle in haystack:
-        return True
-    if len(needle) < 5:
-        return False
-    for w in [w for w in re.split(r'[^a-z0-9]+', haystack) if len(w) >= 4]:
-        if abs(len(w) - len(needle)) > 2:
-            continue
-        if w[:4] == needle[:4]:
-            diffs = 0
-            i = j = 0
-            while i < len(w) and j < len(needle):
-                if w[i] == needle[j]:
-                    i += 1
-                    j += 1
-                else:
-                    diffs += 1
-                    if diffs > 2:
-                        break
-                    if len(w) > len(needle):
-                        i += 1
-                    elif len(needle) > len(w):
-                        j += 1
-                    else:
-                        i += 1
-                        j += 1
-            diffs += (len(w) - i) + (len(needle) - j)
-            if diffs <= 2:
-                return True
-    return False
-
-def extract_query_keywords(question):
-    raw = [w for w in re.split(r'[^a-z0-9]+', question.lower()) if w]
-    out = []
-    for w in raw:
-        if w in ABBREV_MAP:
-            out.append(ABBREV_MAP[w])
-        elif len(w) >= 2 and w not in STOP_WORDS:
-            out.append(w)
-    return list(dict.fromkeys(out))
-
 def topic(question):
     if re.search(r'\b(diagnos\w*|prescrib\w*|treatment|medication|symptom\w*|system|prompt|secret|ignore|exfiltrat\w*)\b',question,re.I):return None
-    if re.search(r'\b(all|every|full|complete|entire)\b.*\b(results?|tests?|values?|reports?|records?|labs?|parameters?)\b|\b(what|show|list|give)\b.*\b(my\s+(?:lab\s+|medical\s+|health\s+)?(?:results?|tests?|reports?|records?|values?))\b',question,re.I):return 'all_measurements'
+    if re.search(r'\b(all|every|full|complete|entire)\b.*\b(results?|tests?|values?|reports?|records?|labs?|parameters?)\b|\b(what|show|list|give|summarize|explain)\b.*\b(my\s+(?:lab\s+|medical\s+|health\s+)?(?:results?|tests?|reports?|records?|values?|summary))\b',question,re.I):return 'all_measurements'
     if re.search(r'\b(glucose|sugar|fbs|rbs)\b',question,re.I):return 'glucose'
     if re.search(r'\b(hemoglobin|haemoglobin|hgb|hb)\b',question,re.I):return 'hemoglobin'
     if re.search(r'\b(hematocrit|haematocrit|hct|pcv)\b',question,re.I):return 'hematocrit'
@@ -93,23 +35,12 @@ def topic(question):
     if re.search(r'\b(cbc|fbc|complete\s+blood\s+count|blood\s+count)\b',question,re.I):return 'cbc'
     return 'keyword_match'
 
-def matches_topic(wanted, f, question, doc_context=''):
+def matches_topic(wanted, f):
     tid = f.get('topic')
     if wanted == 'all_measurements': return True
     if wanted == 'electrolytes': return tid in ('sodium', 'potassium', 'chloride')
     if wanted == 'cbc': return tid in ('hemoglobin', 'hematocrit', 'wbc', 'rbc', 'platelets')
-    if wanted == 'keyword_match':
-        if tid == 'document_text':
-            return True
-        label = (f.get('label') or '').lower()
-        keywords = extract_query_keywords(question)
-        if not keywords:
-            return True
-        if any(w in label or w in (tid or '') or fuzzy_contains(label, w) for w in keywords):
-            return True
-        if doc_context and any(fuzzy_contains(doc_context, w) for w in keywords):
-            return True
-        return False
+    if wanted == 'keyword_match': return True
     return tid == wanted
 
 class SyntheticAnswerProvider:
@@ -129,14 +60,13 @@ def build_graph(provider=None,retriever_factory=None):
     async def authorize(s):return {'status':'ready' if s.get('authorized') is True else 'unauthorized'}
     async def retrieve(s):
         try:
-            retriever=(retriever_factory(s['records']) if retriever_factory else AuthorizedEvidenceRetriever(evidence=[Document(page_content=r['text'],metadata={'facts':r['facts'],'doc_context':((r.get('document_name') or '')+'\n'+(r.get('text') or '')).lower()}) for r in s['records']]))
+            retriever=(retriever_factory(s['records']) if retriever_factory else AuthorizedEvidenceRetriever(evidence=[Document(page_content=r['text'],metadata={'facts':r['facts']}) for r in s['records']]))
             docs=retriever.invoke(s['question'],config={'callbacks':[]})
             return {'docs':docs,'status':'ready' if docs else 'no_records'}
         except Exception:return {'status':'retrieval_failed'}
     async def assess(s):
         wanted=topic(s['question'])
-        facts=[f for d in s['docs'] for f in d.metadata['facts'] if matches_topic(wanted, f, s['question'], d.metadata.get('doc_context',''))] if wanted else []
-        # Duplicate/overlap citations are removed without merging different sources.
+        facts=[f for d in s['docs'] for f in d.metadata['facts'] if matches_topic(wanted, f)] if wanted else []
         facts=list({f['citation_id']:f for f in facts}.values())
         return {'facts':facts,'status':'ready' if facts else 'insufficient'}
     async def context(s):return {'facts':copy.deepcopy(s['facts'])}
@@ -155,7 +85,6 @@ def build_graph(provider=None,retriever_factory=None):
     return g.compile()
 
 async def answer(question,records,authorized=True,provider=None,retriever_factory=None,allowed_document_ids=None):
-    # Defence in depth for doctor grants: Node declares the permitted documents and every evidence record must carry one of them.
     if allowed_document_ids is not None:
         allowed=set(allowed_document_ids)
         authorized=authorized and all(type(r.get('document_id')) is str and r['document_id'] in allowed for r in records)
