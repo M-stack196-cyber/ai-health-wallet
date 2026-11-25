@@ -66,7 +66,7 @@ def build_graph(provider=None,retriever_factory=None):
         except Exception:return {'status':'retrieval_failed'}
     async def assess(s):
         wanted=topic(s['question'])
-        facts=[f for d in s['docs'] for f in d.metadata['facts'] if matches_topic(wanted, f)] if wanted else []
+        facts=[f for d in s['docs'] for f in d.metadata['facts']] if wanted else []
         facts=list({f['citation_id']:f for f in facts}.values())
         return {'facts':facts,'status':'ready' if facts else 'insufficient'}
     async def context(s):return {'facts':copy.deepcopy(s['facts'])}

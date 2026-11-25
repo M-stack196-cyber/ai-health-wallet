@@ -149,16 +149,18 @@ export function createRagService(db:RagDatabase,patient:string,client:ReturnType
   const answer=await client.call('answers',{question,context_json:context,context_sha256,...(doctor?{allowed_document_ids:[...doctor.permittedDocumentIds]}:{})},signal);
   if(answer.context_sha256!==context_sha256||answer.provenance?.provider!=='synthetic-offline'||answer.provenance?.model!=='exact-evidence-selector'||answer.provenance?.revision!=='1'||answer.provenance?.policy!=='patient-records-rag-v1')throw ragUnavailable();
   const symptom=symptomRelated(question);if((answer.safety_notice??null)!==(symptom?safetyNoticeId:null))throw ragUnavailable();
-  const expected=sources.map(s=>s.citation_id),answered=answer.status==='answered';
+  const expected=sources.map(s=>s.citation_id),expectedSet=new Set(expected),answered=answer.status==='answered';
   if(typeof answer.status!=='string'||answered&&!(Array.isArray(answer.selected)&&answer.selected.every((x:unknown)=>typeof x==='string')))throw ragUnavailable();
-  if(answered&&(!expected.length||answer.selected.length!==expected.length||answer.selected.some((id:string,idx:number)=>id!==expected[idx])))throw ragUnavailable();
+  const selectedSet=new Set<string>(answered?answer.selected:[]);
+  if(answered&&(!answer.selected.length||selectedSet.size!==answer.selected.length||answer.selected.some((id:string)=>!expectedSet.has(id))))throw ragUnavailable();
   if(!answered&&!['no_records','insufficient'].includes(answer.status))throw ragUnavailable();
-  const facts=records.flatMap(r=>r.facts);
-  const citations=answered?sources.map(s=>({id:s.citation_id,document_id:s.document_id,document_name:s.original_filename,document_date:s.document_date,upload_date:s.uploaded_at,page:s.page,chunk_reference:s.id,source_reference:s.extraction_id,start_byte:s.start_byte,end_byte:s.end_byte,quote:s.quote})):[];
+  const activeSources=answered?sources.filter(s=>selectedSet.has(s.citation_id)):[];
+  const facts=answered?records.flatMap(r=>r.facts).filter((f:any)=>selectedSet.has(f.citation_id)):[];
+  const citations=answered?activeSources.map(s=>({id:s.citation_id,document_id:s.document_id,document_name:s.original_filename,document_date:s.document_date,upload_date:s.uploaded_at,page:s.page,chunk_reference:s.id,source_reference:s.extraction_id,start_byte:s.start_byte,end_byte:s.end_byte,quote:s.quote})):[];
   const text=answered?'The records report:\n'+facts.map(f=>f.topic==='document_text'?'• '+f.value+(f.document_name?' (Source: '+f.document_name+')':'')+' ['+f.citation_id+']':'• '+f.label+': '+(f.value??'unavailable')+(f.unit?' '+f.unit:'; unit unavailable')+(f.reported_range?' (Reference range: '+f.reported_range+')':'')+(f.document_name?' — '+f.document_name:'')+' ['+f.citation_id+']').join('\n')+'\nDifferent source values are preserved separately and have not been reconciled. This is not a diagnosis or treatment recommendation.':insufficient;
   const shown=symptom?text+'\n\n'+safetyNotice:text;
   const result={status:answered?'answered':'insufficient',answer:shown,...(symptom?{safety_notice:safetyNoticeId}:{}),citations,language:'en',mode:'synthetic-offline',uncertainty:{limited_catalogue:true,ambiguous:facts.some(f=>f.uncertain),missing_values:facts.some(f=>f.value===null)},provenance:{...answer.provenance,embedding_model:'synthetic-hash-32-v1',chunker:chunkerVersion}};
-  await authorize();signal?.throwIfAborted();const id=randomUUID();await repo.save(id,question,result,answered?sources:[]);await authorize();
+  await authorize();signal?.throwIfAborted();const id=randomUUID();await repo.save(id,question,result,activeSources);await authorize();
   const saved=await repo.get(id);if(!saved)throw ragUnavailable();return {id,...saved.structured_answer};
  },
  async get(id:string){await authorize();const result=await repo.get(id);await authorize();return result?{id,...result.structured_answer}:undefined;}
