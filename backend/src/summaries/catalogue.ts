@@ -22,11 +22,7 @@ export function classifyLabTopic(label: string): LabTopic {
 }
 
 const SKIP_LABEL = /^(?:medical\s+laboratory|laboratory\s+report|test\s+results?|parameter|patient\s+id|date|name|age|gender|sex|doctor|hospital|specimen|sample|page|phone|address)\b/i;
-const UNIT_PART = '(?:x10\^?\d+\/[a-zA-Zµu]+|10\^?\d+\/[a-zA-Zµu]+|mg\/dL|mmol\/L|g\/dL|g\/L|mEq\/L|IU\/L|U\/L|ng\/mL|pg\/mL|ug\/dL|µg\/dL|fL|pg|%|\/uL|\/µL)';
-const ROW_RE = new RegExp(
-  '^([A-Za-z][A-Za-z0-9()\\/.,\\s-]{1,56}?)\\s*:?\\s+(\\d+(?:\\.\\d+)?|\\?+)\\s*(' + UNIT_PART + ')?(?:\\s+([<>≤≥]?\\s*\\d+(?:\\.\\d+)?(?:\\s*[-–]\\s*\\d+(?:\\.\\d+)?)?))?$',
-  'di'
-);
+const ROW_RE = /^([A-Za-z][A-Za-z0-9()\/.,\s-]{1,56}?)\s*:?\s+(\d+(?:\.\d+)?|\?+)\s*(x10\^?\d+\/[a-zA-Zµu]+|10\^?\d+\/[a-zA-Zµu]+|mg\/dL|mmol\/L|g\/dL|g\/L|mEq\/L|IU\/L|U\/L|ng\/mL|pg\/mL|ug\/dL|µg\/dL|fL|pg|%|\/uL|\/µL)?(?:\s+([<>≤≥]?\s*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?))?$/di;
 
 export function sourceCatalogue(s:Readonly<SummarySnapshot>):ReportedFactV1[]{
  const facts:ReportedFactV1[]=[];let cursor=0;
