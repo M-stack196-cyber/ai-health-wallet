@@ -11,4 +11,4 @@ CONTEXT_HEADERS = {
 def expected_recipe(input_sha256):
     return {'schema_version': 1, 'input_sha256': input_sha256,
             'pipeline_version': 'summary-contract-v1', 'prompt_sha256': PROMPT_SHA256,
-            'provider': 'synthetic-fake', 'model_id': 'extractive-fixture', 'model_revision': '1'}
+            'provider': 'synthetic-fake', 'model_id': 'extractive-fixture', 'model_revision': '2'}

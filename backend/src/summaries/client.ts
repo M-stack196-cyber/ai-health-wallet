@@ -6,7 +6,7 @@ export const summaryServicePath = '/internal/v1/report-summaries:generate';
 export function fakeSummaryRecipe(inputSha256: string): SummaryProvenanceV1 {
   return {schema_version:1, input_sha256:inputSha256, pipeline_version:'summary-contract-v1',
     prompt_sha256:createHash('sha256').update('health-wallet-summary-fake-extractive-v1').digest('hex'),
-    provider:'synthetic-fake', model_id:'extractive-fixture', model_revision:'1'};
+    provider:'synthetic-fake', model_id:'extractive-fixture', model_revision:'2'};
 }
 export interface SummaryTransportRequest {
   method:'POST'; path:typeof summaryServicePath; headers:Readonly<Record<string,string>>;
